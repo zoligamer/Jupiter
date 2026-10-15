@@ -99,7 +99,7 @@
       {
          "Name": "Apor Vilmos Katolikus Főiskola",
          "Url": "https://neptun.avkf.hu/hallgatoiangular",
-         "ToUrl": "https://avkf.hu/tanulmanyi-osztaly/",
+         "ToUrl": "https://avkf.hu/avkf-es-egysegei/szervezeti-egysegek/tanulmanyi-osztaly",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -208,7 +208,7 @@
       {
          "Name": "Budapesti Corvinus Egyetem",
          "Url": "https://neptun3r.web.uni-corvinus.hu/Hallgatoi",
-         "ToUrl": "https://www.uni-corvinus.hu/fooldal/hallgatoi-szolgaltatasok/",
+         "ToUrl": "https://www.uni-corvinus.hu/",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -432,7 +432,7 @@
       {
          "Name": "Budapesti Metropolitan Egyetem",
          "Url": "https://neptunweb1.metropolitan.hu/hallgato",
-         "ToUrl": "https://www.metropolitan.hu/hallgatoi-informacios-kozpont",
+         "ToUrl": "https://www.metropolitan.hu/hu/hallgatoi-informacios-kozpont",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -679,7 +679,7 @@
       {
          "Name": "Debreceni Református Hittudományi Egyetem",
          "Url": "https://host.sdakft.hu/drhehw",
-         "ToUrl": "https://drhe.hu/tanulmanyi-osztaly/",
+         "ToUrl": "https://drhe.hu/egyetemunk/hivatalok/tanulmanyi-osztaly/",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -947,7 +947,7 @@
             },
             {
                "FacultyName": "Bölcsészettudományi Kar (BTK)",
-               "ToUrl": "https://btk.elte.hu/tanulmanyi-hivatal",
+               "ToUrl": "https://btk.elte.hu/hallgatoi-ugyek",
                "ToSchedule": [
                   {
                      "weekday": 1,
@@ -1120,7 +1120,7 @@
       {
          "Name": "Gál Ferenc Egyetem",
          "Url": "https://host.sdakft.hu/gfehw",
-         "ToUrl": "https://gfe.hu/tanulmanyi-osztaly/",
+         "ToUrl": "https://gfe.hu/hallgatoknak/tanulmanyi-osztaly/",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -1543,7 +1543,7 @@
       {
          "Name": "Magyar Táncművészeti Egyetem",
          "Url": "https://host.sdakft.hu/mtfhw",
-         "ToUrl": "https://mte.eu/tanulmanyi-osztaly/",
+         "ToUrl": "https://mte.eu/hallgatoknak/tanulmanyi-osztaly-2/",
          "ToSchedule": [
             {
                "weekday": 1,
@@ -2036,7 +2036,7 @@
             },
             {
                "FacultyName": "Ybl Miklós Építéstudományi Kar (YBL)",
-               "ToUrl": "https://ybl.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToUrl": "https://ybl.uni-obuda.hu/intezetek/tanulmanyi-iroda/",
                "ToSchedule": [
                   {
                      "weekday": 1,
@@ -2870,7 +2870,7 @@
       {
          "Name": "Tomori Pál Főiskola",
          "Url": "https://host.sdakft.hu/tpfhw",
-         "ToUrl": "https://tpf.hu/tanulmanyi-hivatal/",
+         "ToUrl": "https://tka.hu",
          "ToSchedule": [
             {
                "weekday": 1,
