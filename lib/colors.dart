@@ -1,8 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert' as conv;
 import 'package:flutter/material.dart';
-import 'package:neptun2/API/api_coms.dart';
-import 'package:neptun2/storage.dart';
+import 'package:jupiter/API/api_coms.dart';
+import 'package:jupiter/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
 import 'main.dart';

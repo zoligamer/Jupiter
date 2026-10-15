@@ -1,6 +1,6 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:neptun2/Pages/main_page.dart';
+import 'package:jupiter/Pages/main_page.dart';
 import '../API/api_coms.dart';
 import '../colors.dart';
 import '../haptics.dart';

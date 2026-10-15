@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:neptun2/Misc/emojirich_text.dart';
-import 'package:neptun2/language.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:jupiter/Misc/emojirich_text.dart';
+import 'package:jupiter/language.dart';
 import '../API/api_coms.dart';
 import '../colors.dart';
 import '../storage.dart'; // ÚJ: Betűméret lekéréséhez

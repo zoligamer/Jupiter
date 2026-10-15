@@ -10,13 +10,13 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
-import 'package:neptun2/API/ics_calendar.dart';
-import 'package:neptun2/MailElements/mail_element_widget.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/language.dart';
-import 'package:neptun2/notifications.dart';
-import 'package:neptun2/Misc/emojirich_text.dart';
-import 'package:neptun2/PaymentsElements/payment_element_widget.dart';
+import 'package:jupiter/API/ics_calendar.dart';
+import 'package:jupiter/MailElements/mail_element_widget.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/language.dart';
+import 'package:jupiter/notifications.dart';
+import 'package:jupiter/Misc/emojirich_text.dart';
+import 'package:jupiter/PaymentsElements/payment_element_widget.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/auto_updater.dart';
 import '../haptics.dart';
@@ -26,6 +26,8 @@ import '../MarkbookElements/markbook_element_widget.dart' as mbook;
 import '../PeriodsElements/periods_element_widget.dart' as priods;
 import '../Navigator/bottomnavigator.dart' as bottomnav;
 import '../Navigator/topnavigator.dart' as topnav;
+import '../Misc/to_office_service.dart';
+import '../TimetableElements/to_office_widget.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -51,9 +53,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool _confettiCanBePlayed = false;
   bool _confettiRefreshRetrigger = true;
 
-  double _fbPosX = 0;
-  double _fbPosY = 0;
-  bool _fbNeedAnimate = false;
 
   static HomePageState? _instance;
   HomePageState(){
@@ -65,7 +64,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   static void showBlurPopup(bool b){
-    _instance?.setBlurComplex(b);
+    if (_instance != null && _instance!.mounted) {
+      _instance!.setBlurComplex(b);
+    }
   }
 
   static void navigateToView(int to) {
@@ -74,6 +75,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   bool _showBlur = false;
   void setBlur(bool state){
+    if (!mounted) return;
     setState(() {
       _showBlur = state;
     });
@@ -83,6 +85,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   late Animation<double> blurAnimation;
 
   void setBlurComplex(bool state){
+    if (!mounted) return;
     setState(() {
       if(state) {
         SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -100,9 +103,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         statusBarColor: AppColors.getTheme().rootBackground, // status bar color
       ));
       blurController.reverse().whenComplete((){
-        setState(() {
-          _showBlur = false;
-        });
+        if (mounted) {
+          setState(() {
+            _showBlur = false;
+          });
+        }
       });
     });
   }
@@ -165,6 +170,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   double calendarWeekSwitchValue = 0.0;
   bool calendarWeekCanNavigate = true;
+  bool isCalendarOffline = false;
 
   @override
   void initState() {
@@ -182,6 +188,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     if(storage.DataCache.getHasICSFile() ?? false){
       ICSCalendar.initialize();
     }
+
+    ToOfficeService.initialize().then((_) {
+      ToOfficeService.fetchAndRefreshSchedule();
+    });
 
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       final hasConn = results.any((r) => r != ConnectivityResult.none);
@@ -256,14 +266,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         _instance!.settingsUserWeekOffsetSetup();
       }
     });
-
-    _fbController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
-    _fbTween = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fbController, curve: Curves.decelerate),
-    );
 
     blurController = AnimationController(
         vsync: this,
@@ -374,14 +376,18 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setupCalendarGreetText();
     setupCalendarController(true, true);
 
-    Future.delayed(const Duration(seconds: 1), (){
-      final size = MediaQuery.of(context).size;
-
-      setState(() {
-        _fbPosX = size.width - 90;
-        _fbPosY = size.height - 140;
-      });
+    // Instant paint (~0.05s) from permanent cache on launch
+    _loadPermanentCalendarEntries(currentWeekOffset).then((hasCached) {
+      if (hasCached && mounted) {
+        setState(() {
+          isCalendarOffline = !storage.DataCache.getHasNetwork();
+          _setupCalendar(true);
+          canDoCalendarPaging = true;
+          setupCalendarController(false, false);
+        });
+      }
     });
+
     AppColors.clearThemeChangeCallbacks();
     AppColors.subThemeChangeCallback((){
       if(!mounted){
@@ -806,6 +812,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     final currWeekday = DateTime.now().weekday;
     final now = DateTime.now();
     final Map<int, api.CalendarEntry> prevClassPerWkday = {};
+    final Set<String> shownToSlotsKey = {};
 
     for(var item in calendarEntries){
       final wkday = DateTime.fromMillisecondsSinceEpoch(item.startEpoch).weekday;
@@ -836,11 +843,32 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
               wkday == currWeekday &&
               currentWeekOffset == 1;
 
+          ToOfficeSlot? breakMatchedToSlot;
+          if (storage.DataCache.getShowToOfficeSchedule()) {
+            final toSlots = ToOfficeService.getSlotsForDay(wkday);
+            final bStartDate = DateTime.fromMillisecondsSinceEpoch(breakStart);
+            final bEndDate = DateTime.fromMillisecondsSinceEpoch(breakEnd);
+            final bStartMin = bStartDate.hour * 60 + bStartDate.minute;
+            final bEndMin = bEndDate.hour * 60 + bEndDate.minute;
+
+            for (var slot in toSlots) {
+              final sStartMin = slot.startHour * 60 + slot.startMinute;
+              final sEndMin = slot.endHour * 60 + slot.endMinute;
+              final slotKey = '$wkday-${slot.startHour}:${slot.startMinute}';
+              if (bStartMin < sEndMin && bEndMin > sStartMin && !shownToSlotsKey.contains(slotKey)) {
+                breakMatchedToSlot = slot;
+                shownToSlotsKey.add(slotKey);
+                break;
+              }
+            }
+          }
+
           final breakWidget = t_table.BreakElementWidget(
             startEpoch: breakStart,
             endEpoch: breakEnd,
             isCurrent: isCurrentBreak,
             nextClassTitle: item.title,
+            toOfficeSlot: breakMatchedToSlot,
           );
 
           switch(wkday){
@@ -859,34 +887,112 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
       final isCurrent = !item.isExam && now.millisecondsSinceEpoch >= item.startEpoch && now.millisecondsSinceEpoch <= item.endEpoch && wkday == currWeekday && currentWeekOffset == 1;
 
-      final widget = t_table.TimetableElementWidget(
-        entry: item,
-        position: idx,
-        isCurrent: isCurrent,
-      );
+      Widget classWidget;
+      if (storage.DataCache.getShowToOfficeSchedule()) {
+        final toSlots = ToOfficeService.getSlotsForDay(wkday);
+        final classStartDate = DateTime.fromMillisecondsSinceEpoch(item.startEpoch);
+        final classEndDate = DateTime.fromMillisecondsSinceEpoch(item.endEpoch);
+        final cStartMin = classStartDate.hour * 60 + classStartDate.minute;
+        final cEndMin = classEndDate.hour * 60 + classEndDate.minute;
+
+        ToOfficeSlot? matchedSlot;
+        for (var slot in toSlots) {
+          final sStartMin = slot.startHour * 60 + slot.startMinute;
+          final sEndMin = slot.endHour * 60 + slot.endMinute;
+          final slotKey = '$wkday-${slot.startHour}:${slot.startMinute}';
+          if (cStartMin < sEndMin && cEndMin > sStartMin && !shownToSlotsKey.contains(slotKey)) {
+            matchedSlot = slot;
+            shownToSlotsKey.add(slotKey);
+            break;
+          }
+        }
+
+        if (matchedSlot != null) {
+          final isSlotCurrent = wkday == currWeekday && currentWeekOffset == 1 && ToOfficeService.isCurrentlyOpen();
+          classWidget = Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: t_table.TimetableElementWidget(
+                      entry: item,
+                      position: idx,
+                      isCurrent: isCurrent,
+                      fullWidthMargin: false,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ToOfficeOverlayWidget(
+                    slot: matchedSlot,
+                    isCurrent: isSlotCurrent,
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          classWidget = t_table.TimetableElementWidget(
+            entry: item,
+            position: idx,
+            isCurrent: isCurrent,
+          );
+        }
+      } else {
+        classWidget = t_table.TimetableElementWidget(
+          entry: item,
+          position: idx,
+          isCurrent: isCurrent,
+        );
+      }
 
       switch(wkday){
         case 1:
-          mondayCalendar.add(widget);
+          mondayCalendar.add(classWidget);
           break;
         case 2:
-          tuesdayCalendar.add(widget);
+          tuesdayCalendar.add(classWidget);
           break;
         case 3:
-          wednessdayCalendar.add(widget);
+          wednessdayCalendar.add(classWidget);
           break;
         case 4:
-          thursdayCalendar.add(widget);
+          thursdayCalendar.add(classWidget);
           break;
         case 5:
-          fridayCalendar.add(widget);
+          fridayCalendar.add(classWidget);
           break;
         case 6:
-          saturdayCalendar.add(widget);
+          saturdayCalendar.add(classWidget);
           break;
         case 7:
-          sundayCalendar.add(widget);
+          sundayCalendar.add(classWidget);
           break;
+      }
+    }
+
+    if (storage.DataCache.getShowToOfficeSchedule()) {
+      for (int d = 1; d <= 7; d++) {
+        final daySlots = ToOfficeService.getSlotsForDay(d);
+        for (var slot in daySlots) {
+          final slotKey = '$d-${slot.startHour}:${slot.startMinute}';
+          if (!shownToSlotsKey.contains(slotKey)) {
+            final banner = ToOfficeStandaloneBanner(
+              slot: slot,
+              isCurrent: d == currWeekday && currentWeekOffset == 1 && ToOfficeService.isCurrentlyOpen(),
+            );
+            switch (d) {
+              case 1: mondayCalendar.insert(0, banner); break;
+              case 2: tuesdayCalendar.insert(0, banner); break;
+              case 3: wednessdayCalendar.add(banner); break;
+              case 4: thursdayCalendar.insert(0, banner); break;
+              case 5: fridayCalendar.insert(0, banner); break;
+              case 6: saturdayCalendar.insert(0, banner); break;
+              case 7: sundayCalendar.insert(0, banner); break;
+            }
+          }
+        }
       }
     }
 
@@ -899,6 +1005,47 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       saturdayCalendar,
       sundayCalendar,
     ];
+
+    if (storage.DataCache.getShowPeriodsInCalendar()) {
+      final nowEpoch = DateTime.now().millisecondsSinceEpoch;
+      final activePeriods = periodEntries.where((p) => nowEpoch >= p.startEpoch && nowEpoch <= p.endEpoch).toList();
+      if (activePeriods.isNotEmpty) {
+        final periodNames = activePeriods.map((p) => api.Generic.capitalizePeriodText(p.name)).join(' • ');
+        final periodBadge = Container(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.getTheme().primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.getTheme().primary.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.timer_rounded, size: 15, color: AppColors.getTheme().primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  periodNames,
+                  style: TextStyle(
+                    color: AppColors.getTheme().primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+        for (var list in dayLists) {
+          if (list.isNotEmpty) {
+            list.insert(0, periodBadge);
+          }
+        }
+      }
+    }
 
     bool dayHasClasses(int dayIdx) {
       if (dayIdx < 0 || dayIdx >= dayLists.length) return false;
@@ -946,16 +1093,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void _fillOneCalendarElement(BuildContext context, List<Widget> w, String name, bool isLoading){
-    calendarTabs.add(Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      child: Tab(
+    calendarTabs.add(Tab(
+      height: 32,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text(
           name,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12
-          ),
         ),
       ),
     ));
@@ -964,42 +1108,39 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         scrollDirection: Axis.vertical,
-        child: Container(
-          margin: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: w.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: KeyedSubtree(
-              key: ValueKey<String>('day_${name}_${weeksSinceStart}_${w.length}_$isLoading'),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                mainAxisSize: MainAxisSize.max,
-                children: w.isNotEmpty ? w : isLoading ? <Widget>[
-                  Center(
+        padding: const EdgeInsets.only(top: 4, bottom: 20),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          child: KeyedSubtree(
+            key: ValueKey<String>('day_${name}_${weeksSinceStart}_${w.length}_$isLoading'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: w.isNotEmpty ? w : isLoading ? <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.getTheme().textColor,
+                      color: AppColors.getTheme().primary,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                      fontWeight: FontWeight.w300,
-                      fontSize: 10
-                    ),
-                  )
-                ] : <Widget>[const t_table.FreedayElementWidget()],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.getTheme().textColor.withValues(alpha: .3),
+                    fontWeight: FontWeight.w400,
+                    fontSize: 11,
+                  ),
+                ),
+              ] : <Widget>[const t_table.FreedayElementWidget()],
             ),
           ),
         ),
@@ -1008,13 +1149,22 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void getCalendarTabViews(BuildContext context, bool isLoading){
-    _fillOneCalendarElement(context, mondayCalendar, AppStrings.getLanguagePack().api_dayMon_Universal, isLoading);
-    _fillOneCalendarElement(context, tuesdayCalendar, AppStrings.getLanguagePack().api_dayTue_Universal, isLoading);
-    _fillOneCalendarElement(context, wednessdayCalendar, AppStrings.getLanguagePack().api_dayWed_Universal, isLoading);
-    _fillOneCalendarElement(context, thursdayCalendar, AppStrings.getLanguagePack().api_dayThu_Universal, isLoading);
-    _fillOneCalendarElement(context, fridayCalendar, AppStrings.getLanguagePack().api_dayFri_Universal, isLoading);
-    _fillOneCalendarElement(context, saturdayCalendar, AppStrings.getLanguagePack().api_daySat_Universal, isLoading);
-    _fillOneCalendarElement(context, sundayCalendar, AppStrings.getLanguagePack().api_daySun_Universal, isLoading);
+    final nowWk = DateTime.now().weekday;
+    final isCurrentWeek = currentWeekOffset == 1;
+    String formatDayTab(int dayNum, String shortName) {
+      if (isCurrentWeek && nowWk == dayNum) {
+        return '$shortName (Ma)';
+      }
+      return shortName;
+    }
+
+    _fillOneCalendarElement(context, mondayCalendar, formatDayTab(1, 'H'), isLoading);
+    _fillOneCalendarElement(context, tuesdayCalendar, formatDayTab(2, 'K'), isLoading);
+    _fillOneCalendarElement(context, wednessdayCalendar, formatDayTab(3, 'Sze'), isLoading);
+    _fillOneCalendarElement(context, thursdayCalendar, formatDayTab(4, 'Cs'), isLoading);
+    _fillOneCalendarElement(context, fridayCalendar, formatDayTab(5, 'P'), isLoading);
+    _fillOneCalendarElement(context, saturdayCalendar, formatDayTab(6, 'Szo'), isLoading);
+    _fillOneCalendarElement(context, sundayCalendar, formatDayTab(7, 'V'), isLoading);
   }
 
   void _mbookPopupResult(int result, int idx){
@@ -1203,10 +1353,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     paymentsEntries.sort((a, b) => b.dueDateMs.compareTo(a.dueDateMs));
 
     for(var item in paymentsEntries){
-      if(item.completed && item.ammount < 0){
+      if(!item.isIgnored && item.completed && item.ammount < 0){
         totalMoney += item.ammount.abs();
       }
-      if(!item.completed && (item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0)){
+      if(!item.completed && !item.isIgnored && (item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0)){
         _paymentsNotificationList.add(item);
       }
       paymentsList.add(PaymentElementWidget(
@@ -1218,6 +1368,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         direction: item.direction,
         note: item.note,
         currency: item.currency,
+        isIgnored: item.isIgnored,
       ));
     }
 
@@ -1482,6 +1633,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   Future<void> markAllMailsAsRead() async {
+    final unreadItems = mailEntries.where((m) => !m.isRead).toList();
     for (var item in mailEntries) {
       item.isRead = true;
     }
@@ -1498,6 +1650,22 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       textColor: AppColors.getTheme().textColor,
     );
     if (mounted) setState(() {});
+
+    Future.delayed(Duration.zero, () async {
+      try {
+        for (var item in unreadItems) {
+          await api.MailRequest.setMailRead(item.ID);
+        }
+        final count = await api.MailRequest.getUnreadMessageCount();
+        if (mounted) {
+          setState(() {
+            unreadMailCount = count;
+          });
+        }
+      } catch (e) {
+        debugPrint("Hiba az összes olvasottá tétele során: $e");
+      }
+    });
   }
 
   Future<void> stepCalendarBack() async{
@@ -1509,6 +1677,66 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     currentWeekOffset++;
     AppHaptics.lightImpact();
     await onCalendarRefresh(true);
+  }
+
+  bool _isCalendarIdentical(List<api.CalendarEntry> a, List<api.CalendarEntry> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].startEpoch != b[i].startEpoch ||
+          a[i].endEpoch != b[i].endEpoch ||
+          a[i].title != b[i].title ||
+          a[i].location != b[i].location ||
+          a[i].eventType != b[i].eventType ||
+          a[i].classInstanceId != b[i].classInstanceId ||
+          a[i].teacher != b[i].teacher) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<bool> _loadPermanentCalendarEntries(int weekOffset) async {
+    final activeTerm = storage.DataCache.getSelectedTermId() ?? '';
+    final cachedTerm = await storage.getString('CalendarCacheTermId');
+    final bool hasNetwork = storage.DataCache.getHasNetwork();
+
+    final permKey = 'PermanentCalendar_w$weekOffset';
+    int? len = await storage.getInt('${permKey}_len');
+    String? permTerm = await storage.getString('${permKey}_term');
+
+    if (len == null || len <= 0) {
+      final weekKey = 'CachedCalendar_w$weekOffset';
+      len = await storage.getInt('${weekKey}_len');
+      if (len == null && weekOffset == 1) {
+        len = await storage.getInt('CachedCalendarLength');
+      }
+    }
+
+    if (len != null && len > 0 && (permTerm == activeTerm || cachedTerm == activeTerm || activeTerm.isEmpty || !hasNetwork)) {
+      final List<api.CalendarEntry> loaded = [];
+      for (int i = 0; i < len; i++) {
+        final calEntry = await storage.getString('${permKey}_$i') ??
+            await storage.getString('CachedCalendar_w${weekOffset}_$i') ??
+            (weekOffset == 1 ? await storage.getString('CachedCalendar_$i') : null);
+        if (calEntry != null) {
+          loaded.add(api.CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(calEntry));
+        }
+      }
+      if (loaded.isNotEmpty) {
+        calendarEntries = loaded;
+        storage.DataCache.setHasCachedFirstWeekEpoch(1);
+        api.CalendarRequest.fillMissingDetails(calendarEntries, () {
+          if (mounted) setState(() {});
+        });
+        if (weekOffset == 1) {
+          Future.delayed(Duration.zero, () async {
+            await _setupClassesNotifications(_classesNotificationList);
+          });
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<List<api.CalendarEntry>> fetchCalendarToList(int offset) async{
@@ -1539,48 +1767,32 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     final activeTerm = storage.DataCache.getSelectedTermId() ?? '';
-    final cachedTerm = await storage.getString('CalendarCacheTermId');
     final bool hasNetwork = storage.DataCache.getHasNetwork();
 
-    // 1. Helyi tárolóból betöltés offline használathoz és azonnali megjelenítéshez
+    // 1. Helyi tárolóból betöltés offline használathoz és azonnali megjelenítéshez (~0.05s)
     if (allowCache) {
-      final weekKey = 'CachedCalendar_w$currentWeekOffset';
-      int? len = await storage.getInt('${weekKey}_len');
-      if (len == null && currentWeekOffset == 1) {
-        len = await storage.getInt('CachedCalendarLength');
-      }
+      final loaded = await _loadPermanentCalendarEntries(currentWeekOffset);
+      if (loaded) {
+        isCalendarOffline = !hasNetwork;
 
-      if (len != null && len > 0 && (cachedTerm == activeTerm || activeTerm.isEmpty || !hasNetwork)) {
-        final List<api.CalendarEntry> cached = [];
-        for (int i = 0; i < len; i++) {
-          final calEntry = await storage.getString('${weekKey}_$i') ?? (currentWeekOffset == 1 ? await storage.getString('CachedCalendar_$i') : null);
-          if (calEntry != null) {
-            cached.add(api.CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(calEntry));
-          }
+        // Azonnali megjelenítés a felületen
+        if (mounted) {
+          _setupCalendar(currentWeekOffset == 1);
+          canDoCalendarPaging = true;
+          setupCalendarController(false, false);
         }
-        if (cached.isNotEmpty) {
-          calendarEntries = cached;
-          storage.DataCache.setHasCachedFirstWeekEpoch(1);
-          api.CalendarRequest.fillMissingDetails(calendarEntries, () {
-            if (mounted) setState(() {});
-          });
 
-          if (currentWeekOffset == 1) {
-            Future.delayed(Duration.zero, () async {
-              await _setupClassesNotifications(_classesNotificationList);
-            });
-          }
-
-          // Ha offline vagy nem kérünk csendes frissítést, kész vagyunk
-          if (!hasNetwork || !silentRefreshIfOnline) {
-            return;
-          }
+        // Ha offline vagy nem kérünk csendes frissítést, kész vagyunk
+        if (!hasNetwork || !silentRefreshIfOnline) {
+          return;
         }
       }
     }
 
     // 2. Ha nincs internet kapcsolat
     if (!hasNetwork) {
+      isCalendarOffline = true;
+      if (mounted) setState(() {});
       return;
     }
 
@@ -1595,36 +1807,78 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       );
       final list = api.CalendarRequest.getCalendarEntriesFromJSON(request);
 
-      if (list.isNotEmpty || request.isNotEmpty) {
+      // Smart Dual-Cache: SOHA ne írjuk felül 0/üres adattal a meglévő naptárat!
+      if (list.isNotEmpty) {
+        final bool changed = !_isCalendarIdentical(calendarEntries, list);
         calendarEntries = list;
+        isCalendarOffline = false;
 
         api.CalendarRequest.fillMissingDetails(calendarEntries, () {
           if (mounted) setState(() {});
         });
 
-        // Mentés offline tárba az adott hétre
-        final weekKey = 'CachedCalendar_w$currentWeekOffset';
-        await storage.saveInt('${weekKey}_len', calendarEntries.length);
-        for (int i = 0; i < calendarEntries.length; i++) {
-          await storage.saveString('${weekKey}_$i', calendarEntries[i].toString());
+        // Smart comparison: csak akkor írunk háttértárba, ha valóban változott (~1ms check)
+        if (changed) {
+          // 1. Tartós tárolás (Permanent cache)
+          final permKey = 'PermanentCalendar_w$currentWeekOffset';
+          await storage.saveInt('${permKey}_len', calendarEntries.length);
+          await storage.saveString('${permKey}_term', activeTerm);
+          for (int i = 0; i < calendarEntries.length; i++) {
+            await storage.saveString('${permKey}_$i', calendarEntries[i].toString());
+          }
+
+          // 2. Átmeneti munkamenet tárolás (Session cache)
+          final weekKey = 'CachedCalendar_w$currentWeekOffset';
+          await storage.saveInt('${weekKey}_len', calendarEntries.length);
+          for (int i = 0; i < calendarEntries.length; i++) {
+            await storage.saveString('${weekKey}_$i', calendarEntries[i].toString());
+          }
+
+          if (currentWeekOffset == 1) {
+            await storage.saveInt('CachedCalendarLength', calendarEntries.length);
+            await storage.saveString('CalendarCacheTermId', activeTerm);
+            for (int i = 0; i < calendarEntries.length; i++) {
+              await storage.saveString('CachedCalendar_$i', calendarEntries[i].toString());
+            }
+            final now = DateTime.now();
+            await storage.saveString('CalendarCacheTime', DateTime(now.year, now.month, now.day, 0, 0, 0).toString());
+            await storage.DataCache.setHasCachedCalendar(1);
+          }
+        }
+
+        if (mounted) {
+          setupCalendar(currentWeekOffset == 1);
         }
 
         if (currentWeekOffset == 1) {
-          await storage.saveInt('CachedCalendarLength', calendarEntries.length);
-          await storage.saveString('CalendarCacheTermId', activeTerm);
-          for (int i = 0; i < calendarEntries.length; i++) {
-            await storage.saveString('CachedCalendar_$i', calendarEntries[i].toString());
-          }
-          final now = DateTime.now();
-          await storage.saveString('CalendarCacheTime', DateTime(now.year, now.month, now.day, 0, 0, 0).toString());
-          await storage.DataCache.setHasCachedCalendar(1);
           Future.delayed(Duration.zero, () async {
             await _setupClassesNotifications(_classesNotificationList);
           });
         }
+      } else {
+        // A szerver üreset adott vissza (pl. alt-tab utáni session drop vagy hálózati hiba):
+        // Nem írjuk felül a tartós naptárat, megőrizzük a meglévő órákat!
+        isCalendarOffline = true;
+        if (calendarEntries.isEmpty) {
+          final restored = await _loadPermanentCalendarEntries(currentWeekOffset);
+          if (restored && mounted) {
+            setupCalendar(currentWeekOffset == 1);
+          }
+        } else if (mounted) {
+          setState(() {});
+        }
       }
     } catch (e) {
       debugPrint("Hiba a naptár hálózati lekérésekor: $e");
+      isCalendarOffline = true;
+      if (calendarEntries.isEmpty) {
+        final restored = await _loadPermanentCalendarEntries(currentWeekOffset);
+        if (restored && mounted) {
+          setupCalendar(currentWeekOffset == 1);
+        }
+      } else if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -1842,11 +2096,15 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setState(() {
       weeksSinceStart = calcPassedWeeks();
       canDoCalendarPaging = false;
-      isLoadingCalendar = true;
+      if (isPaging) {
+        isLoadingCalendar = false;
+      } else {
+        isLoadingCalendar = true;
+      }
     });
 
     try {
-      await fetchCalendar(allowCache: false, silentRefreshIfOnline: true);
+      await fetchCalendar(allowCache: isPaging, silentRefreshIfOnline: true);
       setupCalendar(false);
     } catch (e) {
       debugPrint("Hiba az onCalendarRefresh során: $e");
@@ -1982,6 +2240,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   @override
   void dispose() {
+    if (_instance == this) {
+      _instance = null;
+    }
     _connectivitySubscription?.cancel();
     _calendarTimer?.cancel();
     super.dispose();
@@ -2002,27 +2263,15 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     periodEntries.clear();
     mailList.clear();
     mailEntries.clear();
-    _fbController.dispose();
     currentMailPageController.dispose();
     blurController.dispose();
   }
 
   static Container getSeparatorLine(BuildContext context){
     return Container(
-      width: MediaQuery.of(context).size.width / 1.2,
+      width: MediaQuery.of(context).size.width,
       height: 1,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.getTheme().textColor.withValues(alpha: 0),
-            AppColors.getTheme().textColor.withValues(alpha: 0.2),
-            AppColors.getTheme().textColor.withValues(alpha: 0.4),
-            AppColors.getTheme().textColor.withValues(alpha: 0.4),
-            AppColors.getTheme().textColor.withValues(alpha: 0.2),
-            AppColors.getTheme().textColor.withValues(alpha: 0),
-          ]
-        ),
-      ),
+      color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
     );
   }
 
@@ -2035,15 +2284,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     });
   }
 
-  late AnimationController _fbController;
-  late Animation<double> _fbTween;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername()!,
-            loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+            loggedInUsername: storage.DataCache.getUsername() ?? '',
+            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
         ),
       body: SafeArea(
         child: Stack(
@@ -2100,10 +2346,15 @@ class CalendarPageWidget extends StatelessWidget{
 
   @override
   Widget build(BuildContext context){
+    final dayIndex = homePage.calendarTabController.index;
+    final dayText = api.Generic.dayToText(dayIndex + 1);
+    final calendarHintText = '$dayText • ${homePage.weeksSinceStart}. hét';
+
     return Scaffold(
+      backgroundColor: AppColors.getTheme().rootBackground,
       drawer: AppDrawer(
-          loggedInUsername: storage.DataCache.getUsername()!,
-          loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+          loggedInUsername: storage.DataCache.getUsername() ?? '',
+          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
       ),
       body: SafeArea(
         child: Stack(
@@ -2111,43 +2362,61 @@ class CalendarPageWidget extends StatelessWidget{
           Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Calendar, smallHintText: greetText, loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
-              Container(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 6),
-                color: AppColors.getTheme().rootBackground,
-                width: MediaQuery.of(context).size.width,
-                child: TabBar(
-                  tabs: calendarTabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  dividerColor: Colors.transparent,
-                  automaticIndicatorColorAdjustment: true,
-                  controller: homePage.calendarTabController,
-                  enableFeedback: true,
-                  physics: const BouncingScrollPhysics(
-                    decelerationRate: ScrollDecelerationRate.fast,
-                  ),
-                  indicator: BoxDecoration(
-                    color: AppColors.getTheme().textColor.withValues(alpha: .1),
-                    borderRadius: const BorderRadius.all(Radius.circular(26))
-                  ),
-                  onTap: (index){
-                    return;
-                  },
-                ),
+              topnav.TopNavigatorWidget(
+                homePage: homePage,
+                displayString: AppStrings.getLanguagePack().view_header_Calendar,
+                smallHintText: calendarHintText,
+                loggedInUsername: storage.DataCache.getUsername() ?? '',
+                loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", ''),
               ),
-              HomePageState.getSeparatorLine(context),
               Container(
-                width: MediaQuery.of(context).size.width,
-                child: t_table.WeekoffseterElementWidget(
-                  week: homePage.weeksSinceStart,
-                  from: homePage.calendarEntries.isEmpty ? null : DateTime.fromMillisecondsSinceEpoch(homePage.calendarEntries[0].startEpoch),
-                  to: homePage.calendarEntries.isEmpty ? DateTime.now() : DateTime.fromMillisecondsSinceEpoch(homePage.calendarEntries[homePage.calendarEntries.length - 1].endEpoch),
-                  onBackPressed: homePage.stepCalendarBack,
-                  onForwardPressed: homePage.stepCalendarForward,
-                  canDoPaging: homePage.canDoCalendarPaging,
-                  homePage: homePage,
-                  isLoading: homePage.isLoadingCalendar,
+                margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                      color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+                      onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarBack : null,
+                      visualDensity: VisualDensity.compact,
+                      splashRadius: 18,
+                    ),
+                    Expanded(
+                      child: TabBar(
+                        tabs: calendarTabs,
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.center,
+                        dividerColor: Colors.transparent,
+                        controller: homePage.calendarTabController,
+                        indicator: UnderlineTabIndicator(
+                          borderSide: BorderSide(
+                            width: 2.5,
+                            color: AppColors.getTheme().primary,
+                          ),
+                          insets: const EdgeInsets.symmetric(horizontal: 4),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.label,
+                        labelColor: AppColors.getTheme().primary,
+                        unselectedLabelColor: AppColors.getTheme().textColor.withValues(alpha: 0.5),
+                        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                      color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+                      onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarForward : null,
+                      visualDensity: VisualDensity.compact,
+                      splashRadius: 18,
+                    ),
+                  ],
                 ),
               ),
               Expanded(
@@ -2157,7 +2426,6 @@ class CalendarPageWidget extends StatelessWidget{
                   children: calendarTabViews,
                 ),
               ),
-              HomePageState.getSeparatorLine(context),
               bottomnav.BottomNavigatorWidget(homePage: homePage),
             ],
           ),
@@ -2246,8 +2514,8 @@ class MarkbookPageWidget extends StatelessWidget{
     }
     return Scaffold(
       drawer: AppDrawer(
-          loggedInUsername: storage.DataCache.getUsername()!,
-          loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+          loggedInUsername: storage.DataCache.getUsername() ?? '',
+          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
       ),
       body: SafeArea(
         child: Stack(
@@ -2255,7 +2523,7 @@ class MarkbookPageWidget extends StatelessWidget{
           Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Subjects, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_subjects_CreditsInSemester, [totalCredits]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Subjects, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_subjects_CreditsInSemester, [totalCredits]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
               HomePageState.getSeparatorLine(context),
               Expanded(
                   child: RefreshIndicator(
@@ -2391,8 +2659,8 @@ class PaymentsPageWidget extends StatelessWidget{
   Widget build(BuildContext context){
     return Scaffold(
         drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername()!,
-            loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+            loggedInUsername: storage.DataCache.getUsername() ?? '',
+            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
         ),
       body: SafeArea(
         child: Stack(
@@ -2400,7 +2668,7 @@ class PaymentsPageWidget extends StatelessWidget{
           Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
               HomePageState.getSeparatorLine(context),
               Expanded(
                   child: RefreshIndicator(
@@ -2469,8 +2737,8 @@ class PeriodsPageWidget extends StatelessWidget{
   Widget build(BuildContext context){
     return Scaffold(
         drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername()!,
-            loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+            loggedInUsername: storage.DataCache.getUsername() ?? '',
+            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
         ),
         body: SafeArea(
           child: Stack(
@@ -2478,7 +2746,7 @@ class PeriodsPageWidget extends StatelessWidget{
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
-                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Periods, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_periods_MainHeader, [homePage.countActivePeriods, AppStrings.getLanguagePack().topheader_periods_ActiveText, homePage.countFuturePeriods, AppStrings.getLanguagePack().topheader_periods_FutureText, homePage.countExpiredPeriods, AppStrings.getLanguagePack().topheader_periods_ExpiredText]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Periods, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_periods_MainHeader, [homePage.countActivePeriods, AppStrings.getLanguagePack().topheader_periods_ActiveText, homePage.countFuturePeriods, AppStrings.getLanguagePack().topheader_periods_FutureText, homePage.countExpiredPeriods, AppStrings.getLanguagePack().topheader_periods_ExpiredText]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
                 HomePageState.getSeparatorLine(context),
                 Expanded(
                     child: RefreshIndicator(
@@ -2546,8 +2814,8 @@ class MailsPageWidget extends StatelessWidget{
   Widget build(BuildContext context) {
     return Scaffold(
         drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername()!,
-            loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+            loggedInUsername: storage.DataCache.getUsername() ?? '',
+            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
         ),
         body: SafeArea(
           child: Stack(
@@ -2555,7 +2823,7 @@ class MailsPageWidget extends StatelessWidget{
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
-                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
                 HomePageState.getSeparatorLine(context),
                 if (homePage.mailEntries.isNotEmpty)
                   Container(

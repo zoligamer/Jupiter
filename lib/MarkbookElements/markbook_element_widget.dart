@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:neptun2/Misc/popup.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:jupiter/Misc/popup.dart';
 import '../Misc/emojirich_text.dart';
 import '../colors.dart';
 import '../storage.dart'; // ÚJ: Betűméret lekéréséhez

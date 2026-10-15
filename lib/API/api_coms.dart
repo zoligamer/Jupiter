@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert' as conv;
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:neptun2/API/ics_calendar.dart';
-import 'package:neptun2/Misc/clickable_text_span.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/API/ics_calendar.dart';
+import 'package:jupiter/Misc/clickable_text_span.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/language.dart';
 import '../storage.dart' as storage;
 import 'dart:developer' as debug;
 import '../storage.dart';
@@ -23,6 +24,35 @@ import '../storage.dart';
     static const String MARKBOOK_URL = "/api/GetMarkbookData";
     static const String MESSAGES_URL = "/api/GetMessages";
     static const String MESSAGE_SET_READ = "/api/SetReadedMessage";
+    static const String PETITIONS_COUNT_URL = "/api/RequestForm/GetNumberOfRequestForms";
+    static const String PETITIONS_TEMPLATES_URL = "/api/RequestForm/GetStudentRequestFormTemplates";
+    static const String PETITIONS_SUBMITTED_URL = "/api/RequestForm/GetSubmittedRequestForms";
+    static const String PETITIONS_TEMPLATE_DETAILS_URL = "/api/RequestForm/GetStudentRequestFormTemplateDetails";
+    static const String PETITIONS_GET_FORM_URL = "/api/RequestFormCore/GetStudentRequestForm";
+    static const String PETITIONS_SAVE_PAGE_URL = "/api/RequestFormCore/SavePageAndStepNext";
+    static const String PETITIONS_CURRENT_PAGE_URL = "/api/RequestFormCore/GetCurrentPage";
+    static const String PETITIONS_GENERATE_PDF_URL = "/api/RequestFormCore/GenerateRequestFormPdf";
+    static const String PETITIONS_SUBMIT_URL = "/api/RequestFormCore/Submit";
+    static const String PETITIONS_STARTED_TEMPLATES_URL = "/api/RequestForm/GetStartedRequestFormTemplates";
+    static const String PETITIONS_STARTED_DETAILS_URL = "/api/RequestForm/GetStartedRequestFormTemplateDetails";
+    static const String PETITIONS_INVALIDATE_URL = "/api/RequestFormCore/Invalidate";
+    static const String PERSONAL_DATA_GENERAL_URL = "/api/PersonalData/GetGeneralUserData";
+    static const String PERSONAL_DATA_DOCUMENTS_URL = "/api/PersonalData/GetStudentPersonalDocuments";
+    static const String PERSONAL_DATA_CARD_DETAILS_URL = "/api/PersonalData/GetStudentCardDetails";
+    static const String PERSONAL_DATA_CONTACTS_URL = "/api/PersonalData/GetStudentPersonalDataContacts";
+    static const String PERSONAL_DATA_BANK_ACCOUNT_URL = "/api/BankAccount/GetDefaultBankAccountNumber";
+    static const String PERSONAL_DATA_GDPR_URL = "/api/PersonalData/GetStudentGdprStatements";
+    static const String USER_PROFILE_AVATAR_URL = "/api/General/GetUserAvatar";
+    static const String USER_PROFILE_SETTINGS_URL = "/api/UserProfile/GetUserProfileSettings";
+    static const String USER_PROFILE_SAVE_SETTINGS_URL = "/api/UserProfile/SaveUserProfileSettings";
+    static const String USER_PROFILE_FALLBACK_COLORS_URL = "/api/UserProfile/GetDefaultFallbackProfilePictureColorCodes";
+    static const String USER_PROFILE_DEFAULT_AVATARS_URL = "/api/UserProfile/GetDefaultAvatars";
+    static const String USER_PROFILE_IS_PASSWORD_MOD_ALLOWED_URL = "/api/UserProfile/IsPasswordModificationAllowed";
+    static const String DOCUMENT_STORAGE_DASHBOARD_URL = "/api/DocumentContainer/GetDashboardData";
+    static const String DOCUMENT_STORAGE_FOR_STUDENT_URL = "/api/DocumentContainer/GetDocumentsUploadedForStudent";
+    static const String DOCUMENT_STORAGE_BY_STUDENT_URL = "/api/DocumentContainer/GetDocumentsUploadedByStudent";
+    static const String DOCUMENT_STORAGE_TR_URL = "/api/DocumentContainer/GetTrDocuments";
+    static const String DOCUMENT_STORAGE_DOWNLOAD_URL = "/api/DocumentContainer/DownloadDocumentationOrZip";
   }
   
   class _APIRequest{
@@ -91,25 +121,50 @@ import '../storage.dart';
       }
     }
 
+    static String? _extractSessionIdFromJwt(String jwt) {
+      try {
+        final parts = jwt.split('.');
+        if (parts.length >= 2) {
+          String normalized = parts[1];
+          while (normalized.length % 4 != 0) {
+            normalized += '=';
+          }
+          final decoded = conv.utf8.decode(conv.base64Url.decode(normalized));
+          final map = conv.jsonDecode(decoded);
+          if (map is Map && map['SessionId'] != null) {
+            return map['SessionId'].toString();
+          }
+        }
+      } catch (_) {}
+      return null;
+    }
+
     static void _extractAndSaveCookiesAndTokens(http.Response response, String username) {
       final setCookie = response.headers['set-cookie'];
       if (setCookie == null || setCookie.isEmpty) return;
 
       // Extract device cookie: devicecookie-<BASE64_NEPTUN_CODE>=<VALUE>
-      final deviceCookieRegExp = RegExp(r'devicecookie-[a-zA-Z0-9+/=]+=([a-zA-Z0-9+/=]+)');
+      final deviceCookieRegExp = RegExp(r'devicecookie-[a-zA-Z0-9+/=]+=([^;,\s]+)');
       final deviceCookieMatch = deviceCookieRegExp.firstMatch(setCookie);
       if (deviceCookieMatch != null) {
         final cookieValue = deviceCookieMatch.group(1);
-        storage.DataCache.setDeviceCookie(username, cookieValue);
+        if (cookieValue != null && cookieValue.isNotEmpty) {
+          storage.DataCache.setDeviceCookie(username, cookieValue);
+        }
       }
 
-      // Extract refresh token: <GUID>=<JWT_REFRESH_TOKEN>
-      // The key is a 36-char GUID (optional check), value starts with eyJ
-      final refreshTokenRegExp = RegExp(r'[^=;\s,]+=(eyJ[a-zA-Z0-9\-_\.]+)');
+      // Extract refresh token: <GUID_OR_NAME>=<JWT_REFRESH_TOKEN>
+      final refreshTokenRegExp = RegExp(r'([0-9a-fA-F-]{36}|[a-zA-Z0-9_\-\.]+)=(eyJ[a-zA-Z0-9\-_\.]+)');
       final refreshTokenMatch = refreshTokenRegExp.firstMatch(setCookie);
       if (refreshTokenMatch != null) {
-        final tokenValue = refreshTokenMatch.group(1);
-        storage.DataCache.setRefreshToken(tokenValue);
+        final cookieName = refreshTokenMatch.group(1);
+        final tokenValue = refreshTokenMatch.group(2);
+        if (tokenValue != null && tokenValue.isNotEmpty) {
+          storage.DataCache.setRefreshToken(tokenValue);
+          if (cookieName != null && cookieName.isNotEmpty && !cookieName.startsWith('devicecookie')) {
+            storage.DataCache.setSessionCookieName(cookieName);
+          }
+        }
       }
     }
 
@@ -128,16 +183,43 @@ import '../storage.dart';
         }
 
         final refreshUrl = Uri.parse("$baseUrl/api/Account/GetNewTokens");
-        final response = await postRequestRaw(refreshUrl, "{}", bearerToken: refreshToken);
+        final accessToken = storage.DataCache.getAccessToken() ?? '';
+        final username = storage.DataCache.getUsername();
+
+        List<String> cookieParts = [];
+        if (username != null && username.isNotEmpty) {
+          final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
+          if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+            final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+            cookieParts.add('devicecookie-$b64=$savedCookieVal');
+          }
+        }
+
+        String? sessionCookieName = storage.DataCache.getSessionCookieName();
+        if (sessionCookieName == null || sessionCookieName.isEmpty) {
+          sessionCookieName = _extractSessionIdFromJwt(refreshToken);
+        }
+        if (sessionCookieName != null && sessionCookieName.isNotEmpty) {
+          cookieParts.add('$sessionCookieName=$refreshToken');
+        } else {
+          cookieParts.add('refreshToken=$refreshToken');
+        }
+
+        final cookieHeader = cookieParts.isNotEmpty ? cookieParts.join('; ') : null;
+
+        final response = await postRequestRaw(
+          refreshUrl,
+          "{}",
+          bearerToken: accessToken.isNotEmpty ? accessToken : refreshToken,
+          cookie: cookieHeader,
+        );
 
         if (response.statusCode == 200) {
           final bodyJson = conv.jsonDecode(response.body);
-          if (bodyJson["data"] != null && bodyJson["data"]["accessToken"] != null) {
-            final newAccessToken = bodyJson["data"]["accessToken"];
+          final String? newAccessToken = bodyJson["accessToken"] ?? bodyJson["data"]?["accessToken"];
+          if (newAccessToken != null && newAccessToken.isNotEmpty) {
             await storage.DataCache.setAccessToken(newAccessToken);
-            
-            final username = storage.DataCache.getUsername();
-            if (username != null) {
+            if (username != null && username.isNotEmpty) {
               _extractAndSaveCookiesAndTokens(response, username);
             }
             return true;
@@ -201,6 +283,97 @@ import '../storage.dart';
       } catch (e) {
         client.close();
         return '{"ErrorMessage": "$e"}';
+      }
+    }
+
+    static Future<String> postRequestWithRetry(Uri url, String requestBody, {bool isRetry = false}) async {
+      HttpOverrides.global = NeptunCerts.getCerts();
+      final client = http.Client();
+      final request = http.Request('POST', url);
+      final bearerToken = storage.DataCache.getAccessToken() ?? '';
+      if (bearerToken.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $bearerToken';
+      }
+      request.headers['Content-Type'] = 'application/json';
+      request.headers['Accept'] = 'application/json, text/plain, */*';
+      request.body = requestBody;
+
+      try {
+        final streamedResponse = await client.send(request);
+        final response = await http.Response.fromStream(streamedResponse);
+        client.close();
+
+        if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
+          if (!_isRefreshingToken) {
+            _isRefreshingToken = true;
+            bool refreshSuccess = false;
+            if (storage.DataCache.getIsModernApi()) {
+              refreshSuccess = await tryTokenRefresh();
+            }
+            if (!refreshSuccess) {
+              final username = storage.DataCache.getUsername()!;
+              final password = storage.DataCache.getPassword()!;
+              final baseUrl = storage.DataCache.getInstituteUrl()!;
+              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            }
+            _isRefreshingToken = false;
+          } else {
+            while (_isRefreshingToken) {
+              await Future.delayed(const Duration(milliseconds: 100));
+            }
+          }
+          return await postRequestWithRetry(url, requestBody, isRetry: true);
+        }
+
+        return response.body;
+      } catch (e) {
+        client.close();
+        return '{"ErrorMessage": "$e"}';
+      }
+    }
+
+    static Future<http.Response> postRequestRawWithRetry(Uri url, String requestBody, {bool isRetry = false}) async {
+      HttpOverrides.global = NeptunCerts.getCerts();
+      final client = http.Client();
+      final request = http.Request('POST', url);
+      final bearerToken = storage.DataCache.getAccessToken() ?? '';
+      if (bearerToken.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $bearerToken';
+      }
+      request.headers['Content-Type'] = 'application/json';
+      request.body = requestBody;
+
+      try {
+        final streamedResponse = await client.send(request);
+        final response = await http.Response.fromStream(streamedResponse);
+        client.close();
+
+        if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
+          if (!_isRefreshingToken) {
+            _isRefreshingToken = true;
+            bool refreshSuccess = false;
+            if (storage.DataCache.getIsModernApi()) {
+              refreshSuccess = await tryTokenRefresh();
+            }
+            if (!refreshSuccess) {
+              final username = storage.DataCache.getUsername()!;
+              final password = storage.DataCache.getPassword()!;
+              final baseUrl = storage.DataCache.getInstituteUrl()!;
+              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            }
+            _isRefreshingToken = false;
+          } else {
+            while (_isRefreshingToken) {
+              await Future.delayed(const Duration(milliseconds: 100));
+            }
+          }
+          return await postRequestRawWithRetry(url, requestBody, isRetry: true);
+        }
+
+        return response;
+      } catch (e) {
+        client.close();
+        rethrow;
       }
     }
 
@@ -407,51 +580,84 @@ import '../storage.dart';
       // Path normalization for specific institutions is handled by the modern API detection below.
 
       if (containsAspx) {
-
-        bool success = await _tryOldLogin(baseUrl, username, password);
-        return success ? 1 : 0;
-      } else {
+        // Try old login first, but fallback to modern login if old login fails (e.g. universities like Semmelweis that use .aspx URLs but require modern API / 2FA)
+        bool oldSuccess = await _tryOldLogin(baseUrl, username, password);
+        if (oldSuccess) {
+          return 1;
+        }
         return await _tryModernLogin(baseUrl, username, password);
+      } else {
+        // Try modern login first, but fallback to old login if modern login fails
+        int modernResult = await _tryModernLogin(baseUrl, username, password);
+        if (modernResult != 0) {
+          return modernResult;
+        }
+        bool oldSuccess = await _tryOldLogin(baseUrl, username, password);
+        return oldSuccess ? 1 : 0;
       }
     }
 
     static Future<int> _tryModernLogin(String baseUrl, String username, String password) async {
-      try {
-        final modernApiUrl = Uri.parse("$baseUrl/api/Account/Authenticate");
-        final body = conv.jsonEncode({
-          "userName": username, "password": password,
-          "captcha": "", "captchaIdentifier": "", "token": "", "LCID": 1038
-        });
+      final modernApiUrl = Uri.parse("$baseUrl/api/Account/Authenticate");
+      final body = conv.jsonEncode({
+        "userName": username, "password": password,
+        "captcha": "", "captchaIdentifier": "", "token": "", "LCID": 1038
+      });
 
-        // Load device cookie if exists
-        final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
-        String? cookieHeader;
-        if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+      // 1. Try with saved device cookie if exists
+      final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
+      if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+        try {
           final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
-          cookieHeader = 'devicecookie-$b64=$savedCookieVal';
-        }
+          final cookieHeader = 'devicecookie-$b64=$savedCookieVal';
+          final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
 
-        final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
+          if (responseRaw.statusCode == 200 || responseRaw.statusCode == 202) {
+            final response = conv.jsonDecode(responseRaw.body);
+            _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
+
+            final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
+            if (is2fa) {
+              await storage.DataCache.setInstituteUrl(baseUrl);
+              await storage.DataCache.setAccessToken(response["data"]["twoFactorLoginToken"]);
+              return 2; // 2FA required
+            }
+
+            if (response["data"] != null && response["data"]["accessToken"] != null) {
+              await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
+              await storage.DataCache.setIsModernApi(true);
+              await storage.DataCache.setInstituteUrl(baseUrl);
+              return 1; // Success
+            }
+          }
+        } catch (_) { }
+        // If cookie-based login failed or was rejected, clear the stale cookie and fallback to clean login
+        await storage.DataCache.setDeviceCookie(username, null);
+      }
+
+      // 2. Clean login attempt without cookies (first-time login or cookie invalidation)
+      try {
+        final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body);
         final response = conv.jsonDecode(responseRaw.body);
 
-        // Extract and save cookies/tokens
         _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
 
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
           await storage.DataCache.setInstituteUrl(baseUrl);
           await storage.DataCache.setAccessToken(response["data"]["twoFactorLoginToken"]);
-          return 2; // 2FA KELL
+          return 2; // 2FA required
         }
 
         if (response["data"] != null && response["data"]["accessToken"] != null) {
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
           await storage.DataCache.setInstituteUrl(baseUrl);
-          return 1;
+          return 1; // Success
         }
       } catch (e) { }
-      return 0; // HIBA
+
+      return 0; // Failure
     }
 
 
@@ -486,6 +692,7 @@ import '../storage.dart';
         if (response["data"] != null && response["data"]["accessToken"] != null) {
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
+          await storage.DataCache.setInstituteUrl(baseUrl);
           return true;
         }
       } catch (e) { }
@@ -719,11 +926,9 @@ class CalendarRequest {
       try {
         final oldPayload = conv.json.decode(calendarJson);
         final startDateRaw = (oldPayload['startDate'] ?? oldPayload['StartDate']).toString();
-        final endDateRaw = (oldPayload['endDate'] ?? oldPayload['EndDate']).toString();
 
         final numRegex = RegExp(r'\d+');
         final startEpoch = int.parse(numRegex.firstMatch(startDateRaw)!.group(0)!);
-        final endEpoch = int.parse(numRegex.firstMatch(endDateRaw)!.group(0)!);
 
         final startDate = DateTime.fromMillisecondsSinceEpoch(startEpoch);
         final sunday = startDate.add(const Duration(days: 6));
@@ -1318,6 +1523,63 @@ class MarkbookRequest{
 class CashinRequest{
   static Future<List<CashinEntry>?> getCashin() => getAllCashins();
 
+  static String _normalizeText(String s) {
+    return s.toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ö', 'o')
+        .replaceAll('ő', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ű', 'u')
+        .replaceAll(RegExp(r'\.{2,}'), '');
+  }
+
+  static bool _isIgnoredTransaction(String text) {
+    final norm = _normalizeText(text);
+    return norm.contains('utalas a gyujtoszamlara') ||
+        norm.contains('utalas a gyujto') ||
+        (norm.contains('utalas') && norm.contains('gyujto'));
+  }
+
+  static bool _isPositiveIncome(String text) {
+    final norm = _normalizeText(text);
+    return norm.contains('kozeleti') ||
+        norm.contains('intezmenyi szakmai') ||
+        norm.contains('tudomanyos') ||
+        norm.contains('rendszeres szocialis') ||
+        norm.contains('rendkivuli szocialis') ||
+        norm.contains('egyszeri szocialis') ||
+        norm.contains('tamogatas') ||
+        norm.contains('hok rendszeres oszt') ||
+        norm.contains('hok.rend.szoc') ||
+        norm.contains('hok') ||
+        norm.contains('osztondij') ||
+        norm.contains('kifizetes') ||
+        norm.contains('jovairas') ||
+        norm.contains('jutalom');
+  }
+
+  static Future<List<Map<String, dynamic>>> getScholarshipPayments() async {
+    if (storage.DataCache.getIsModernApi()) {
+      try {
+        final token = await storage.DataCache.getAccessToken();
+        String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        final url = Uri.parse("$baseUrl/api/Scholarship/GetScholarshipPayments?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.termId=desc");
+        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final decoded = conv.json.decode(responseRaw);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          return List<Map<String, dynamic>>.from(decoded['data']);
+        }
+      } catch (e) {
+        debug.log("Hiba az ösztöndíjak lekérésekor: $e");
+      }
+    }
+    return [];
+  }
+
   static Future<List<CashinEntry>?> getAllCashins() async{
     if(storage.DataCache.getIsDemoAccount()!){
       final now = DateTime.now();
@@ -1330,66 +1592,110 @@ class CashinRequest{
       return [];
     }
 
-
     if (storage.DataCache.getIsModernApi()) {
       try {
         final token = await storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
-        final url = Uri.parse("$baseUrl/api/Transactions/GetStudentPreviousTransactions?sortAndPage.firstRow=0&sortAndPage.lastRow=50&sortAndPage.transferDate=desc");
+        final txUrl = Uri.parse("$baseUrl/api/Transactions/GetStudentPreviousTransactions?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.transferDate=desc");
 
-        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final results = await Future.wait([
+          _APIRequest.getRequest(txUrl, bearerToken: token!),
+          getScholarshipPayments(),
+        ]);
+
+        final responseRaw = results[0] as String;
+        final scholarships = results[1] as List<Map<String, dynamic>>;
         final decoded = conv.json.decode(responseRaw);
 
         List<CashinEntry> modernCashins = [];
+        Set<String> processedTxIds = {};
 
         if (decoded['data'] != null && decoded['data'] is List) {
           for (var item in decoded['data']) {
             final rawVal = item['transactionValue'];
-            int amount = ((rawVal as num?) ?? 0).toInt().abs();
-            final sign = item['sign']?.toString() ?? '';
-            final dir = item['transactionDirection']?.toString().toLowerCase() ?? '';
-            final type = item['transactionPayingType']?.toString().toLowerCase() ?? '';
+            int rawAmount = ((rawVal as num?) ?? 0).toInt().abs();
+            final payingType = item['transactionPayingType']?.toString() ?? '';
+            final dir = item['transactionDirection']?.toString() ?? '';
+            final note = item['transactionNote']?.toString() ?? '';
+            final status = item['transactionStatus']?.toString() ?? '';
+            final txId = item['transactionId']?.toString() ?? 'ismeretlen_id';
 
-            // Student perspective:
-            // Receiving money (scholarship, kifizetés, jóváírás, sign == '-'): POSITIVE (+)
-            // Paying money (tuition, fees, befizetés, sign == '+'): NEGATIVE (-)
-            bool isReceiving = sign == '-' ||
-                dir.contains('kifizet') ||
-                dir.contains('jóváírás') ||
-                dir.contains('bejövő') ||
-                type.contains('ösztöndíj') ||
-                type.contains('támogatás') ||
-                type.contains('jutalom');
+            final combined = "$payingType $dir $note";
+            final bool ignored = _isIgnoredTransaction(combined);
+            final bool isIncome = !ignored && _isPositiveIncome(combined);
 
-            if (isReceiving) {
-              amount = amount; // Positive
-            } else {
-              amount = -amount; // Negative
-            }
+            int amount = isIncome ? rawAmount : -rawAmount;
 
             final rawDate = item['transferDate']?.toString();
             final dateMs = rawDate != null ? (DateTime.tryParse(rawDate)?.millisecondsSinceEpoch ?? 0) : 0;
 
+            String displayTitle = payingType.isNotEmpty ? payingType : 'Tranzakció';
+            String? displayNote = note.isNotEmpty ? note : null;
+
+            // Ösztöndíj esetén keressük meg a pontos, részletes nevet
+            if (isIncome && scholarships.isNotEmpty) {
+              for (var s in scholarships) {
+                final sAmount = ((s['amount'] as num?) ?? 0).toInt().abs();
+                if (sAmount == rawAmount) {
+                  final sName = s['name']?.toString() ?? '';
+                  final sType = s['titleType']?.toString() ?? '';
+                  if (sName.isNotEmpty) {
+                    displayTitle = sName;
+                    displayNote = sType.isNotEmpty ? sType : displayNote;
+                    break;
+                  }
+                }
+              }
+            }
+
+            processedTxIds.add(txId);
+
             modernCashins.add(CashinEntry(
-                amount,
-                dateMs,
-                item['transactionPayingType']?.toString() ?? 'Ismeretlen tranzakció',
-                item['transactionId']?.toString() ?? 'ismeretlen_id',
-                item['transactionStatus']?.toString() ?? 'Ismeretlen státusz',
-                direction: item['transactionDirection']?.toString(),
-                note: item['transactionNote']?.toString(),
-                currency: item['transactionCurrency']?.toString() ?? 'HUF'
+              amount,
+              dateMs,
+              displayTitle,
+              txId,
+              status,
+              direction: dir.isNotEmpty ? dir : null,
+              note: displayNote,
+              currency: item['transactionCurrency']?.toString() ?? 'HUF',
+              isIgnored: ignored,
             ));
           }
         }
+
+        // Ha a Scholarship végponton van olyan ösztöndíj, ami még nem volt a tranzakciók között
+        for (var s in scholarships) {
+          final sId = s['id']?.toString() ?? '';
+          if (sId.isNotEmpty && !processedTxIds.contains(sId)) {
+            final sAmount = ((s['amount'] as num?) ?? 0).toInt().abs();
+            final sName = s['name']?.toString() ?? 'Ösztöndíj';
+            final sType = s['titleType']?.toString() ?? '';
+            final rawDate = (s['bankDate'] ?? s['latestExecutionDate'])?.toString();
+            final dateMs = rawDate != null ? (DateTime.tryParse(rawDate)?.millisecondsSinceEpoch ?? 0) : 0;
+            final isDone = (s['uiDisplayState'] != null && s['uiDisplayState']['type'] == 1) || s['bankDate'] != null;
+
+            modernCashins.add(CashinEntry(
+              sAmount,
+              dateMs,
+              sName,
+              sId,
+              isDone ? 'teljesített' : 'aktív',
+              direction: 'Ösztöndíj kifizetés',
+              note: sType.isNotEmpty ? sType : null,
+              currency: s['currencyName']?.toString() ?? 'HUF',
+              isIgnored: false,
+            ));
+          }
+        }
+
         return modernCashins;
       } catch (e) {
         debug.log("Hiba a modern tranzakciók lekérésekor: $e");
         return [];
       }
     }
-
 
     final username = storage.DataCache.getUsername();
     final password = storage.DataCache.getPassword();
@@ -1407,16 +1713,18 @@ class CashinRequest{
       final List<dynamic> cashins = conv.json.decode(json)['CashinDataRows'];
       for (var cashin in cashins) {
         int rawAmount = ((cashin['amount'] as num?) ?? 0).toInt().abs();
-        final name = (cashin['appellation']?.toString() ?? '').toLowerCase();
-        bool isReceiving = name.contains('ösztöndíj') || name.contains('támogatás') || name.contains('jutalom');
-        int amount = isReceiving ? rawAmount : -rawAmount;
+        final name = cashin['appellation']?.toString() ?? '';
+        final bool ignored = _isIgnoredTransaction(name);
+        final bool isIncome = !ignored && _isPositiveIncome(name);
+        int amount = isIncome ? rawAmount : -rawAmount;
 
         ls.add(CashinEntry(
             amount,
             int.parse(cashin['deadline'] == null ? '0' : cashin['deadline'].toString().replaceAll('/Date(', '').replaceAll(')/', '')),
-            cashin['appellation'],
+            name,
             cashin['ID'].toString(),
-            cashin['status_name']
+            cashin['status_name'],
+            isIgnored: ignored,
         ));
       }
     }
@@ -1695,8 +2003,48 @@ class MailRequest{
     return sanitised.trim();
   }
 
-  static Future<void> setMailRead(String id)async{
+  static Future<bool> setMailRead(String id, {String? postId}) async {
+    if (storage.DataCache.getIsDemoAccount() ?? false) {
+      return true;
+    }
+    if (storage.DataCache.getIsModernApi()) {
+      try {
+        final token = await storage.DataCache.getAccessToken();
+        String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        String? targetPostId = postId;
+
+        if (targetPostId == null || targetPostId.isEmpty) {
+          final postsUrl = Uri.parse("$baseUrl/api/Messages/$id/Posts?messageId=$id");
+          String postsRaw = await _APIRequest.getRequest(postsUrl, bearerToken: token!);
+          final postsDecoded = conv.json.decode(postsRaw);
+          if (postsDecoded['data'] != null && postsDecoded['data']['posts'] != null) {
+            final postsList = postsDecoded['data']['posts'] as List<dynamic>;
+            for (var p in postsList) {
+              if (p['isRead'] == false && p['postId'] != null) {
+                targetPostId = p['postId'].toString();
+                break;
+              }
+            }
+            if (targetPostId == null && postsList.isNotEmpty && postsList[0]['postId'] != null) {
+              targetPostId = postsList[0]['postId'].toString();
+            }
+          }
+        }
+
+        if (targetPostId != null && targetPostId.isNotEmpty) {
+          final processedUrl = Uri.parse("$baseUrl/api/Messages/$id/Posts/Processed");
+          final body = conv.jsonEncode({"postIds": [targetPostId]});
+          await _APIRequest.postRequestWithRetry(processedUrl, body);
+          await getUnreadMessageCount();
+          return true;
+        }
+      } catch (e) {
+        debug.log("Hiba az üzenet olvasottá tétele során: $e");
+      }
+    }
+    return false;
   }
+
   static Future<String> getMailContent(String messageId, String oldDetails) async {
     if (storage.DataCache.getIsDemoAccount() ?? false) {
       return oldDetails;
@@ -1720,7 +2068,13 @@ class MailRequest{
         final decoded = conv.json.decode(responseRaw);
 
         if (decoded['data'] != null && decoded['data']['posts'] != null && decoded['data']['posts'].isNotEmpty) {
-          String rawHtml = decoded['data']['posts'][0]['htmlText'] ?? "";
+          final firstPost = decoded['data']['posts'][0];
+          final postId = firstPost['postId']?.toString();
+          if (postId != null && firstPost['isRead'] != true) {
+            // Automatically mark processed on server!
+            setMailRead(messageId, postId: postId);
+          }
+          String rawHtml = firstPost['htmlText'] ?? "";
           String cleanText = rawHtml
               .replaceAll(RegExp(r'<style[^>]*>[\s\S]*?</style>'), '')
               .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
@@ -1923,18 +2277,25 @@ class CashinEntry{
   String? direction;
   String? note;
   String? currency;
+  bool isIgnored = false;
 
-  CashinEntry(this.ammount, this.dueDateMs, this.comment, this.ID, String completedStatus, {this.direction, this.note, this.currency}){
-    if(completedStatus.toLowerCase() == 'teljesített' ||
-        completedStatus.toLowerCase() == 'törölt' ||
-        completedStatus.toLowerCase() == 'pénzügyileg igazolt'){
+  CashinEntry(this.ammount, this.dueDateMs, this.comment, this.ID, String completedStatus, {this.direction, this.note, this.currency, this.isIgnored = false}){
+    final norm = completedStatus.toLowerCase();
+    final isCancelled = norm.contains('erveny') || norm.contains('érvény') || norm.contains('sikertelen');
+    if(!isCancelled && (
+        norm.contains('teljes') ||
+        norm.contains('kifizetett') ||
+        norm.contains('penzugyileg igazolt') ||
+        norm.contains('pénzügyileg igazolt') ||
+        norm.contains('torolt') ||
+        norm.contains('törölt'))){
       completed = true;
     }
   }
 
   @override
   String toString() {
-    return '$ammount\n$dueDateMs\n$comment\n$completed\n$ID\n${direction ?? ''}\n${note ?? ''}\n${currency ?? ''}';
+    return '$ammount\n$dueDateMs\n$comment\n$completed\n$ID\n${direction ?? ''}\n${note ?? ''}\n${currency ?? ''}\n$isIgnored';
   }
 
   CashinEntry fillWithExisting(String existing){
@@ -1950,6 +2311,7 @@ class CashinEntry{
     if (data.length > 5) direction = data[5].isNotEmpty ? data[5] : null;
     if (data.length > 6) note = data[6].isNotEmpty ? data[6] : null;
     if (data.length > 7) currency = data[7].isNotEmpty ? data[7] : null;
+    if (data.length > 8) isIgnored = bool.tryParse(data[8]) ?? false;
     return this;
   }
 }
@@ -2512,7 +2874,1082 @@ class CashinEntry{
       return ThemePackMap(themeName: json['themeName'], themeUrl: json['themeURL'], themepackAccent: Color(json['themeAccent']));
     }
   }
-  
+
+  class PetitionCounts {
+    final int availableCount;
+    final int startedCount;
+    final int sentBackToCorrectionCount;
+    final int submittedCount;
+
+    const PetitionCounts({
+      required this.availableCount,
+      required this.startedCount,
+      required this.sentBackToCorrectionCount,
+      required this.submittedCount,
+    });
+
+    factory PetitionCounts.fromJson(Map<String, dynamic> json) {
+      return PetitionCounts(
+        availableCount: json['availableCount'] ?? 0,
+        startedCount: json['startedCount'] ?? 0,
+        sentBackToCorrectionCount: json['sentBackToCorrectionCount'] ?? 0,
+        submittedCount: json['submittedCount'] ?? 0,
+      );
+    }
+  }
+
+  class PetitionTemplate {
+    final String requestFormTemplateId;
+    final String templateName;
+    final String? validFrom;
+    final String? validTo;
+    final String? feeInformation;
+
+    const PetitionTemplate({
+      required this.requestFormTemplateId,
+      required this.templateName,
+      this.validFrom,
+      this.validTo,
+      this.feeInformation,
+    });
+
+    static String parseFeeInformation(dynamic fee) {
+      if (fee == null) return '';
+      if (fee is Map) {
+        final feeVal = fee['feeValue'] ?? fee['fee'] ?? fee['amount'];
+        final feeCurr = fee['feeCurrency'] ?? fee['currency'] ?? 'Ft';
+        if (feeVal != null) {
+          final numVal = double.tryParse(feeVal.toString()) ?? 0;
+          if (numVal <= 0) return 'Ingyenes';
+          final formatted = numVal == numVal.toInt() ? numVal.toInt().toString() : numVal.toStringAsFixed(0);
+          final spaceFormatted = formatted.replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ');
+          return 'Díj: $spaceFormatted ${feeCurr == 'HUF' ? 'Ft' : feeCurr}';
+        }
+      }
+      final str = fee.toString().trim();
+      if (str.isEmpty || str == 'null') return '';
+      if (str.startsWith('{') && str.contains('feeValue')) {
+        try {
+          final feeMatch = RegExp(r'feeValue:\s*([0-9\.]+)').firstMatch(str) ?? RegExp(r'"feeValue":\s*([0-9\.]+)').firstMatch(str);
+          final currMatch = RegExp(r'feeCurrency:\s*([A-Za-z]+)').firstMatch(str) ?? RegExp(r'"feeCurrency":\s*"([^"]+)"').firstMatch(str);
+          if (feeMatch != null) {
+            final numVal = double.tryParse(feeMatch.group(1) ?? '0') ?? 0;
+            if (numVal <= 0) return 'Ingyenes';
+            final curr = currMatch?.group(1) ?? 'Ft';
+            final formatted = numVal == numVal.toInt() ? numVal.toInt().toString() : numVal.toStringAsFixed(0);
+            final spaceFormatted = formatted.replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ');
+            return 'Díj: $spaceFormatted ${curr == 'HUF' ? 'Ft' : curr}';
+          }
+        } catch (_) {}
+      }
+      return str;
+    }
+
+    factory PetitionTemplate.fromJson(Map<String, dynamic> json) {
+      return PetitionTemplate(
+        requestFormTemplateId: json['requestFormTemplateId']?.toString() ?? '',
+        templateName: json['templateName']?.toString() ?? '',
+        validFrom: json['validFrom']?.toString(),
+        validTo: json['validTo']?.toString(),
+        feeInformation: parseFeeInformation(json['feeInformation']),
+      );
+    }
+
+    Map<String, dynamic> toJson() {
+      return {
+        'requestFormTemplateId': requestFormTemplateId,
+        'templateName': templateName,
+        'validFrom': validFrom,
+        'validTo': validTo,
+        'feeInformation': feeInformation,
+      };
+    }
+  }
+
+  class StartedPetition {
+    final String requestFormTemplateId;
+    final String templateName;
+    final String? lastModified;
+    final String? validFrom;
+    final String? validTo;
+    final String? feeInformation;
+    final String? requestFormId;
+
+    const StartedPetition({
+      required this.requestFormTemplateId,
+      required this.templateName,
+      this.lastModified,
+      this.validFrom,
+      this.validTo,
+      this.feeInformation,
+      this.requestFormId,
+    });
+
+    factory StartedPetition.fromJson(Map<String, dynamic> json) {
+      return StartedPetition(
+        requestFormTemplateId: json['requestFormTemplateId']?.toString() ?? '',
+        templateName: json['templateName']?.toString() ?? '',
+        lastModified: json['lastModified']?.toString(),
+        validFrom: json['validFrom']?.toString(),
+        validTo: json['validTo']?.toString(),
+        feeInformation: PetitionTemplate.parseFeeInformation(json['feeInformation']),
+        requestFormId: json['requestFormId']?.toString(),
+      );
+    }
+
+    Map<String, dynamic> toJson() {
+      return {
+        'requestFormTemplateId': requestFormTemplateId,
+        'templateName': templateName,
+        'lastModified': lastModified,
+        'validFrom': validFrom,
+        'validTo': validTo,
+        'feeInformation': feeInformation,
+        'requestFormId': requestFormId,
+      };
+    }
+  }
+
+  class SubmittedPetition {
+    final String requestFormId;
+    final String templateName;
+    final String? submissionDate;
+    final String requestFormIdentifier;
+    final bool sentBackToCorrection;
+    final String statusText;
+    final int statusType;
+
+    const SubmittedPetition({
+      required this.requestFormId,
+      required this.templateName,
+      this.submissionDate,
+      required this.requestFormIdentifier,
+      this.sentBackToCorrection = false,
+      this.statusText = '',
+      this.statusType = 0,
+    });
+
+    factory SubmittedPetition.fromJson(Map<String, dynamic> json) {
+      String status = '';
+      int type = 0;
+      if (json['uiDisplayState'] != null && json['uiDisplayState'] is Map) {
+        final ui = json['uiDisplayState'];
+        type = ui['type'] ?? 0;
+        if (ui['reasons'] != null && ui['reasons'] is List && (ui['reasons'] as List).isNotEmpty) {
+          status = (ui['reasons'] as List).join(', ');
+        }
+      }
+      if (status.isEmpty) {
+        status = json['statusText']?.toString() ?? '';
+      }
+
+      return SubmittedPetition(
+        requestFormId: json['requestFormId']?.toString() ?? '',
+        templateName: json['templateName']?.toString() ?? '',
+        submissionDate: json['submissionDate']?.toString(),
+        requestFormIdentifier: json['requestFormIdentifier']?.toString() ?? '',
+        sentBackToCorrection: json['sentBackToCorrection'] == true,
+        statusText: status,
+        statusType: type,
+      );
+    }
+
+    Map<String, dynamic> toJson() {
+      return {
+        'requestFormId': requestFormId,
+        'templateName': templateName,
+        'submissionDate': submissionDate,
+        'requestFormIdentifier': requestFormIdentifier,
+        'sentBackToCorrection': sentBackToCorrection,
+        'statusText': statusText,
+        'statusType': statusType,
+      };
+    }
+  }
+
+  class PetitionsRequest {
+    static String getModernApiBase() {
+      String url = storage.DataCache.getInstituteUrl() ?? '';
+      url = url.replaceAll(RegExp(r'/MobileService\.svc.*$', caseSensitive: false), '');
+      url = url.replaceAll(RegExp(r'/hallgato/?$', caseSensitive: false), '');
+      url = url.replaceAll(RegExp(r'/ujhallgato/?$', caseSensitive: false), '');
+      return '$url/ujhallgato';
+    }
+
+    static Future<PetitionCounts?> getPetitionCounts() async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_COUNT_URL}');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null) {
+          return PetitionCounts.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching petition counts: $e');
+      }
+      return null;
+    }
+
+    static Future<List<PetitionTemplate>> getAvailableTemplates({int firstRow = 0, int lastRow = 100}) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_TEMPLATES_URL}?sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow&sortAndPage.templateName=asc');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((item) => PetitionTemplate.fromJson(item)).toList();
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching petition templates: $e');
+      }
+      return [];
+    }
+
+    static Future<List<SubmittedPetition>> getSubmittedPetitions({int firstRow = 0, int lastRow = 100}) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_SUBMITTED_URL}?sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow&sortAndPage.submissionDate=desc');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((item) => SubmittedPetition.fromJson(item)).toList();
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching submitted petitions: $e');
+      }
+      return [];
+    }
+
+    static Future<Map<String, dynamic>?> getStudentRequestForm(String templateId) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_GET_FORM_URL}?requestFormTemplateId=$templateId');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+      } catch (e) {
+        debug.log('Error fetching student request form: $e');
+      }
+      return null;
+    }
+
+    static Future<bool> savePageAndStepNext(List<Map<String, String>> formData) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_SAVE_PAGE_URL}');
+        final body = conv.jsonEncode({'formData': formData});
+        final responseBody = await _APIRequest.postRequestWithRetry(url, body);
+        final decoded = conv.jsonDecode(responseBody);
+        return decoded['ErrorMessage'] == null;
+      } catch (e) {
+        debug.log('Error saving petition page: $e');
+      }
+      return false;
+    }
+
+    static Future<Map<String, dynamic>?> getCurrentPage() async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_CURRENT_PAGE_URL}');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+      } catch (e) {
+        debug.log('Error fetching current page: $e');
+      }
+      return null;
+    }
+
+    static Future<String?> submitPetition() async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_SUBMIT_URL}');
+        final responseBody = await _APIRequest.postRequestWithRetry(url, '{}');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['notification'] != null && decoded['notification'] is List && (decoded['notification'] as List).isNotEmpty) {
+          return decoded['notification'][0]['description']?.toString();
+        }
+        return 'OK';
+      } catch (e) {
+        debug.log('Error submitting petition: $e');
+      }
+      return null;
+    }
+
+    static Future<List<StartedPetition>> getStartedPetitions({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_STARTED_TEMPLATES_URL}?sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow&sortAndPage.templateName=asc');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((item) => StartedPetition.fromJson(item)).toList();
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching started petitions: $e');
+      }
+      return [];
+    }
+
+    static Future<Map<String, dynamic>?> getStartedRequestFormTemplateDetails(String templateId) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_STARTED_DETAILS_URL}?requestFormTemplateId=$templateId');
+        final responseBody = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(responseBody);
+        if (decoded['data'] != null && decoded['data'] is Map) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+      } catch (e) {
+        debug.log('Error fetching started template details: $e');
+      }
+      return null;
+    }
+
+    static Future<bool> invalidateRequestForm(String requestFormId) async {
+      try {
+        final baseUrl = getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PETITIONS_INVALIDATE_URL}');
+        final body = conv.jsonEncode({'requestFormId': requestFormId});
+        final responseBody = await _APIRequest.postRequestWithRetry(url, body);
+        final decoded = conv.jsonDecode(responseBody);
+        return decoded['ErrorMessage'] == null;
+      } catch (e) {
+        debug.log('Error invalidating request form: $e');
+      }
+      return false;
+    }
+
+    static Future<bool> resetStartedPetition(String templateId, {String? requestFormId}) async {
+      try {
+        String? formId = requestFormId;
+        if (formId == null || formId.isEmpty) {
+          final details = await getStartedRequestFormTemplateDetails(templateId);
+          formId = details?['requestFormId']?.toString();
+        }
+        if (formId != null && formId.isNotEmpty) {
+          return await invalidateRequestForm(formId);
+        }
+      } catch (e) {
+        debug.log('Error in resetStartedPetition: $e');
+      }
+      return false;
+    }
+  }
+
+  // ==========================================
+  // SZEMÉLYES ADATOK, PROFIL & DOKUMENTUMTÁR
+  // ==========================================
+
+  class GeneralUserData {
+    final String title;
+    final String firstName;
+    final String lastName;
+    final String bornName;
+    final String bornDate;
+    final String bornCountry;
+    final String bornPlace;
+    final String motherName;
+    final String citizenship;
+    final String sex;
+    final String loginName;
+    final String maritalStatus;
+    final String educationalIdentifier;
+    final String taxIdentifier;
+    final String tajNumber;
+    final int numberOfChildren;
+
+    GeneralUserData({
+      required this.title,
+      required this.firstName,
+      required this.lastName,
+      required this.bornName,
+      required this.bornDate,
+      required this.bornCountry,
+      required this.bornPlace,
+      required this.motherName,
+      required this.citizenship,
+      required this.sex,
+      required this.loginName,
+      required this.maritalStatus,
+      required this.educationalIdentifier,
+      required this.taxIdentifier,
+      required this.tajNumber,
+      required this.numberOfChildren,
+    });
+
+    factory GeneralUserData.fromJson(Map<String, dynamic> json) {
+      String cit = '';
+      if (json['userCitizenship'] != null && json['userCitizenship'] is List && (json['userCitizenship'] as List).isNotEmpty) {
+        cit = json['userCitizenship'][0]['citizenship']?.toString() ?? '';
+      }
+      return GeneralUserData(
+        title: json['title']?.toString() ?? '',
+        firstName: json['firstName']?.toString() ?? '',
+        lastName: json['lastName']?.toString() ?? '',
+        bornName: json['bornName']?.toString() ?? '${json['bornLastName'] ?? ''} ${json['bornFirstName'] ?? ''}'.trim(),
+        bornDate: json['bornDate']?.toString() ?? '',
+        bornCountry: json['bornCountry']?.toString() ?? '',
+        bornPlace: json['bornPlace']?.toString() ?? '',
+        motherName: json['motherName']?.toString() ?? '${json['motherLastName'] ?? ''} ${json['motherFirstName'] ?? ''}'.trim(),
+        citizenship: cit.isNotEmpty ? cit : (json['bornCountry']?.toString() ?? 'Magyarország'),
+        sex: json['sex']?.toString() ?? '',
+        loginName: json['loginName']?.toString() ?? '',
+        maritalStatus: json['maritalStatus']?.toString() ?? '',
+        educationalIdentifier: json['educationalIdentifier']?.toString() ?? '',
+        taxIdentifier: json['taxIdentifier']?.toString() ?? '',
+        tajNumber: json['tajNumber']?.toString() ?? '',
+        numberOfChildren: json['numberOfChildren'] is int ? json['numberOfChildren'] : 0,
+      );
+    }
+
+    String get fullName => '$lastName $firstName'.trim();
+
+    Map<String, dynamic> toJson() => {
+      'title': title,
+      'firstName': firstName,
+      'lastName': lastName,
+      'bornName': bornName,
+      'bornDate': bornDate,
+      'bornCountry': bornCountry,
+      'bornPlace': bornPlace,
+      'motherName': motherName,
+      'citizenship': citizenship,
+      'sex': sex,
+      'loginName': loginName,
+      'maritalStatus': maritalStatus,
+      'educationalIdentifier': educationalIdentifier,
+      'taxIdentifier': taxIdentifier,
+      'tajNumber': tajNumber,
+      'numberOfChildren': numberOfChildren,
+    };
+  }
+
+  class StudentPersonalDocument {
+    final String id;
+    final String identifier;
+    final String typeString;
+
+    StudentPersonalDocument({required this.id, required this.identifier, required this.typeString});
+
+    factory StudentPersonalDocument.fromJson(Map<String, dynamic> json) {
+      return StudentPersonalDocument(
+        id: json['id']?.toString() ?? '',
+        identifier: json['identifier']?.toString() ?? '',
+        typeString: json['typeString']?.toString() ?? '',
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'identifier': identifier,
+      'typeString': typeString,
+    };
+  }
+
+  class StudentCardSticker {
+    final String id;
+    final String serialNumber;
+    final String releaseDate;
+    final String termString;
+    final String statusString;
+
+    StudentCardSticker({
+      required this.id,
+      required this.serialNumber,
+      required this.releaseDate,
+      required this.termString,
+      required this.statusString,
+    });
+
+    factory StudentCardSticker.fromJson(Map<String, dynamic> json) {
+      return StudentCardSticker(
+        id: json['id']?.toString() ?? '',
+        serialNumber: json['serialNumber']?.toString() ?? '',
+        releaseDate: json['releaseDate']?.toString() ?? '',
+        termString: json['termString']?.toString() ?? '',
+        statusString: json['statusString']?.toString() ?? '',
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'serialNumber': serialNumber,
+      'releaseDate': releaseDate,
+      'termString': termString,
+      'statusString': statusString,
+    };
+  }
+
+  class StudentCardDetails {
+    final String id;
+    final String serial;
+    final String releaseDate;
+    final String validityEnd;
+    final String facultyString;
+    final String statusString;
+    final String primaryInstituteName;
+    final List<StudentCardSticker> stickers;
+
+    StudentCardDetails({
+      required this.id,
+      required this.serial,
+      required this.releaseDate,
+      required this.validityEnd,
+      required this.facultyString,
+      required this.statusString,
+      required this.primaryInstituteName,
+      required this.stickers,
+    });
+
+    factory StudentCardDetails.fromJson(Map<String, dynamic> json) {
+      List<StudentCardSticker> stickerList = [];
+      if (json['stickerInformation'] != null && json['stickerInformation'] is List) {
+        stickerList = (json['stickerInformation'] as List)
+            .map((s) => StudentCardSticker.fromJson(s))
+            .toList();
+      }
+      return StudentCardDetails(
+        id: json['id']?.toString() ?? '',
+        serial: json['serial']?.toString() ?? '',
+        releaseDate: json['releaseDate']?.toString() ?? '',
+        validityEnd: json['validityEnd']?.toString() ?? '',
+        facultyString: json['facultyString']?.toString() ?? '',
+        statusString: json['statusString']?.toString() ?? '',
+        primaryInstituteName: json['primaryInstituteName']?.toString() ?? '',
+        stickers: stickerList,
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'serial': serial,
+      'releaseDate': releaseDate,
+      'validityEnd': validityEnd,
+      'facultyString': facultyString,
+      'statusString': statusString,
+      'primaryInstituteName': primaryInstituteName,
+      'stickers': stickers.map((s) => s.toJson()).toList(),
+    };
+  }
+
+  class StudentPhoneNumber {
+    final String id;
+    final String typeName;
+    final String number;
+    final bool isDefault;
+
+    StudentPhoneNumber({required this.id, required this.typeName, required this.number, required this.isDefault});
+
+    factory StudentPhoneNumber.fromJson(Map<String, dynamic> json) {
+      return StudentPhoneNumber(
+        id: json['phonenumberId']?.toString() ?? '',
+        typeName: json['phonenumberTypeName']?.toString() ?? 'Mobil',
+        number: json['phonenumber']?.toString() ?? '',
+        isDefault: json['isDefault'] == true,
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'typeName': typeName,
+      'number': number,
+      'isDefault': isDefault,
+    };
+  }
+
+  class StudentAddress {
+    final String id;
+    final String typeName;
+    final String postcode;
+    final String city;
+    final String street;
+
+    StudentAddress({required this.id, required this.typeName, required this.postcode, required this.city, required this.street});
+
+    factory StudentAddress.fromJson(Map<String, dynamic> json) {
+      return StudentAddress(
+        id: json['addressId']?.toString() ?? '',
+        typeName: json['addressTypeName']?.toString() ?? 'Lakcím',
+        postcode: json['postcode']?.toString() ?? '',
+        city: json['city']?.toString() ?? '',
+        street: json['street']?.toString() ?? '',
+      );
+    }
+
+    String get fullAddress => '$postcode $city, $street'.trim();
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'typeName': typeName,
+      'postcode': postcode,
+      'city': city,
+      'street': street,
+    };
+  }
+
+  class StudentEmail {
+    final String id;
+    final String typeName;
+    final String email;
+    final bool isDefault;
+
+    StudentEmail({required this.id, required this.typeName, required this.email, required this.isDefault});
+
+    factory StudentEmail.fromJson(Map<String, dynamic> json) {
+      return StudentEmail(
+        id: json['emailId']?.toString() ?? '',
+        typeName: json['emailTypeName']?.toString() ?? 'Email',
+        email: json['email']?.toString() ?? '',
+        isDefault: json['isDefault'] == true,
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'typeName': typeName,
+      'email': email,
+      'isDefault': isDefault,
+    };
+  }
+
+  class StudentContacts {
+    final List<StudentPhoneNumber> phones;
+    final List<StudentAddress> addresses;
+    final List<StudentEmail> emails;
+
+    StudentContacts({required this.phones, required this.addresses, required this.emails});
+
+    factory StudentContacts.fromJson(Map<String, dynamic> json) {
+      final phoneList = (json['phonenumberList'] as List? ?? []).map((p) => StudentPhoneNumber.fromJson(p)).toList();
+      final addressList = (json['addressList'] as List? ?? []).map((a) => StudentAddress.fromJson(a)).toList();
+      final emailList = (json['emailList'] as List? ?? []).map((e) => StudentEmail.fromJson(e)).toList();
+      return StudentContacts(phones: phoneList, addresses: addressList, emails: emailList);
+    }
+
+    Map<String, dynamic> toJson() => {
+      'phonenumberList': phones.map((p) => p.toJson()).toList(),
+      'addressList': addresses.map((a) => a.toJson()).toList(),
+      'emailList': emails.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  class DefaultBankAccount {
+    final String accountNumber;
+    final String bankName;
+    final String currency;
+    final bool isDefault;
+
+    DefaultBankAccount({
+      required this.accountNumber,
+      required this.bankName,
+      required this.currency,
+      required this.isDefault,
+    });
+
+    factory DefaultBankAccount.fromJson(Map<String, dynamic> json) {
+      return DefaultBankAccount(
+        accountNumber: json['accountNumber']?.toString() ?? json['bankAccountNumber']?.toString() ?? '',
+        bankName: json['bankName']?.toString() ?? '',
+        currency: json['currency']?.toString() ?? 'HUF',
+        isDefault: json['isDefault'] == true,
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'accountNumber': accountNumber,
+      'bankName': bankName,
+      'currency': currency,
+      'isDefault': isDefault,
+    };
+  }
+
+  class UserProfileSettings {
+    final bool isLoginNameVisible;
+    final bool isNicknameVisible;
+    final String loginName;
+    final String nickname;
+    final String photoLastChangedAt;
+
+    UserProfileSettings({
+      required this.isLoginNameVisible,
+      required this.isNicknameVisible,
+      required this.loginName,
+      required this.nickname,
+      required this.photoLastChangedAt,
+    });
+
+    factory UserProfileSettings.fromJson(Map<String, dynamic> json) {
+      return UserProfileSettings(
+        isLoginNameVisible: json['isLoginNameVisible'] == true,
+        isNicknameVisible: json['isNicknameVisible'] == true,
+        loginName: json['loginName']?.toString() ?? '',
+        nickname: json['nickname']?.toString() ?? '',
+        photoLastChangedAt: json['photoLastChangedAt']?.toString() ?? '',
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'isLoginNameVisible': isLoginNameVisible,
+      'isNicknameVisible': isNicknameVisible,
+      'loginName': loginName,
+      'nickname': nickname,
+      'photoLastChangedAt': photoLastChangedAt,
+    };
+  }
+
+  class DocumentStorageDashboard {
+    final int trDocumentsCount;
+    final int documentsUploadedForStudentCount;
+    final int documentsUploadedByStudentCount;
+    final int trDocumentsThatShouldBeESignedCount;
+
+    DocumentStorageDashboard({
+      required this.trDocumentsCount,
+      required this.documentsUploadedForStudentCount,
+      required this.documentsUploadedByStudentCount,
+      required this.trDocumentsThatShouldBeESignedCount,
+    });
+
+    factory DocumentStorageDashboard.fromJson(Map<String, dynamic> json) {
+      return DocumentStorageDashboard(
+        trDocumentsCount: json['trDocumentsCount'] is int ? json['trDocumentsCount'] : 0,
+        documentsUploadedForStudentCount: json['documentsUploadedForStudentCount'] is int ? json['documentsUploadedForStudentCount'] : 0,
+        documentsUploadedByStudentCount: json['documentsUploadedByStudentCount'] is int ? json['documentsUploadedByStudentCount'] : 0,
+        trDocumentsThatShouldBeESignedCount: json['trDocumentsThatShouldBeESignedCount'] is int ? json['trDocumentsThatShouldBeESignedCount'] : 0,
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'trDocumentsCount': trDocumentsCount,
+      'documentsUploadedForStudentCount': documentsUploadedForStudentCount,
+      'documentsUploadedByStudentCount': documentsUploadedByStudentCount,
+      'trDocumentsThatShouldBeESignedCount': trDocumentsThatShouldBeESignedCount,
+    };
+  }
+
+  class StorageDocumentItem {
+    final String id;
+    final String name;
+    final String type;
+    final String uploadDate;
+    final String? registrationNumber;
+    final String? connectionType;
+    final bool isDeletable;
+    final String? certificationStatus;
+
+    StorageDocumentItem({
+      required this.id,
+      required this.name,
+      required this.type,
+      required this.uploadDate,
+      this.registrationNumber,
+      this.connectionType,
+      this.isDeletable = false,
+      this.certificationStatus,
+    });
+
+    factory StorageDocumentItem.fromJson(Map<String, dynamic> json) {
+      return StorageDocumentItem(
+        id: json['id']?.toString() ?? json['documentationId']?.toString() ?? '',
+        name: json['name']?.toString() ?? json['documentationName']?.toString() ?? '',
+        type: json['type']?.toString() ?? json['documentationType']?.toString() ?? '',
+        uploadDate: json['uploadDate']?.toString() ?? json['documentationUploadDate']?.toString() ?? '',
+        registrationNumber: json['registrationNumber']?.toString(),
+        connectionType: json['connectionType']?.toString(),
+        isDeletable: json['isDeletable'] == true,
+        certificationStatus: json['certificationStatusString']?.toString() ?? json['userCertificationStatusDescription']?.toString(),
+      );
+    }
+
+    Map<String, dynamic> toJson() => {
+      'id': id,
+      'name': name,
+      'type': type,
+      'uploadDate': uploadDate,
+      'registrationNumber': registrationNumber,
+      'connectionType': connectionType,
+      'isDeletable': isDeletable,
+      'certificationStatus': certificationStatus,
+    };
+  }
+
+  class PersonalDataRequest {
+    static Future<GeneralUserData?> getGeneralUserData() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PERSONAL_DATA_GENERAL_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedPersonalDataRaw(response);
+          return GeneralUserData.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching GeneralUserData: $e');
+      }
+      return null;
+    }
+
+    static Future<List<StudentPersonalDocument>> getStudentPersonalDocuments() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PERSONAL_DATA_DOCUMENTS_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data']['studentPersonalDocuments'] != null) {
+          await storage.DataCache.setCachedPersonalDocumentsRaw(response);
+          return (decoded['data']['studentPersonalDocuments'] as List)
+              .map((d) => StudentPersonalDocument.fromJson(d))
+              .toList();
+        }
+      } catch (e) {
+        debug.log('Error fetching PersonalDocuments: $e');
+      }
+      return [];
+    }
+
+    static Future<StudentCardDetails?> getStudentCardDetails(String cardId) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PERSONAL_DATA_CARD_DETAILS_URL}?id=$cardId');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedStudentCardRaw(response);
+          return StudentCardDetails.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching StudentCardDetails: $e');
+      }
+      return null;
+    }
+
+    static Future<StudentContacts?> getStudentPersonalDataContacts() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PERSONAL_DATA_CONTACTS_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedPersonalContactsRaw(response);
+          return StudentContacts.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching StudentContacts: $e');
+      }
+      return null;
+    }
+
+    static Future<DefaultBankAccount?> getDefaultBankAccount() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.PERSONAL_DATA_BANK_ACCOUNT_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedBankAccountRaw(response);
+          return DefaultBankAccount.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching DefaultBankAccount: $e');
+      }
+      return null;
+    }
+  }
+
+  class UserProfileRequest {
+    static Future<String?> getUserAvatar({bool forceRefresh = false}) async {
+      if (!forceRefresh) {
+        final cached = storage.DataCache.getCachedUserAvatarBase64();
+        if (cached != null && cached.isNotEmpty) {
+          return cached;
+        }
+      }
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.USER_PROFILE_AVATAR_URL}?imageSizeType=Normal');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data']['image'] != null) {
+          final imgBase64 = decoded['data']['image'].toString();
+          await storage.DataCache.setCachedUserAvatarBase64(imgBase64);
+          return imgBase64;
+        }
+      } catch (e) {
+        debug.log('Error fetching UserAvatar: $e');
+      }
+      return null;
+    }
+
+    static Future<UserProfileSettings?> getUserProfileSettings() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.USER_PROFILE_SETTINGS_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedProfileSettingsRaw(response);
+          return UserProfileSettings.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching UserProfileSettings: $e');
+      }
+      return null;
+    }
+
+    static Future<List<String>> getFallbackColorCodes() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.USER_PROFILE_FALLBACK_COLORS_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          return (decoded['data'] as List).map((c) => c.toString()).toList();
+        }
+      } catch (e) {
+        debug.log('Error fetching FallbackColorCodes: $e');
+      }
+      return ['A62C2C', 'F2994A', '00DEA4', '0943D9', 'BDD910', 'FF2113', 'B605BA'];
+    }
+
+    static Future<bool> isPasswordModificationAllowed() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.USER_PROFILE_IS_PASSWORD_MOD_ALLOWED_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null) {
+          return decoded['data'] == true;
+        }
+      } catch (e) {
+        debug.log('Error fetching isPasswordModificationAllowed: $e');
+      }
+      return true;
+    }
+
+    static Future<bool> saveUserProfileSettings({
+      required String loginName,
+      required String nickname,
+      int avatarType = 0,
+      String? base64EncodedProfilePicture,
+    }) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.USER_PROFILE_SAVE_SETTINGS_URL}');
+        final body = conv.jsonEncode({
+          'loginName': loginName,
+          'nickname': nickname,
+          'avatarType': avatarType,
+          'base64EncodedProfilePicture': base64EncodedProfilePicture ?? '',
+        });
+        final response = await _APIRequest.postRequestWithRetry(url, body);
+        final decoded = conv.jsonDecode(response);
+        return decoded['errorMessage'] == null && decoded['ErrorMessage'] == null;
+      } catch (e) {
+        debug.log('Error saving UserProfileSettings: $e');
+      }
+      return false;
+    }
+  }
+
+  class DocumentStorageRequest {
+    static Future<DocumentStorageDashboard?> getDashboardData() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DOCUMENT_STORAGE_DASHBOARD_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          await storage.DataCache.setCachedStorageDashboardRaw(response);
+          return DocumentStorageDashboard.fromJson(decoded['data']);
+        }
+      } catch (e) {
+        debug.log('Error fetching DocumentStorageDashboard: $e');
+      }
+      return null;
+    }
+
+    static Future<List<StorageDocumentItem>> getDocumentsUploadedForStudent({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DOCUMENT_STORAGE_FOR_STUDENT_URL}?sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((d) => StorageDocumentItem.fromJson(d)).toList();
+          await storage.DataCache.setCachedStorageForStudentDocsRaw(
+              list.map((item) => conv.jsonEncode(item.toJson())).toList());
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching DocumentsUploadedForStudent: $e');
+      }
+      return [];
+    }
+
+    static Future<List<StorageDocumentItem>> getDocumentsUploadedByStudent({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DOCUMENT_STORAGE_BY_STUDENT_URL}?sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow&sortAndPage.documentationName=asc');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((d) => StorageDocumentItem.fromJson(d)).toList();
+          await storage.DataCache.setCachedStorageByStudentDocsRaw(
+              list.map((item) => conv.jsonEncode(item.toJson())).toList());
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching DocumentsUploadedByStudent: $e');
+      }
+      return [];
+    }
+
+    static Future<List<StorageDocumentItem>> getTrDocuments({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DOCUMENT_STORAGE_TR_URL}?request.isOnlyCertificated=false&request.mustBeCertified=false&request.isOnlyLegalRemediableFilter=false&sortAndPage.firstRow=$firstRow&sortAndPage.lastRow=$lastRow&sortAndPage.documentationName=asc');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((d) => StorageDocumentItem.fromJson(d)).toList();
+          await storage.DataCache.setCachedStorageTrDocsRaw(
+              list.map((item) => conv.jsonEncode(item.toJson())).toList());
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching TrDocuments: $e');
+      }
+      return [];
+    }
+
+    static Future<Uint8List?> downloadDocumentPdf(String docId) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DOCUMENT_STORAGE_DOWNLOAD_URL}');
+        final body = conv.jsonEncode({
+          'documentationIds': [docId]
+        });
+        final response = await _APIRequest.postRequestRawWithRetry(url, body);
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          return response.bodyBytes;
+        }
+      } catch (e) {
+        debug.log('Error downloading document PDF: $e');
+      }
+      return null;
+    }
+  }
+
   class NeptunCerts extends HttpOverrides {
     static NeptunCerts? _instance;
     static bool hasValidCertificate = true;

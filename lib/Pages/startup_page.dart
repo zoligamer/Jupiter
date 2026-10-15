@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:neptun2/API/api_coms.dart' as api;
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/API/api_coms.dart' as api;
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/haptics.dart';
+import 'package:jupiter/language.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../storage.dart';
 import 'main_page.dart' as main_page;
 import 'setup_page.dart' as setup_page;
+import 'language_select_page.dart';
 
 class Splitter extends StatefulWidget{
   const Splitter({super.key});
@@ -65,6 +66,17 @@ class _SplitterState extends State<Splitter>{
         );
         return;
       }
+
+      final selectedLang = DataCache.getUserSelectedLanguage();
+      final selectedCode = DataCache.getUserSelectedLanguageCode();
+      if ((selectedLang == null || selectedLang < 0) && (selectedCode == null || selectedCode.isEmpty)) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LanguageSelectPage()),
+        );
+        return;
+      }
+
       Navigator.push(
         context,
         MaterialPageRoute(

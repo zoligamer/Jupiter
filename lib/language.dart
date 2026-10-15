@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert' as conv;
 import 'package:flutter/material.dart';
-import 'package:neptun2/storage.dart';
+import 'package:jupiter/storage.dart';
 import 'API/api_coms.dart';
 import 'Misc/popup.dart';
 import 'Pages/startup_page.dart';
@@ -131,6 +131,50 @@ class AppStrings{
       topmenu_NoUnreadMessages: 'Nincs új üzenet',
       topmenu_MessagesTitle: 'Üzenetek',
       topmenu_PaymentsTitle: 'Pénzügyek',
+      topmenu_PetitionsTitle: 'Kérvények',
+      topmenu_DocumentsTitle: 'Dokumentumtár',
+      topmenu_ProfileTitle: 'Személyes Adatok & Beállítások',
+      petitions_Header: 'Kérvénykezelés',
+      petitions_TabAvailable: 'Leadható kérvények',
+      petitions_TabSubmitted: 'Leadott kérvények',
+      petitions_SearchHint: 'Kérvény keresése...',
+      petitions_NoAvailable: 'Nincs leadható kérvény',
+      petitions_NoSubmitted: 'Nincs leadott kérvény',
+      petitions_SubmitButton: 'Kérvény leadása',
+      petitions_StepFill: 'Adatok megadása',
+      petitions_StepPreview: 'Nyomtatási előnézet',
+      petitions_SubmitSuccess: 'A kérvény sikeresen leadva!',
+      petitions_SubmitConfirm: 'Biztosan be szeretnéd nyújtani a kérvényt?',
+      petitions_Fee: 'Díj',
+      petitions_ValidUntil: 'Érvényesség',
+      petitions_StatusAccepted: 'Elfogadva',
+      petitions_StatusRejected: 'Elutasítva',
+      petitions_StatusProcessing: 'Feldolgozás alatt',
+      petitions_TabStarted: 'Megkezdett',
+      petitions_NoStarted: 'Nincs megkezdett kérvény',
+      petitions_Continue: 'Folytatás',
+      petitions_Reset: 'Visszaállítás',
+      petitions_ResetConfirm: 'Biztosan elveted a megkezdett kérvényt? A kitöltött adatok elvesznek, és a kérvény visszakerül a leadható kérvények közé.',
+      petitions_ResetSuccess: 'A kérvény piszkozata sikeresen törölve!',
+      petitions_ExitOptionsTitle: 'Kilépés a kérvényből',
+      petitions_ExitKeepDraft: 'Mentés piszkozatként és kilépés',
+      petitions_ExitDiscard: 'Kilépés mentés nélkül (visszaállítás)',
+      calendarFilter_Title: 'Órarendi Beállítások',
+      calendarFilter_TO: 'Tanulmányi Iroda (TO) sáv',
+      calendarFilter_TODesc: 'Félfogadási idők és helyszínek jelzése a naptárban',
+      calendarFilter_Periods: 'Időszakok jelzése az órarendben',
+      calendarFilter_PeriodsDesc: 'Aktuális féléves időszakok megjelenítése',
+      topbar_TOOn: 'TO Be',
+      topbar_TOOff: 'TO Ki',
+      profile_TabDetails: 'Adatlap',
+      profile_TabSettings: 'Beállítások',
+      profile_Header: 'Személyes Adatok & Beállítások',
+      profile_Subheader: 'Hallgatói törzsadatlap és biztonság',
+      documents_Header: 'Dokumentumtár',
+      documents_Subheader: 'Hivatalos határozatok, igazolások és iratok',
+      documents_TabOfficial: 'Hivatalos',
+      documents_TabSubmitted: 'Benyújtott',
+      documents_TabTr: 'TR iratok',
       calendarPage_FreeDay: '🥳Szabadnap!🥳',
       calendarPage_weekNav_ClassesThisWeekFull: 'Óráid ezen a héten: %0 %1. - %2 %3.',
       calendarPage_weekNav_ClassesThisWeekOneDay: 'Órád ezen a héten: %0 %1. (%2)',
@@ -326,7 +370,51 @@ class AppStrings{
       topmenu_UnreadMessagesBadge: '%0 new messages',
       topmenu_NoUnreadMessages: 'No new messages',
       topmenu_MessagesTitle: 'Messages',
-      topmenu_PaymentsTitle: 'Payments',
+      topmenu_PaymentsTitle: 'Finances',
+      topmenu_PetitionsTitle: 'Requests & Petitions',
+      topmenu_DocumentsTitle: 'Document Vault',
+      topmenu_ProfileTitle: 'Personal Data & Settings',
+      petitions_Header: 'Requests & Petitions',
+      petitions_TabAvailable: 'Available Requests',
+      petitions_TabSubmitted: 'Submitted Requests',
+      petitions_SearchHint: 'Search requests...',
+      petitions_NoAvailable: 'No available requests',
+      petitions_NoSubmitted: 'No submitted requests',
+      petitions_SubmitButton: 'Submit Request',
+      petitions_StepFill: 'Fill in Details',
+      petitions_StepPreview: 'Print Preview',
+      petitions_SubmitSuccess: 'Request submitted successfully!',
+      petitions_SubmitConfirm: 'Are you sure you want to submit this request?',
+      petitions_Fee: 'Fee',
+      petitions_ValidUntil: 'Validity',
+      petitions_StatusAccepted: 'Accepted',
+      petitions_StatusRejected: 'Rejected',
+      petitions_StatusProcessing: 'In Progress',
+      petitions_TabStarted: 'In Progress',
+      petitions_NoStarted: 'No petitions in progress',
+      petitions_Continue: 'Continue',
+      petitions_Reset: 'Reset',
+      petitions_ResetConfirm: 'Are you sure you want to discard this started petition? All entered data will be reset, and the petition will return to available.',
+      petitions_ResetSuccess: 'Started petition discarded successfully!',
+      petitions_ExitOptionsTitle: 'Exit Petition',
+      petitions_ExitKeepDraft: 'Save draft & exit',
+      petitions_ExitDiscard: 'Exit without saving (reset)',
+      calendarFilter_Title: 'Timetable Settings',
+      calendarFilter_TO: 'Student Office (TO) schedule',
+      calendarFilter_TODesc: 'Show office hours and rooms in calendar',
+      calendarFilter_Periods: 'Show periods in timetable',
+      calendarFilter_PeriodsDesc: 'Display active semester periods',
+      topbar_TOOn: 'TO On',
+      topbar_TOOff: 'TO Off',
+      profile_TabDetails: 'Profile',
+      profile_TabSettings: 'Settings',
+      profile_Header: 'Personal Data & Settings',
+      profile_Subheader: 'Student master record and security',
+      documents_Header: 'Document Vault',
+      documents_Subheader: 'Official resolutions, certificates and records',
+      documents_TabOfficial: 'Official',
+      documents_TabSubmitted: 'Submitted',
+      documents_TabTr: 'TR Records',
       calendarPage_FreeDay: '🥳Free Day!🥳',
       calendarPage_weekNav_ClassesThisWeekFull: 'Classes this week: %0 %1. - %2 %3.',
       calendarPage_weekNav_ClassesThisWeekOneDay: 'Class this week: %0 %1. (%2)',
@@ -785,6 +873,52 @@ class LanguagePack{
 
   final String popup_caseDefault_InvalidPopupState;
 
+  final String topmenu_PetitionsTitle;
+  final String topmenu_DocumentsTitle;
+  final String topmenu_ProfileTitle;
+  final String petitions_Header;
+  final String petitions_TabAvailable;
+  final String petitions_TabSubmitted;
+  final String petitions_SearchHint;
+  final String petitions_NoAvailable;
+  final String petitions_NoSubmitted;
+  final String petitions_SubmitButton;
+  final String petitions_StepFill;
+  final String petitions_StepPreview;
+  final String petitions_SubmitSuccess;
+  final String petitions_SubmitConfirm;
+  final String petitions_Fee;
+  final String petitions_ValidUntil;
+  final String petitions_StatusAccepted;
+  final String petitions_StatusRejected;
+  final String petitions_StatusProcessing;
+  final String petitions_TabStarted;
+  final String petitions_NoStarted;
+  final String petitions_Continue;
+  final String petitions_Reset;
+  final String petitions_ResetConfirm;
+  final String petitions_ResetSuccess;
+  final String petitions_ExitOptionsTitle;
+  final String petitions_ExitKeepDraft;
+  final String petitions_ExitDiscard;
+
+  final String calendarFilter_Title;
+  final String calendarFilter_TO;
+  final String calendarFilter_TODesc;
+  final String calendarFilter_Periods;
+  final String calendarFilter_PeriodsDesc;
+  final String topbar_TOOn;
+  final String topbar_TOOff;
+  final String profile_TabDetails;
+  final String profile_TabSettings;
+  final String profile_Header;
+  final String profile_Subheader;
+  final String documents_Header;
+  final String documents_Subheader;
+  final String documents_TabOfficial;
+  final String documents_TabSubmitted;
+  final String documents_TabTr;
+
   const LanguagePack({
     required this.language_flag,
     required this.rootpage_setupPage_SelectLoginTypeHeader,
@@ -979,7 +1113,51 @@ class LanguagePack{
     this.topmenu_UnreadMessagesBadge = '%0 új üzenet',
     this.topmenu_NoUnreadMessages = 'Nincs új üzenet',
     this.topmenu_MessagesTitle = 'Üzenetek',
-    this.topmenu_PaymentsTitle = 'Pénzügyek'
+    this.topmenu_PaymentsTitle = 'Pénzügyek',
+    this.topmenu_PetitionsTitle = 'Kérvények',
+    this.topmenu_DocumentsTitle = 'Dokumentumtár',
+    this.topmenu_ProfileTitle = 'Személyes Adatok & Beállítások',
+    this.petitions_Header = 'Kérvénykezelés',
+    this.petitions_TabAvailable = 'Leadható kérvények',
+    this.petitions_TabSubmitted = 'Leadott kérvények',
+    this.petitions_SearchHint = 'Kérvény keresése...',
+    this.petitions_NoAvailable = 'Nincs leadható kérvény',
+    this.petitions_NoSubmitted = 'Nincs leadott kérvény',
+    this.petitions_SubmitButton = 'Kérvény leadása',
+    this.petitions_StepFill = 'Adatok megadása',
+    this.petitions_StepPreview = 'Nyomtatási előnézet',
+    this.petitions_SubmitSuccess = 'A kérvény sikeresen leadva!',
+    this.petitions_SubmitConfirm = 'Biztosan be szeretnéd nyújtani a kérvényt?',
+    this.petitions_Fee = 'Díj',
+    this.petitions_ValidUntil = 'Érvényesség',
+    this.petitions_StatusAccepted = 'Elfogadva',
+    this.petitions_StatusRejected = 'Elutasítva',
+    this.petitions_StatusProcessing = 'Feldolgozás alatt',
+    this.petitions_TabStarted = 'Megkezdett',
+    this.petitions_NoStarted = 'Nincs megkezdett kérvény',
+    this.petitions_Continue = 'Folytatás',
+    this.petitions_Reset = 'Visszaállítás',
+    this.petitions_ResetConfirm = 'Biztosan elveted a megkezdett kérvényt? A kitöltött adatok elvesznek, és a kérvény visszakerül a leadható kérvények közé.',
+    this.petitions_ResetSuccess = 'A kérvény piszkozata sikeresen törölve!',
+    this.petitions_ExitOptionsTitle = 'Kilépés a kérvényből',
+    this.petitions_ExitKeepDraft = 'Mentés piszkozatként és kilépés',
+    this.petitions_ExitDiscard = 'Kilépés mentés nélkül (visszaállítás)',
+    this.calendarFilter_Title = 'Órarendi Beállítások',
+    this.calendarFilter_TO = 'Tanulmányi Iroda (TO) sáv',
+    this.calendarFilter_TODesc = 'Félfogadási idők és helyszínek jelzése a naptárban',
+    this.calendarFilter_Periods = 'Időszakok jelzése az órarendben',
+    this.calendarFilter_PeriodsDesc = 'Aktuális féléves időszakok megjelenítése',
+    this.topbar_TOOn = 'TO Be',
+    this.topbar_TOOff = 'TO Ki',
+    this.profile_TabDetails = 'Adatlap',
+    this.profile_TabSettings = 'Beállítások',
+    this.profile_Header = 'Személyes Adatok & Beállítások',
+    this.profile_Subheader = 'Hallgatói törzsadatlap és biztonság',
+    this.documents_Header = 'Dokumentumtár',
+    this.documents_Subheader = 'Hivatalos határozatok, igazolások és iratok',
+    this.documents_TabOfficial = 'Hivatalos',
+    this.documents_TabSubmitted = 'Benyújtott',
+    this.documents_TabTr = 'TR iratok'
   });
 
   static LanguagePack fromJson(String countryId, String json, VoidCallback onLanguageOutdated){
@@ -1198,6 +1376,50 @@ class LanguagePack{
         topmenu_NoUnreadMessages: getStr('topmenu_NoUnreadMessages', en.topmenu_NoUnreadMessages),
         topmenu_MessagesTitle: getStr('topmenu_MessagesTitle', en.topmenu_MessagesTitle),
         topmenu_PaymentsTitle: getStr('topmenu_PaymentsTitle', en.topmenu_PaymentsTitle),
+        topmenu_PetitionsTitle: getStr('topmenu_PetitionsTitle', en.topmenu_PetitionsTitle),
+        topmenu_DocumentsTitle: getStr('topmenu_DocumentsTitle', en.topmenu_DocumentsTitle),
+        topmenu_ProfileTitle: getStr('topmenu_ProfileTitle', en.topmenu_ProfileTitle),
+        petitions_Header: getStr('petitions_Header', en.petitions_Header),
+        petitions_TabAvailable: getStr('petitions_TabAvailable', en.petitions_TabAvailable),
+        petitions_TabSubmitted: getStr('petitions_TabSubmitted', en.petitions_TabSubmitted),
+        petitions_SearchHint: getStr('petitions_SearchHint', en.petitions_SearchHint),
+        petitions_NoAvailable: getStr('petitions_NoAvailable', en.petitions_NoAvailable),
+        petitions_NoSubmitted: getStr('petitions_NoSubmitted', en.petitions_NoSubmitted),
+        petitions_SubmitButton: getStr('petitions_SubmitButton', en.petitions_SubmitButton),
+        petitions_StepFill: getStr('petitions_StepFill', en.petitions_StepFill),
+        petitions_StepPreview: getStr('petitions_StepPreview', en.petitions_StepPreview),
+        petitions_SubmitSuccess: getStr('petitions_SubmitSuccess', en.petitions_SubmitSuccess),
+        petitions_SubmitConfirm: getStr('petitions_SubmitConfirm', en.petitions_SubmitConfirm),
+        petitions_Fee: getStr('petitions_Fee', en.petitions_Fee),
+        petitions_ValidUntil: getStr('petitions_ValidUntil', en.petitions_ValidUntil),
+        petitions_StatusAccepted: getStr('petitions_StatusAccepted', en.petitions_StatusAccepted),
+        petitions_StatusRejected: getStr('petitions_StatusRejected', en.petitions_StatusRejected),
+        petitions_StatusProcessing: getStr('petitions_StatusProcessing', en.petitions_StatusProcessing),
+        petitions_TabStarted: getStr('petitions_TabStarted', en.petitions_TabStarted),
+        petitions_NoStarted: getStr('petitions_NoStarted', en.petitions_NoStarted),
+        petitions_Continue: getStr('petitions_Continue', en.petitions_Continue),
+        petitions_Reset: getStr('petitions_Reset', en.petitions_Reset),
+        petitions_ResetConfirm: getStr('petitions_ResetConfirm', en.petitions_ResetConfirm),
+        petitions_ResetSuccess: getStr('petitions_ResetSuccess', en.petitions_ResetSuccess),
+        petitions_ExitOptionsTitle: getStr('petitions_ExitOptionsTitle', en.petitions_ExitOptionsTitle),
+        petitions_ExitKeepDraft: getStr('petitions_ExitKeepDraft', en.petitions_ExitKeepDraft),
+        petitions_ExitDiscard: getStr('petitions_ExitDiscard', en.petitions_ExitDiscard),
+        calendarFilter_Title: getStr('calendarFilter_Title', en.calendarFilter_Title),
+        calendarFilter_TO: getStr('calendarFilter_TO', en.calendarFilter_TO),
+        calendarFilter_TODesc: getStr('calendarFilter_TODesc', en.calendarFilter_TODesc),
+        calendarFilter_Periods: getStr('calendarFilter_Periods', en.calendarFilter_Periods),
+        calendarFilter_PeriodsDesc: getStr('calendarFilter_PeriodsDesc', en.calendarFilter_PeriodsDesc),
+        topbar_TOOn: getStr('topbar_TOOn', en.topbar_TOOn),
+        topbar_TOOff: getStr('topbar_TOOff', en.topbar_TOOff),
+        profile_TabDetails: getStr('profile_TabDetails', en.profile_TabDetails),
+        profile_TabSettings: getStr('profile_TabSettings', en.profile_TabSettings),
+        profile_Header: getStr('profile_Header', en.profile_Header),
+        profile_Subheader: getStr('profile_Subheader', en.profile_Subheader),
+        documents_Header: getStr('documents_Header', en.documents_Header),
+        documents_Subheader: getStr('documents_Subheader', en.documents_Subheader),
+        documents_TabOfficial: getStr('documents_TabOfficial', en.documents_TabOfficial),
+        documents_TabSubmitted: getStr('documents_TabSubmitted', en.documents_TabSubmitted),
+        documents_TabTr: getStr('documents_TabTr', en.documents_TabTr),
       );
     }
     catch(error){
@@ -1409,7 +1631,51 @@ class LanguagePack{
       'calendarLogin_setupPage_WhereIsICSHelper':lang.calendarLogin_setupPage_WhereIsICSHelper,
       'calendarLogin_setupPage_WhereIsICSHelperDescription':lang.calendarLogin_setupPage_WhereIsICSHelperDescription,
       'calendarLogin_setupPage_ImportICSFileHelpText':lang.calendarLogin_setupPage_ImportICSFileHelpText,
-      'calendarLogin_setupPage_ImportICSFileButton':lang.calendarLogin_setupPage_ImportICSFileButton
+      'calendarLogin_setupPage_ImportICSFileButton':lang.calendarLogin_setupPage_ImportICSFileButton,
+      'topmenu_PetitionsTitle':lang.topmenu_PetitionsTitle,
+      'topmenu_DocumentsTitle':lang.topmenu_DocumentsTitle,
+      'topmenu_ProfileTitle':lang.topmenu_ProfileTitle,
+      'petitions_Header':lang.petitions_Header,
+      'petitions_TabAvailable':lang.petitions_TabAvailable,
+      'petitions_TabSubmitted':lang.petitions_TabSubmitted,
+      'petitions_SearchHint':lang.petitions_SearchHint,
+      'petitions_NoAvailable':lang.petitions_NoAvailable,
+      'petitions_NoSubmitted':lang.petitions_NoSubmitted,
+      'petitions_SubmitButton':lang.petitions_SubmitButton,
+      'petitions_StepFill':lang.petitions_StepFill,
+      'petitions_StepPreview':lang.petitions_StepPreview,
+      'petitions_SubmitSuccess':lang.petitions_SubmitSuccess,
+      'petitions_SubmitConfirm':lang.petitions_SubmitConfirm,
+      'petitions_Fee':lang.petitions_Fee,
+      'petitions_ValidUntil':lang.petitions_ValidUntil,
+      'petitions_StatusAccepted':lang.petitions_StatusAccepted,
+      'petitions_StatusRejected':lang.petitions_StatusRejected,
+      'petitions_StatusProcessing':lang.petitions_StatusProcessing,
+      'petitions_TabStarted':lang.petitions_TabStarted,
+      'petitions_NoStarted':lang.petitions_NoStarted,
+      'petitions_Continue':lang.petitions_Continue,
+      'petitions_Reset':lang.petitions_Reset,
+      'petitions_ResetConfirm':lang.petitions_ResetConfirm,
+      'petitions_ResetSuccess':lang.petitions_ResetSuccess,
+      'petitions_ExitOptionsTitle':lang.petitions_ExitOptionsTitle,
+      'petitions_ExitKeepDraft':lang.petitions_ExitKeepDraft,
+      'petitions_ExitDiscard':lang.petitions_ExitDiscard,
+      'calendarFilter_Title':lang.calendarFilter_Title,
+      'calendarFilter_TO':lang.calendarFilter_TO,
+      'calendarFilter_TODesc':lang.calendarFilter_TODesc,
+      'calendarFilter_Periods':lang.calendarFilter_Periods,
+      'calendarFilter_PeriodsDesc':lang.calendarFilter_PeriodsDesc,
+      'topbar_TOOn':lang.topbar_TOOn,
+      'topbar_TOOff':lang.topbar_TOOff,
+      'profile_TabDetails':lang.profile_TabDetails,
+      'profile_TabSettings':lang.profile_TabSettings,
+      'profile_Header':lang.profile_Header,
+      'profile_Subheader':lang.profile_Subheader,
+      'documents_Header':lang.documents_Header,
+      'documents_Subheader':lang.documents_Subheader,
+      'documents_TabOfficial':lang.documents_TabOfficial,
+      'documents_TabSubmitted':lang.documents_TabSubmitted,
+      'documents_TabTr':lang.documents_TabTr
     });
     return json;
   }

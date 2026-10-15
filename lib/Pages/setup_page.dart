@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -6,11 +6,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:neptun2/API/ics_calendar.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/local_file_actions.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/API/ics_calendar.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/haptics.dart';
+import 'package:jupiter/local_file_actions.dart';
+import 'package:jupiter/language.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/custom_snackbar.dart';
@@ -19,6 +19,7 @@ import '../Misc/auto_updater.dart';
 import '../storage.dart' as storage;
 import '../storage.dart';
 import 'main_page.dart' as main_page;
+import 'language_select_page.dart';
 import '../Misc/popup.dart';
 
 class SetupPageLoginTypeSelection extends StatefulWidget{
@@ -121,7 +122,24 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                   mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        tooltip: 'Change language / Nyelvválasztás',
+                        icon: Icon(Icons.language_rounded, color: AppColors.getTheme().primary, size: 28),
+                        onPressed: () async {
+                          AppHaptics.lightImpact();
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LanguageSelectPage(isFromSetup: true)),
+                          );
+                          if (changed == true && mounted) {
+                            setState(() {});
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       AppStrings.getLanguagePack().rootpage_setupPage_SelectLoginTypeHeader,
                       textAlign: TextAlign.center,
@@ -1287,7 +1305,6 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
       if(value == 1){ // 1: SIKERES BELÉPÉS
         storage.DataCache.setUsername(_username.toUpperCase());
         storage.DataCache.setPassword(_password);
-        storage.DataCache.setInstituteUrl(selected.URL);
         storage.DataCache.setHasLogin(1);
         // proceed logic
         Navigator.popUntil(context, (route) => route.willHandlePopInternally);
@@ -1305,7 +1322,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
             mode: 9,
             callback: (kod) async {
               // JAVÍTVA: Hozzáadva az InstitutesRequest és a .toString()
-              bool isOk = await api.InstitutesRequest.submitTwoFactorCode( _username, _password, kod.toString());
+              bool isOk = await api.InstitutesRequest.submitTwoFactorCode(_username.toUpperCase(), _password, kod.toString());
 
               if (isOk) {
                 PopupWidgetHandler.closePopup(context);
@@ -1313,7 +1330,6 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                 // Mivel jó a kód, elmentjük az adatokat és beléptetjük
                 storage.DataCache.setUsername(_username.toUpperCase());
                 storage.DataCache.setPassword(_password);
-                storage.DataCache.setInstituteUrl(selected.URL);
                 storage.DataCache.setHasLogin(1);
 
                 Navigator.popUntil(context, (route) => route.willHandlePopInternally);
@@ -1332,7 +1348,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
               }
             }
         );
-        PopupWidgetHandler.doPopup(context);
+        PopupWidgetHandler.doPopup(context, blur: (){}, closeBlur: (){});
         return;
       }
       else { // 0: HIBÁS JELSZÓ VAGY NEPTUN KÓD

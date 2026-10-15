@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
-import 'package:neptun2/Misc/custom_snackbar.dart';
-import 'package:neptun2/Pages/main_page.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/language.dart';
-import 'package:neptun2/storage.dart';
+import 'package:jupiter/Misc/custom_snackbar.dart';
+import 'package:jupiter/Pages/main_page.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/haptics.dart';
+import 'package:jupiter/language.dart';
+import 'package:jupiter/storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../API/api_coms.dart';
 import '../API/api_coms.dart' as api;
@@ -2057,7 +2058,13 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                   alignment: Alignment.center,
                   color: Colors.transparent,
                   padding: widget.topPadding,
-                  margin: EdgeInsets.only(bottom: mounted ? MediaQuery.of(context).viewInsets.bottom : 0),
+                  margin: EdgeInsets.only(
+                    bottom: mounted
+                        ? (MediaQuery.of(context).viewInsets.bottom +
+                            math.max(MediaQuery.of(context).padding.bottom,
+                                MediaQuery.of(context).viewPadding.bottom))
+                        : 0,
+                  ),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     controller: PopupWidgetHandler._instance!.scrollController,

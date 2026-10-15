@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🪐 Neptun Mobile 📱
+# 🪐 Jupiter 📱
 
 **Egy modern, gyors és átlátható Neptun kliens egyetemistáknak.**  
 *Ne maradj le egyetlen óráról, vizsgáról vagy ösztöndíjról sem!*
@@ -65,6 +65,18 @@ Hozzáadásukkal rengeteget segítesz a projekt fejlődésében!
 
 <details open>
 <summary><b>✨ Legfrissebb verziók</b></summary>
+
+
+
+
+### 🪐 v2.0.0 (Jupiter Release)
+* 🪐 **Új arculat & Jupiter:** Megújult alkalmazásnév, új ikonok és logók, letisztult indítás és első indítási nyelvválassztó kártyák.
+* 📑 **Kérvénykezelés modul:** 3 fülös felület (Leadható, Leadott és Megkezdett kérvények), piszkozat-mentés és visszaállítás (`Invalidate`), dinamikus natív űrlapkitöltés és nagyítható A4-es dokumentum-előnézet.
+* 🏢 **Tanulmányi Iroda (TO) sáv:** Egybefüggő idősáv az órák mellett, valós idejű NYITVA / ZÁRVA állapotjelzés a rendszeridő alapján, és letisztázott szünetek.
+* 📅 **Naptár & Idővonal:** Villámgyors (0.05s) azonnali órarend-megjelenítés (`Smart Dual-Cache`), élő napi haladási jelző és a választott témához illeszkedő mély háttérszínek.
+* 💳 **Pénzügyek & Ösztöndíjak:** Intelligens tranzakció-kategorizálás (pozitív ösztöndíjak és juttatások vs. valós költések, belső gyűjtőszámlás utalások kizárása).
+* 🧭 **Animált navigáció & Profil:** Ruganyos (spring physics) csúszó navbar animáció, élő olvasatlan üzenet badge és perzisztens becenév-beállítás a profilképed mellett.
+* 🛠️ **Stabilitás és minőség:** 0 fordítási és analízis hiba, teljes körű magyar és angol nyelvi frissítés.
 
 ### 🚀 v1.0.5
 * ✅ **Félévválasztó:** Mostantól félévek szerint is listázhatók a tárgyak és adatok.

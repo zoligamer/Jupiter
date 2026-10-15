@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/language.dart';
 import '../Pages/main_page.dart';
 import '../haptics.dart';
 
@@ -14,30 +14,29 @@ class BottomNavigatorWidget extends StatelessWidget {
       width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
         color: AppColors.getTheme().rootBackground,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
-      child: Center(
+      child: SafeArea(
+        top: false,
         child: GestureDetector(
-          onHorizontalDragStart: (_){
+          onHorizontalDragStart: (_) {
             homePage.bottomNavCanNavigate = true;
             homePage.bottomNavSwitchValue = 0.0;
           },
-          onHorizontalDragEnd: (_){
+          onHorizontalDragEnd: (_) {
             homePage.bottomNavCanNavigate = false;
             homePage.bottomNavSwitchValue = 0.0;
           },
-          onHorizontalDragUpdate: (e){
-            if(!homePage.bottomNavCanNavigate){
+          onHorizontalDragUpdate: (e) {
+            if (!homePage.bottomNavCanNavigate) {
               return;
             }
-            if(homePage.bottomNavSwitchValue < -50){
+            if (homePage.bottomNavSwitchValue < -50) {
               homePage.bottomNavCanNavigate = false;
               final val = homePage.currentView + 1 > HomePageState.maxBottomNavWidgets - 1 ? 0 : homePage.currentView + 1;
               homePage.switchView(val);
               AppHaptics.lightImpact();
               return;
-            }
-            else if(homePage.bottomNavSwitchValue > 50){
+            } else if (homePage.bottomNavSwitchValue > 50) {
               homePage.bottomNavCanNavigate = false;
               final val = homePage.currentView - 1 < 0 ? HomePageState.maxBottomNavWidgets - 1 : homePage.currentView - 1;
               homePage.switchView(val);
@@ -47,35 +46,84 @@ class BottomNavigatorWidget extends StatelessWidget {
             homePage.bottomNavSwitchValue -= e.delta.dx;
           },
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 4),
+              // Menu Title Indicator in Primary Accent
               Text(
-                _getNameOfMenu(homePage.currentView),
+                _getNameOfMenu(homePage.currentView).toUpperCase(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: AppColors.getTheme().onPrimaryContainer,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.0
+                  color: AppColors.getTheme().primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10.5,
+                  letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 2),
-              SingleChildScrollView(
-                controller: homePage.bottomnavController,
-                physics: const BouncingScrollPhysics(decelerationRate: ScrollDecelerationRate.fast),
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    _buildNavigationButton(0, Icons.calendar_month_rounded, Icons.calendar_month_outlined),
-                    _buildNavigationButton(1, Icons.backpack_rounded, Icons.backpack_outlined),
-                    _buildNavigationButton(2, Icons.price_change_rounded, Icons.price_change_outlined),
-                    _buildNavigationButton(3, Icons.timer_rounded, Icons.timer_outlined),
-                    _buildNavigationButton(4, Icons.email_rounded, Icons.email_outlined),
-                  ],
-                ),
+              const SizedBox(height: 4),
+              // Modern Floating Pill Dock with Jiggly Sliding Indicator
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalWidth = constraints.maxWidth - 32; // 16 margin on left and right
+                  final tabWidth = (totalWidth - 12) / 5; // 6 padding on left and right
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
+                        width: 1,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Sliding indicator pill with jiggly spring physics
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 380),
+                          curve: Curves.easeOutBack,
+                          left: homePage.currentView * tabWidth,
+                          width: tabWidth,
+                          top: 0,
+                          bottom: 0,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.getTheme().primary.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.getTheme().primary.withValues(alpha: 0.55),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.getTheme().primary.withValues(alpha: 0.15),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Navigation buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: <Widget>[
+                            _buildNavigationButton(0, Icons.calendar_month_rounded, Icons.calendar_month_outlined),
+                            _buildNavigationButton(1, Icons.backpack_rounded, Icons.backpack_outlined),
+                            _buildNavigationButton(2, Icons.account_balance_wallet_rounded, Icons.account_balance_wallet_outlined),
+                            _buildNavigationButton(3, Icons.timer_rounded, Icons.timer_outlined),
+                            _buildNavigationButton(4, Icons.email_rounded, Icons.email_outlined),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
             ],
           ),
         ),
@@ -83,8 +131,8 @@ class BottomNavigatorWidget extends StatelessWidget {
     );
   }
 
-  String _getNameOfMenu(int idx){
-    switch(idx){
+  String _getNameOfMenu(int idx) {
+    switch (idx) {
       case 0:
         return AppStrings.getLanguagePack().view_header_Calendar;
       case 1:
@@ -96,17 +144,19 @@ class BottomNavigatorWidget extends StatelessWidget {
       case 4:
         return AppStrings.getLanguagePack().view_header_Messages;
       default:
-        return 'Not Impl';
+        return '';
     }
   }
 
   Widget _buildNavigationButton(int index, IconData filledIcon, IconData outlinedIcon) {
+    final bool isSelected = homePage.currentView == index;
+
     Widget iconWidget = Icon(
-      homePage.currentView == index ? filledIcon : outlinedIcon,
-      color: homePage.currentView == index ?
-      AppColors.getTheme().onPrimaryContainer :
-      AppColors.getTheme().onPrimaryContainer.withValues(alpha: .3),
-      size: 28,
+      isSelected ? filledIcon : outlinedIcon,
+      color: isSelected
+          ? AppColors.getTheme().primary
+          : AppColors.getTheme().textColor.withValues(alpha: 0.45),
+      size: 24,
     );
 
     if (index == 4 && homePage.unreadMailCount > 0) {
@@ -118,30 +168,20 @@ class BottomNavigatorWidget extends StatelessWidget {
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-          color: homePage.currentView == index
-              ? AppColors.getTheme().textColor.withValues(alpha: .15)
-              : AppColors.getTheme().textColor.withValues(alpha: .05),
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(12), bottomRight: Radius.circular(16), bottomLeft: Radius.circular(12)),
-          border: Border.all(
-            width: 1,
-            color: homePage.currentView == index ? AppColors.getTheme().primary : Colors.transparent
-          )
-      ),
-      child: IconButton(
-        onPressed: (){
-          homePage.switchView(index);
-          AppHaptics.lightImpact();
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (!isSelected) {
+            homePage.switchView(index);
+            AppHaptics.lightImpact();
+          }
         },
-        color: Colors.transparent,
-        focusColor: Colors.transparent,
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        disabledColor: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 13),
-        icon: iconWidget,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          color: Colors.transparent,
+          child: Center(child: iconWidget),
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/storage.dart';
+import 'package:jupiter/colors.dart';
+import 'package:jupiter/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
 import 'language.dart';
@@ -92,6 +92,8 @@ class ThemeNotifier extends ChangeNotifier {
 
   ThemeData _buildTheme(bool isDark) {
     return ThemeData(
+      scaffoldBackgroundColor: AppColors.getTheme().rootBackground,
+      canvasColor: AppColors.getTheme().rootBackground,
       colorScheme: isDark ? ColorScheme.dark(
         primary: AppColors.getTheme().primary,
         onPrimary: AppColors.getTheme().onPrimary,
@@ -99,6 +101,7 @@ class ThemeNotifier extends ChangeNotifier {
         secondary: AppColors.getTheme().secondary,
         onSecondary: AppColors.getTheme().onSecondary,
         onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
+        surface: AppColors.getTheme().rootBackground,
       ) : ColorScheme.light(
         primary: AppColors.getTheme().primary,
         onPrimary: AppColors.getTheme().onPrimary,
@@ -106,6 +109,7 @@ class ThemeNotifier extends ChangeNotifier {
         secondary: AppColors.getTheme().secondary,
         onSecondary: AppColors.getTheme().onSecondary,
         onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
+        surface: AppColors.getTheme().rootBackground,
       ),
       useMaterial3: true,
     );
@@ -113,6 +117,8 @@ class ThemeNotifier extends ChangeNotifier {
 
   static ThemeData _initialTheme(bool isDark){
     return ThemeData(
+      scaffoldBackgroundColor: AppColors.getTheme().rootBackground,
+      canvasColor: AppColors.getTheme().rootBackground,
       colorScheme: isDark ? ColorScheme.dark(
         primary: AppColors.getTheme().primary,
         onPrimary: AppColors.getTheme().onPrimary,
@@ -120,6 +126,7 @@ class ThemeNotifier extends ChangeNotifier {
         secondary: AppColors.getTheme().secondary,
         onSecondary: AppColors.getTheme().onSecondary,
         onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
+        surface: AppColors.getTheme().rootBackground,
       ) : ColorScheme.light(
         primary: AppColors.getTheme().primary,
         onPrimary: AppColors.getTheme().onPrimary,
@@ -127,6 +134,7 @@ class ThemeNotifier extends ChangeNotifier {
         secondary: AppColors.getTheme().secondary,
         onSecondary: AppColors.getTheme().onSecondary,
         onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
+        surface: AppColors.getTheme().rootBackground,
       ),
       useMaterial3: true,
     );

@@ -1,9 +1,9 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/haptics.dart';
+import 'package:jupiter/language.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../colors.dart';

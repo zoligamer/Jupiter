@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:neptun2/API/api_coms.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/API/api_coms.dart';
+import 'package:jupiter/language.dart';
 import '../Misc/emojirich_text.dart';
 import '../colors.dart';
 import '../storage.dart';
@@ -14,6 +14,7 @@ class PaymentElementWidget extends StatelessWidget{
   final String? direction;
   final String? note;
   final String? currency;
+  final bool isIgnored;
 
   const PaymentElementWidget({
     super.key,
@@ -25,6 +26,7 @@ class PaymentElementWidget extends StatelessWidget{
     this.direction,
     this.note,
     this.currency,
+    this.isIgnored = false,
   });
 
   @override
@@ -39,17 +41,21 @@ class PaymentElementWidget extends StatelessWidget{
     final isPositive = ammount > 0;
     final isNegative = ammount < 0;
 
-    final cardColor = completed
-        ? (isPositive ? AppColors.getTheme().currentClassGreen : AppColors.getTheme().onPrimaryContainer)
-        : (isMissed ? AppColors.getTheme().errorRed : Colors.amber.shade600);
+    final cardColor = isIgnored
+        ? AppColors.getTheme().textColor.withValues(alpha: 0.45)
+        : completed
+            ? (isPositive ? AppColors.getTheme().currentClassGreen : AppColors.getTheme().onPrimaryContainer)
+            : (isMissed ? AppColors.getTheme().errorRed : Colors.amber.shade600);
 
     final curr = (currency != null && currency!.isNotEmpty) ? currency! : 'Ft';
     final absAmount = ammount.abs();
     final formattedNum = absAmount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ');
 
-    final formattedAmount = completed
-        ? (isPositive ? "+$formattedNum $curr" : (isNegative ? "-$formattedNum $curr" : "$formattedNum $curr"))
-        : "$formattedNum $curr";
+    final formattedAmount = isIgnored
+        ? "$formattedNum $curr"
+        : completed
+            ? (isPositive ? "+$formattedNum $curr" : (isNegative ? "-$formattedNum $curr" : "$formattedNum $curr"))
+            : "$formattedNum $curr";
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -75,7 +81,18 @@ class PaymentElementWidget extends StatelessWidget{
               fontSize: 15.0 * fontScale,
             ),
           ),
-          if (direction != null && direction!.isNotEmpty) ...[
+          if (isIgnored) ...[
+            const SizedBox(height: 3),
+            Text(
+              "Belső átvezetés (gyűjtőszámla)",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.getTheme().textColor.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w600,
+                fontSize: 11.5 * fontScale,
+              ),
+            ),
+          ] else if (direction != null && direction!.isNotEmpty) ...[
             const SizedBox(height: 3),
             Text(
               direction!,
@@ -93,9 +110,9 @@ class PaymentElementWidget extends StatelessWidget{
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               EmojiRichText(
-                text: completed ? (isPositive ? '📥' : '📤') : isMissed ? '🙉' : '💰',
+                text: isIgnored ? '🔄' : (completed ? (isPositive ? '📥' : '📤') : (isMissed ? '🙉' : '💰')),
                 defaultStyle: TextStyle(
-                  color: AppColors.getTheme().onPrimaryContainer,
+                  color: cardColor,
                   fontWeight: FontWeight.w900,
                   fontSize: 20.0 * fontScale,
                 ),

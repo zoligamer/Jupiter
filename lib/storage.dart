@@ -52,6 +52,7 @@ class DataCache{
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await prefs.reload();
+    await clearSecureData();
     _instance._localWipe();
   }
 
@@ -59,6 +60,7 @@ class DataCache{
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await prefs.reload();
+    await clearSecureData();
   }
 
   void _localWipe(){
@@ -67,6 +69,7 @@ class DataCache{
     _instituteUrl = '';
     _accessToken = '';
     _refreshToken = '';
+    _sessionCookieName = '';
     _hasNetwork = false;
     _hasLogin = false;
     _hasCachedCalendar = false;
@@ -81,6 +84,21 @@ class DataCache{
     _selectedTermId = null;
     _selectedTermName = null;
     _cachedTermsList = [];
+    _cachedPetitionTemplatesRaw = [];
+    _cachedSubmittedPetitionsRaw = [];
+    _cachedStartedPetitionsRaw = [];
+    _cachedUserAvatarBase64 = null;
+    _cachedFallbackColor = null;
+    _cachedPersonalDataRaw = null;
+    _cachedPersonalContactsRaw = null;
+    _cachedPersonalDocumentsRaw = null;
+    _cachedStudentCardRaw = null;
+    _cachedBankAccountRaw = null;
+    _cachedProfileSettingsRaw = null;
+    _cachedStorageDashboardRaw = null;
+    _cachedStorageForStudentDocsRaw = [];
+    _cachedStorageByStudentDocsRaw = [];
+    _cachedStorageTrDocsRaw = [];
     _studentTrainingId = null;
     setNeedFamilyFriendlyComments(_persistentSetting_familyFriendlyLoadingComments! ? 1 : 0);
     setNeedExamNotifications(_persistentSetting_showExamNotifications! ? 1 : 0);
@@ -105,6 +123,7 @@ class DataCache{
   late String? _instituteUrl = '';
   late String? _accessToken = ''; //new systems token query
   late String? _refreshToken = '';
+  late String? _sessionCookieName = '';
   String? _selectedTermId;
   String? _selectedTermName;
   List<String> _cachedTermsList = [];
@@ -159,6 +178,8 @@ class DataCache{
   late bool? _persistentSetting_showClassNotifications = true;
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
+  late bool? _persistentSetting_showToOfficeSchedule = true;
+  late bool? _persistentSetting_showPeriodsInCalendar = true;
   late int? _persistentSetting_weekOffset = 0;
   late bool? _persistentSetting_needBetterHaptics = true;
   late int? _persistentSetting_userSelectedLanguage = -1;
@@ -173,6 +194,24 @@ class DataCache{
 
   late String? _themePreference = '';
   late List<String> _themesJsonBatch = [];
+  List<String> _cachedPetitionTemplatesRaw = [];
+  List<String> _cachedSubmittedPetitionsRaw = [];
+  List<String> _cachedStartedPetitionsRaw = [];
+  String? _cachedUserAvatarBase64;
+  String? _cachedFallbackColor;
+  String? _cachedPersonalDataRaw;
+  String? _cachedPersonalContactsRaw;
+  String? _cachedPersonalDocumentsRaw;
+  String? _cachedStudentCardRaw;
+  String? _cachedBankAccountRaw;
+  String? _cachedProfileSettingsRaw;
+  String? _cachedStorageDashboardRaw;
+  List<String> _cachedStorageForStudentDocsRaw = [];
+  List<String> _cachedStorageByStudentDocsRaw = [];
+  List<String> _cachedStorageTrDocsRaw = [];
+  String? _userNickname;
+  bool _isNicknameVisible = false;
+  bool _isLoginNameVisible = true;
 
   late String? _icsLocationPath = '';
   late bool? _icsIsUploaded = false;
@@ -208,6 +247,7 @@ class DataCache{
     }
 
     _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
+    _sessionCookieName = await _secureStorage.read(key: 'neptun_session_cookie_name');
 
     tmp = await getInt('IsModernApi');
     _isModernApi = tmp != null && tmp != 0;
@@ -280,6 +320,12 @@ class DataCache{
       _persistentSetting_showPeriodsNotifications = true;  // this is the default value, not false
     }
 
+    tmp = await getInt('SETTING_ShowToOfficeSchedule');
+    _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : true;
+
+    tmp = await getInt('SETTING_ShowPeriodsInCalendar');
+    _persistentSetting_showPeriodsInCalendar = tmp != null ? tmp != 0 : true;
+
     tmp = await getInt('SETTING_NeedHaptics');
     _persistentSetting_needBetterHaptics = tmp != null && tmp != 0;
     if(tmp == null){
@@ -297,7 +343,27 @@ class DataCache{
     _selectedTermId = await getString('SELECTED_TermId');
     _selectedTermName = await getString('SELECTED_TermName');
     _cachedTermsList = await getStringList('CACHED_TermsList') ?? [];
+    _cachedPetitionTemplatesRaw = await getStringList('CACHED_PetitionTemplates') ?? [];
+    _cachedSubmittedPetitionsRaw = await getStringList('CACHED_SubmittedPetitions') ?? [];
+    _cachedStartedPetitionsRaw = await getStringList('CACHED_StartedPetitions') ?? [];
+    _cachedUserAvatarBase64 = await getString('USER_CachedAvatarBase64');
+    _cachedFallbackColor = await getString('USER_FallbackAvatarColor');
+    _cachedPersonalDataRaw = await getString('USER_PersonalDataRaw');
+    _cachedPersonalContactsRaw = await getString('USER_PersonalContactsRaw');
+    _cachedPersonalDocumentsRaw = await getString('USER_PersonalDocumentsRaw');
+    _cachedStudentCardRaw = await getString('USER_StudentCardRaw');
+    _cachedBankAccountRaw = await getString('USER_BankAccountRaw');
+    _cachedProfileSettingsRaw = await getString('USER_ProfileSettingsRaw');
+    _cachedStorageDashboardRaw = await getString('STORAGE_DashboardRaw');
+    _cachedStorageForStudentDocsRaw = await getStringList('STORAGE_ForStudentDocs') ?? [];
+    _cachedStorageByStudentDocsRaw = await getStringList('STORAGE_ByStudentDocs') ?? [];
+    _cachedStorageTrDocsRaw = await getStringList('STORAGE_TrDocs') ?? [];
     _studentTrainingId = await getString('STUDENT_TrainingId');
+    _userNickname = await getString('USER_Nickname');
+    final nickVis = await getInt('USER_IsNicknameVisible');
+    _isNicknameVisible = nickVis != null ? nickVis != 0 : false;
+    final loginVis = await getInt('USER_IsLoginNameVisible');
+    _isLoginNameVisible = loginVis != null ? loginVis != 0 : true;
 
     tmp = await getInt('CONFIG_IsInstalledFromGPlay');
     _permanentConfiguration_isInstalledFromGooglePlay = tmp ?? 0;
@@ -357,6 +423,9 @@ class DataCache{
   static String? getInstituteUrl(){return _instance._instituteUrl;}
 
   static Future<void> setInstituteUrl(String? value) async{
+    if (value != null && value.isNotEmpty && !value.endsWith('MobileService.svc')) {
+      value = value.replaceAll(RegExp(r'/login(\.aspx)?$', caseSensitive: false), '');
+    }
     _instance._instituteUrl = value;
     await saveString('URL', value.toString());
   }
@@ -407,7 +476,21 @@ class DataCache{
     _instance._password = null;
     _instance._accessToken = null;
     _instance._refreshToken = null;
+    _instance._sessionCookieName = null;
     await _secureStorage.deleteAll();
+  }
+
+  static String? getSessionCookieName() {
+    return _instance._sessionCookieName;
+  }
+
+  static Future<void> setSessionCookieName(String? name) async {
+    _instance._sessionCookieName = name;
+    if (name == null) {
+      await _secureStorage.delete(key: 'neptun_session_cookie_name');
+    } else {
+      await _secureStorage.write(key: 'neptun_session_cookie_name', value: name);
+    }
   }
 
   static bool getHasNetwork(){return _instance._hasNetwork;}
@@ -513,6 +596,18 @@ class DataCache{
     await saveInt('SETTING_IsNeedPeriodsNotifications', value ?? 1);
   }
 
+  static bool getShowToOfficeSchedule() => _instance._persistentSetting_showToOfficeSchedule ?? true;
+  static Future<void> setShowToOfficeSchedule(bool value) async {
+    _instance._persistentSetting_showToOfficeSchedule = value;
+    await saveInt('SETTING_ShowToOfficeSchedule', value ? 1 : 0);
+  }
+
+  static bool getShowPeriodsInCalendar() => _instance._persistentSetting_showPeriodsInCalendar ?? true;
+  static Future<void> setShowPeriodsInCalendar(bool value) async {
+    _instance._persistentSetting_showPeriodsInCalendar = value;
+    await saveInt('SETTING_ShowPeriodsInCalendar', value ? 1 : 0);
+  }
+
   static int? getUserWeekOffset(){return _instance._persistentSetting_weekOffset;}
   static Future<void> setUserWeekOffset(int? value)async{
     _instance._persistentSetting_weekOffset = value ?? 0;
@@ -562,6 +657,24 @@ class DataCache{
   static Future<void> setCachedTermsRaw(List<String> value) async {
     _instance._cachedTermsList = value;
     await saveStringList('CACHED_TermsList', value);
+  }
+
+  static List<String> getCachedPetitionTemplatesRaw() => _instance._cachedPetitionTemplatesRaw;
+  static Future<void> setCachedPetitionTemplatesRaw(List<String> value) async {
+    _instance._cachedPetitionTemplatesRaw = value;
+    await saveStringList('CACHED_PetitionTemplates', value);
+  }
+
+  static List<String> getCachedSubmittedPetitionsRaw() => _instance._cachedSubmittedPetitionsRaw;
+  static Future<void> setCachedSubmittedPetitionsRaw(List<String> value) async {
+    _instance._cachedSubmittedPetitionsRaw = value;
+    await saveStringList('CACHED_SubmittedPetitions', value);
+  }
+
+  static List<String> getCachedStartedPetitionsRaw() => _instance._cachedStartedPetitionsRaw;
+  static Future<void> setCachedStartedPetitionsRaw(List<String> value) async {
+    _instance._cachedStartedPetitionsRaw = value;
+    await saveStringList('CACHED_StartedPetitions', value);
   }
 
   static String? getStudentTrainingId() => _instance._studentTrainingId;
@@ -649,4 +762,153 @@ class DataCache{
     await prefs.setBool('CALENDAR_DisplayPeriods', _displayPeriods!);
   }
 
+  // --- Profil és Avatar gyorsítótár ---
+  static String? getCachedUserAvatarBase64() => _instance._cachedUserAvatarBase64;
+  static Future<void> setCachedUserAvatarBase64(String? value) async {
+    _instance._cachedUserAvatarBase64 = value;
+    if (value == null || value.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_CachedAvatarBase64');
+    } else {
+      await saveString('USER_CachedAvatarBase64', value);
+    }
+  }
+
+  static String? getCachedFallbackColor() => _instance._cachedFallbackColor;
+  static Future<void> setCachedFallbackColor(String? value) async {
+    _instance._cachedFallbackColor = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_FallbackAvatarColor');
+    } else {
+      await saveString('USER_FallbackAvatarColor', value);
+    }
+  }
+
+  static String? getCachedPersonalDataRaw() => _instance._cachedPersonalDataRaw;
+  static Future<void> setCachedPersonalDataRaw(String? value) async {
+    _instance._cachedPersonalDataRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_PersonalDataRaw');
+    } else {
+      await saveString('USER_PersonalDataRaw', value);
+    }
+  }
+
+  static String? getCachedPersonalContactsRaw() => _instance._cachedPersonalContactsRaw;
+  static Future<void> setCachedPersonalContactsRaw(String? value) async {
+    _instance._cachedPersonalContactsRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_PersonalContactsRaw');
+    } else {
+      await saveString('USER_PersonalContactsRaw', value);
+    }
+  }
+
+  static String? getCachedPersonalDocumentsRaw() => _instance._cachedPersonalDocumentsRaw;
+  static Future<void> setCachedPersonalDocumentsRaw(String? value) async {
+    _instance._cachedPersonalDocumentsRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_PersonalDocumentsRaw');
+    } else {
+      await saveString('USER_PersonalDocumentsRaw', value);
+    }
+  }
+
+  static String? getCachedStudentCardRaw() => _instance._cachedStudentCardRaw;
+  static Future<void> setCachedStudentCardRaw(String? value) async {
+    _instance._cachedStudentCardRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_StudentCardRaw');
+    } else {
+      await saveString('USER_StudentCardRaw', value);
+    }
+  }
+
+  static String? getCachedBankAccountRaw() => _instance._cachedBankAccountRaw;
+  static Future<void> setCachedBankAccountRaw(String? value) async {
+    _instance._cachedBankAccountRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_BankAccountRaw');
+    } else {
+      await saveString('USER_BankAccountRaw', value);
+    }
+  }
+
+  static String? getCachedProfileSettingsRaw() => _instance._cachedProfileSettingsRaw;
+  static Future<void> setCachedProfileSettingsRaw(String? value) async {
+    _instance._cachedProfileSettingsRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_ProfileSettingsRaw');
+    } else {
+      await saveString('USER_ProfileSettingsRaw', value);
+    }
+  }
+
+  static String? getCachedStorageDashboardRaw() => _instance._cachedStorageDashboardRaw;
+  static Future<void> setCachedStorageDashboardRaw(String? value) async {
+    _instance._cachedStorageDashboardRaw = value;
+    if (value == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('STORAGE_DashboardRaw');
+    } else {
+      await saveString('STORAGE_DashboardRaw', value);
+    }
+  }
+
+  static List<String> getCachedStorageForStudentDocsRaw() => _instance._cachedStorageForStudentDocsRaw;
+  static Future<void> setCachedStorageForStudentDocsRaw(List<String> value) async {
+    _instance._cachedStorageForStudentDocsRaw = value;
+    await saveStringList('STORAGE_ForStudentDocs', value);
+  }
+
+  static List<String> getCachedStorageByStudentDocsRaw() => _instance._cachedStorageByStudentDocsRaw;
+  static Future<void> setCachedStorageByStudentDocsRaw(List<String> value) async {
+    _instance._cachedStorageByStudentDocsRaw = value;
+    await saveStringList('STORAGE_ByStudentDocs', value);
+  }
+
+  static List<String> getCachedStorageTrDocsRaw() => _instance._cachedStorageTrDocsRaw;
+  static Future<void> setCachedStorageTrDocsRaw(List<String> value) async {
+    _instance._cachedStorageTrDocsRaw = value;
+    await saveStringList('STORAGE_TrDocs', value);
+  }
+
+  static String? getUserNickname() => _instance._userNickname;
+  static Future<void> setUserNickname(String? value) async {
+    _instance._userNickname = value;
+    if (value == null || value.trim().isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('USER_Nickname');
+    } else {
+      await saveString('USER_Nickname', value.trim());
+    }
+  }
+
+  static bool getIsNicknameVisible() => _instance._isNicknameVisible;
+  static Future<void> setIsNicknameVisible(bool value) async {
+    _instance._isNicknameVisible = value;
+    await saveInt('USER_IsNicknameVisible', value ? 1 : 0);
+  }
+
+  static bool getIsLoginNameVisible() => _instance._isLoginNameVisible;
+  static Future<void> setIsLoginNameVisible(bool value) async {
+    _instance._isLoginNameVisible = value;
+    await saveInt('USER_IsLoginNameVisible', value ? 1 : 0);
+  }
+
+  static String getEffectiveDisplayName() {
+    if (_instance._isNicknameVisible && _instance._userNickname != null && _instance._userNickname!.trim().isNotEmpty) {
+      return _instance._userNickname!.trim();
+    }
+    return _instance._username ?? '';
+  }
+
 }
+

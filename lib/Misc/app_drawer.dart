@@ -12,7 +12,11 @@ import '../Misc/emojirich_text.dart';
 import '../language.dart';
 import '../notifications.dart';
 import '../Pages/settings_page.dart';
+import '../Pages/petitions_page.dart';
+import '../Pages/profile_hub_page.dart';
+import '../Pages/document_storage_page.dart';
 import '../Misc/auto_updater.dart';
+import 'dart:convert' as conv;
 
 class AppDrawer extends StatefulWidget {
   final String loggedInUsername;
@@ -32,6 +36,8 @@ class _AppDrawerState extends State<AppDrawer> {
   String _accountCurrency = 'HUF';
   bool _isLoadingBalance = true;
   int _unreadCount = 0;
+  String? _userAvatarBase64;
+  String? _fallbackColorHex;
 
   @override
   void initState() {
@@ -41,8 +47,22 @@ class _AppDrawerState extends State<AppDrawer> {
     _accountCurrency = storage.DataCache.getAccountBalanceCurrency();
     _unreadCount = storage.DataCache.getUnreadMailCount();
     _isLoadingBalance = _accountBalance == null;
+    _userAvatarBase64 = storage.DataCache.getCachedUserAvatarBase64();
+    _fallbackColorHex = storage.DataCache.getCachedFallbackColor();
     _loadTerms();
     _loadFinancialAndMessages();
+    _loadUserAvatarIfNeeded();
+  }
+
+  Future<void> _loadUserAvatarIfNeeded() async {
+    if (_userAvatarBase64 == null) {
+      final img = await UserProfileRequest.getUserAvatar();
+      if (mounted && img != null && img.isNotEmpty) {
+        setState(() {
+          _userAvatarBase64 = img;
+        });
+      }
+    }
   }
 
   Future<void> _loadTerms() async {
@@ -195,6 +215,45 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 
+  Color _getFallbackColor() {
+    if (_fallbackColorHex != null && _fallbackColorHex!.isNotEmpty) {
+      try {
+        final clean = _fallbackColorHex!.replaceAll('#', '').trim();
+        return Color(int.parse('FF$clean', radix: 16));
+      } catch (_) {}
+    }
+    return AppColors.getTheme().primary;
+  }
+
+  Widget _buildDrawerAvatar() {
+    if (_userAvatarBase64 != null && _userAvatarBase64!.isNotEmpty) {
+      try {
+        final bytes = conv.base64Decode(_userAvatarBase64!);
+        return Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.getTheme().primary, width: 2),
+            image: DecorationImage(
+              image: MemoryImage(bytes),
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      } catch (_) {}
+    }
+
+    return CircleAvatar(
+      backgroundColor: _getFallbackColor(),
+      radius: 28,
+      child: Text(
+        widget.loggedInUsername.isNotEmpty ? widget.loggedInUsername[0].toUpperCase() : '?',
+        style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -203,54 +262,72 @@ class _AppDrawerState extends State<AppDrawer> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- header (welcome) ---
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                  border: Border(bottom: BorderSide(color: AppColors.getTheme().textColor.withValues(alpha: 0.1), width: 1))
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // --- header (welcome) - clickable to open ProfileHubPage ---
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  AppHaptics.lightImpact();
+                  Navigator.pop(context); // close drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileHubPage()),
+                  ).then((_) {
+                    setState(() {
+                      _userAvatarBase64 = storage.DataCache.getCachedUserAvatarBase64();
+                      _fallbackColorHex = storage.DataCache.getCachedFallbackColor();
+                    });
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                    border: Border(bottom: BorderSide(color: AppColors.getTheme().textColor.withValues(alpha: 0.1), width: 1)),
+                  ),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.getTheme().currentClassGreen,
-                        radius: 28,
-                        child: Text(
-                          widget.loggedInUsername.isNotEmpty ? widget.loggedInUsername[0].toUpperCase() : '?',
-                          style: TextStyle(color: AppColors.getTheme().rootBackground, fontSize: 22, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: AppUpdater.hasUpdateNotifier,
-                        builder: (context, hasUpdate, _) {
-                          return ValueListenableBuilder<String?>(
-                            valueListenable: AppUpdater.latestVersionNotifier,
-                            builder: (context, latestTag, _) {
-                              return _buildVersionBadge(context, hasUpdate, latestTag);
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDrawerAvatar(),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: AppUpdater.hasUpdateNotifier,
+                            builder: (context, hasUpdate, _) {
+                              return ValueListenableBuilder<String?>(
+                                valueListenable: AppUpdater.latestVersionNotifier,
+                                builder: (context, latestTag, _) {
+                                  return _buildVersionBadge(context, hasUpdate, latestTag);
+                                },
+                              );
                             },
-                          );
-                        },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: EmojiRichText(
+                              text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topmenu_Greet, [storage.DataCache.getEffectiveDisplayName()]),
+                              defaultStyle: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 18),
+                              emojiStyle: TextStyle(color: AppColors.getTheme().textColor, fontSize: 20, fontFamily: "Noto Color Emoji"),
+                            ),
+                          ),
+                          Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.getTheme().textColor.withValues(alpha: 0.4)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      EmojiRichText(
+                        text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topmenu_LoginPlace, [widget.loggedInURL]),
+                        defaultStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 13),
+                        emojiStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 13, fontFamily: "Noto Color Emoji"),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  EmojiRichText(
-                    text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topmenu_Greet, [widget.loggedInUsername]),
-                    defaultStyle: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 18),
-                    emojiStyle: TextStyle(color: AppColors.getTheme().textColor, fontSize: 20, fontFamily: "Noto Color Emoji"),
-                  ),
-                  const SizedBox(height: 4),
-                  EmojiRichText(
-                    text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topmenu_LoginPlace, [widget.loggedInURL]),
-                    defaultStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 13),
-                    emojiStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 13, fontFamily: "Noto Color Emoji"),
-                  ),
-                ],
+                ),
               ),
             ),
 
@@ -533,6 +610,38 @@ class _AppDrawerState extends State<AppDrawer> {
                     const SizedBox(height: 4),
 
                     // --- menus ---
+                    ListTile(
+                      leading: Icon(Icons.assignment_turned_in_rounded, color: AppColors.getTheme().primary),
+                      title: Text(
+                        AppStrings.getLanguagePack().topmenu_PetitionsTitle,
+                        style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Icon(Icons.chevron_right_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.3)),
+                      onTap: () {
+                        AppHaptics.lightImpact();
+                        Navigator.pop(context); // closes drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PetitionsPage()),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.folder_shared_rounded, color: AppColors.getTheme().primary),
+                      title: Text(
+                        AppStrings.getLanguagePack().topmenu_DocumentsTitle,
+                        style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Icon(Icons.chevron_right_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.3)),
+                      onTap: () {
+                        AppHaptics.lightImpact();
+                        Navigator.pop(context); // closes drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DocumentStoragePage()),
+                        );
+                      },
+                    ),
                     ListTile(
                       leading: Icon(Icons.settings_rounded, color: AppColors.getTheme().textColor),
                       title: Text(AppStrings.getLanguagePack().topmenu_buttons_Settings, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),

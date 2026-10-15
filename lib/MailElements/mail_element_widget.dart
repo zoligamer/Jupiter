@@ -1,8 +1,8 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
-import 'package:neptun2/API/api_coms.dart';
-import 'package:neptun2/Misc/popup.dart';
-// import 'package:neptun2/language.dart';
+import 'package:jupiter/API/api_coms.dart';
+import 'package:jupiter/Misc/popup.dart';
+// import 'package:jupiter/language.dart';
 
 import '../Misc/emojirich_text.dart';
 import '../colors.dart';
@@ -32,9 +32,6 @@ class MailElementWidget extends StatelessWidget{
     final pattern = RegExp(r'<a[^>]*>(.*?)</a>');
     List<String> parts = details.split(pattern);
 
-    // Kártya színe (Olvasatlan = Kiemelt / Olvasott = Halvány)
-    final cardColor = !isRead ? AppColors.getTheme().secondary : AppColors.getTheme().textColor;
-
     return GestureDetector(
       onTap: (){
         MailPopupDisplayTexts.title = subject;
@@ -47,15 +44,19 @@ class MailElementWidget extends StatelessWidget{
         PopupWidgetHandler.doPopup(context);
       },
       child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),
           width: MediaQuery.of(context).size.width,
           decoration: BoxDecoration(
-              color: cardColor.withValues(alpha: !isRead ? 0.1 : 0.03), // Olvasatlan sötétebb háttérrel
+              color: !isRead 
+                  ? AppColors.getTheme().primary.withValues(alpha: 0.12)
+                  : AppColors.getTheme().textColor.withValues(alpha: 0.03),
               borderRadius: const BorderRadius.all(Radius.circular(20)),
               border: Border.all(
-                  color: cardColor.withValues(alpha: !isRead ? 0.5 : 0.2), // Olvasatlan erősebb kerettel
-                  width: !isRead ? 1.5 : 1.0 // Olvasatlan vastagabb kerettel
+                  color: !isRead
+                      ? AppColors.getTheme().primary.withValues(alpha: 0.7)
+                      : AppColors.getTheme().textColor.withValues(alpha: 0.12),
+                  width: !isRead ? 1.8 : 1.0
               )
           ),
           child: Row(
@@ -64,12 +65,12 @@ class MailElementWidget extends StatelessWidget{
               EmojiRichText(
                 text: isRead ? '📭' : '📬',
                 defaultStyle: TextStyle(
-                  color: AppColors.getTheme().onPrimaryContainer,
+                  color: !isRead ? AppColors.getTheme().primary : AppColors.getTheme().onPrimaryContainer,
                   fontWeight: FontWeight.w900,
                   fontSize: 24.0 * fontScale, // Skálázott
                 ),
                 emojiStyle: TextStyle(
-                    color: AppColors.getTheme().onPrimaryContainer,
+                    color: !isRead ? AppColors.getTheme().primary : AppColors.getTheme().onPrimaryContainer,
                     fontSize: 24.0 * fontScale, // Skálázott
                     fontFamily: "Noto Color Emoji"
                 ),
@@ -82,14 +83,31 @@ class MailElementWidget extends StatelessWidget{
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      subject,
-                      style: TextStyle(
-                        color: AppColors.getTheme().onPrimaryContainer,
-                        fontWeight: !isRead ? FontWeight.w800 : FontWeight.w600,
-                        fontSize: (isRead ? 15.0 : 16.0) * fontScale, // Skálázott
-                      ),
-                      textAlign: TextAlign.start,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (!isRead)
+                          Container(
+                            width: 8 * fontScale,
+                            height: 8 * fontScale,
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.getTheme().primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            subject,
+                            style: TextStyle(
+                              color: !isRead ? AppColors.getTheme().textColor : AppColors.getTheme().onPrimaryContainer,
+                              fontWeight: !isRead ? FontWeight.w800 : FontWeight.w600,
+                              fontSize: (isRead ? 15.0 : 16.0) * fontScale, // Skálázott
+                            ),
+                            textAlign: TextAlign.start,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Row(

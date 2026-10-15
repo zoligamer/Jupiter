@@ -1,12 +1,14 @@
 import '../storage.dart' as storage;
 import 'package:flutter/material.dart';
-import 'package:neptun2/language.dart';
+import 'package:jupiter/language.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/emojirich_text.dart';
 import '../Misc/popup.dart';
 import '../Pages/main_page.dart';
 import '../colors.dart';
 import '../haptics.dart';
+import '../Misc/to_office_service.dart';
+import 'to_office_widget.dart';
 
 typedef Callback = Future<void> Function();
 
@@ -28,9 +30,10 @@ class TimetableElementWidget extends StatelessWidget {
   late final bool currentOverride;
 
   late final bool isTask;
+  final bool fullWidthMargin;
 
   TimetableElementWidget(
-      {super.key, required this.entry, required this.position, required this.isCurrent}) {
+      {super.key, required this.entry, required this.position, required this.isCurrent, this.fullWidthMargin = true}) {
     isExam = entry.isExam;
     isTask = entry.isTask;
     title = entry.title;
@@ -65,277 +68,438 @@ class TimetableElementWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double fontScale = storage.DataCache.getFontScale();
+    final theme = AppColors.getTheme();
+    final isPast = endDateNormalized.millisecondsSinceEpoch < DateTime.now().millisecondsSinceEpoch;
 
-  return GestureDetector(
-    onTap: () {
-      if (isExam) {
-        TimetableCurrentlySelected.entry = entry;
-        PopupWidgetHandler(mode: 5, callback: (_) {});
-        PopupWidgetHandler.doPopup(context);
-        return;
-      }
-      if (isTask && entry.taskId != null && entry.taskId!.isNotEmpty) {
-        showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                backgroundColor: AppColors.getTheme().rootBackground,
-                title: Text(title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
-                content: FutureBuilder<String?>(
-                  future: storage.getString('task_type_${entry.taskId}'),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
-                    }
+    // Card highlight styling
+    final Color cardBg;
+    final Color cardBorder;
+    final double borderWidth;
 
-                    return FutureBuilder<String?>(
-                        future: storage.getString('task_res_${entry.taskId}'),
-                        builder: (context, resSnapshot) {
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("📚 Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
-                              const SizedBox(height: 10),
-                              Text("📝 Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
-                              const SizedBox(height: 10),
-                              Text("🎯 Eredmény: ${resSnapshot.data ?? 'Nincs még kiírva'}", style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
+    if (isExam) {
+      cardBg = theme.errorRed.withValues(alpha: 0.10);
+      cardBorder = theme.errorRed.withValues(alpha: 0.45);
+      borderWidth = 1.0;
+    } else if (isTask) {
+      cardBg = Colors.amber.shade600.withValues(alpha: 0.10);
+      cardBorder = Colors.amber.shade600.withValues(alpha: 0.45);
+      borderWidth = 1.0;
+    } else if (currentOverride) {
+      cardBg = theme.primary.withValues(alpha: 0.12);
+      cardBorder = theme.primary.withValues(alpha: 0.85);
+      borderWidth = 1.5;
+    } else {
+      cardBg = AppColors.isDarktheme()
+          ? theme.secondary.withValues(alpha: 0.35)
+          : theme.secondary.withValues(alpha: 0.10);
+      cardBorder = AppColors.isDarktheme()
+          ? theme.secondary.withValues(alpha: 0.60)
+          : theme.secondary.withValues(alpha: 0.25);
+      borderWidth = 1.0;
+    }
+
+    final Color cardTimeColor;
+    if (isExam) {
+      cardTimeColor = theme.errorRed;
+    } else if (isTask) {
+      cardTimeColor = Colors.amber.shade600;
+    } else if (currentOverride) {
+      cardTimeColor = theme.primary;
+    } else {
+      cardTimeColor = theme.onPrimaryContainer;
+    }
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: fullWidthMargin ? 14 : 0,
+        vertical: 4,
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // --- LEFT TIMELINE TRACK (Width: 46px) ---
+            SizedBox(
+              width: 46,
+              child: Column(
+                children: [
+                  Text(
+                    displayStartTime,
+                    style: TextStyle(
+                      color: currentOverride
+                          ? theme.primary
+                          : (isPast
+                              ? theme.textColor.withValues(alpha: 0.35)
+                              : theme.textColor.withValues(alpha: 0.70)),
+                      fontWeight: currentOverride ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 11.5 * fontScale,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (currentOverride) ...[
+                        Container(
+                          width: 15,
+                          height: 15,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.primary.withValues(alpha: 0.5),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
                             ],
-                          );
-                        }
-                    );
-                  },
-                ),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
-                  )
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.rootBackground,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_right_rounded,
+                          size: 16,
+                          color: theme.primary,
+                        ),
+                      ] else if (isPast) ...[
+                        Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.textColor.withValues(alpha: 0.22),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.check,
+                              size: 9,
+                              color: theme.rootBackground,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          width: 13,
+                          height: 13,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.rootBackground,
+                            border: Border.all(
+                              color: theme.primary.withValues(alpha: 0.4),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: theme.primary.withValues(alpha: 0.18),
+                    ),
+                  ),
                 ],
-              );
-            }
-        );
-        return;
-      }
-      // HA VAN CLASSINSTANCE ID (Modern API), Akkor a mi új ablakunk jön be!
-      if (entry.classInstanceId != null && entry.classInstanceId!.isNotEmpty) {
-        showDialog(
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // --- RIGHT LESSON CARD ---
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _handleTap(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16.0),
+                    border: Border.all(
+                      color: cardBorder,
+                      width: borderWidth,
+                    ),
+                    boxShadow: currentOverride
+                        ? [
+                            BoxShadow(
+                              color: theme.primary.withValues(alpha: 0.15),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 1. SOR: Idősáv a bal oldalon, Terem kártya a jobb oldalon
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            "$displayStartTime - $displayEndTime",
+                            style: TextStyle(
+                              color: cardTimeColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.0 * fontScale,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          if (location.trim().isNotEmpty && location != "NULL" && location != "Nincs megadva")
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.textColor.withValues(alpha: 0.07),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: theme.textColor.withValues(alpha: 0.12),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  color: isExam
+                                      ? theme.errorRed.withValues(alpha: 0.9)
+                                      : theme.textColor.withValues(alpha: 0.85),
+                                  fontSize: 11.0 * fontScale,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+
+                      // 2. SOR: Tárgynév félkövéren
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: currentOverride ? theme.primary : theme.textColor,
+                          fontSize: 14.5 * fontScale,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 5),
+
+                      // 3. SOR: Típus • Oktató + visszaszámláló aktív óránál
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _buildSubtitle(),
+                              style: TextStyle(
+                                color: isExam
+                                    ? theme.errorRed.withValues(alpha: 0.8)
+                                    : theme.textColor.withValues(alpha: 0.6),
+                                fontSize: 11.5 * fontScale,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (currentOverride) ...[
+                            const SizedBox(width: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.timelapse_rounded,
+                                  color: theme.primary,
+                                  size: 14 * fontScale,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${(Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inHours.remainder(60).toString().padLeft(2, '0')}:${((Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inMinutes.remainder(60)).toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    color: theme.primary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.0 * fontScale,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleTap(BuildContext context) {
+    if (isExam) {
+      TimetableCurrentlySelected.entry = entry;
+      PopupWidgetHandler(mode: 5, callback: (_) {});
+      PopupWidgetHandler.doPopup(context);
+      return;
+    }
+    if (isTask && entry.taskId != null && entry.taskId!.isNotEmpty) {
+      showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
               backgroundColor: AppColors.getTheme().rootBackground,
               title: Text(title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
-              content: FutureBuilder<Map<String, String>>(
-                future: api.CalendarRequest.getCourseDetails(entry.classInstanceId!),
+              content: FutureBuilder<String?>(
+                future: storage.getString('task_type_${entry.taskId}'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
-                      height: 100,
-                      child: Center(child: CircularProgressIndicator())
-                    );
+                    return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
                   }
-                  final data = snapshot.data ?? {};
-                  final room = (data['room'] != null && data['room']!.isNotEmpty && data['room'] != 'Nincs terem') ? data['room']! : entry.location;
-                  final teacher = (data['teacher'] != null && data['teacher']!.isNotEmpty && data['teacher'] != 'Nincs tanár') ? data['teacher']! : entry.teacher;
-                  final courseType = (data['type'] != null && data['type']!.isNotEmpty) ? data['type']! : (entry.courseType ?? '');
-                  final subjectCode = (data['code'] != null && data['code']!.isNotEmpty && data['code'] != '-') ? data['code']! : entry.subjectCode;
 
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (subjectCode.isNotEmpty && subjectCode != '-') ...[
-                        Row(
+                  return FutureBuilder<String?>(
+                      future: storage.getString('task_res_${entry.taskId}'),
+                      builder: (context, resSnapshot) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("🏷️ Tárgykód: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                            Expanded(child: SelectableText(subjectCode, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
+                            Text("📚 Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                            const SizedBox(height: 10),
+                            Text("📝 Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                            const SizedBox(height: 10),
+                            Text("🎯 Eredmény: ${resSnapshot.data ?? 'Nincs még kiírva'}", style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
                           ],
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                      if (courseType.isNotEmpty && courseType != '-') ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("📖 Típus: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                            Expanded(child: SelectableText(courseType, style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontWeight: FontWeight.bold, fontSize: 15))),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("👨‍🏫 Tanár: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                          Expanded(child: SelectableText(teacher, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("📍 Terem: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                          Expanded(child: SelectableText(room, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
-                        ],
-                      ),
-                    ],
+                        );
+                      }
                   );
                 },
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
                 )
               ],
             );
           }
-        );
-        return;
-      } else {
+      );
+      return;
+    }
+    // HA VAN CLASSINSTANCE ID (Modern API), Akkor a mi új ablakunk jön be!
+    if (entry.classInstanceId != null && entry.classInstanceId!.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: AppColors.getTheme().rootBackground,
+            title: Text(title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+            content: FutureBuilder<Map<String, String>>(
+              future: api.CalendarRequest.getCourseDetails(entry.classInstanceId!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 100,
+                    child: Center(child: CircularProgressIndicator())
+                  );
+                }
+                final data = snapshot.data ?? {};
+                final room = (data['room'] != null && data['room']!.isNotEmpty && data['room'] != 'Nincs terem') ? data['room']! : entry.location;
+                final teacher = (data['teacher'] != null && data['teacher']!.isNotEmpty && data['teacher'] != 'Nincs tanár') ? data['teacher']! : entry.teacher;
+                final courseType = (data['type'] != null && data['type']!.isNotEmpty) ? data['type']! : (entry.courseType ?? '');
+                final subjectCode = (data['code'] != null && data['code']!.isNotEmpty && data['code'] != '-') ? data['code']! : entry.subjectCode;
 
-        TimetableCurrentlySelected.entry = entry;
-        PopupWidgetHandler(mode: 4, callback: (_) {});
-        PopupWidgetHandler.doPopup(context);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (subjectCode.isNotEmpty && subjectCode != '-') ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("🏷️ Tárgykód: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Expanded(child: SelectableText(subjectCode, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (courseType.isNotEmpty && courseType != '-') ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("📖 Típus: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Expanded(child: SelectableText(courseType, style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontWeight: FontWeight.bold, fontSize: 15))),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("👨‍🏫 Tanár: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Expanded(child: SelectableText(teacher, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("📍 Terem: ", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Expanded(child: SelectableText(room, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 15))),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
+              )
+            ],
+          );
+        }
+      );
+      return;
+    } else {
+      TimetableCurrentlySelected.entry = entry;
+      PopupWidgetHandler(mode: 4, callback: (_) {});
+      PopupWidgetHandler.doPopup(context);
+    }
+  }
+
+  String _buildSubtitle() {
+    if (isExam) return 'Vizsga';
+    if (isTask) return 'Feladat';
+    final parts = <String>[];
+    if (entry.courseType != null && entry.courseType!.trim().isNotEmpty && entry.courseType != '-') {
+      parts.add(entry.courseType!.trim());
+    }
+    if (entry.teacher.trim().isNotEmpty && entry.teacher != 'Nincs megadva' && entry.teacher != 'Nincs tanár') {
+      parts.add(entry.teacher.trim());
+    }
+    if (parts.isEmpty) {
+      if (entry.subjectCode.trim().isNotEmpty && entry.subjectCode != '-') {
+        return entry.subjectCode.trim();
       }
-    },
-    child: Container(
-      margin: EdgeInsets.symmetric(horizontal: 15, vertical: currentOverride ? 10 : 25),
-      padding: isExam || currentOverride ? const EdgeInsets.symmetric(vertical: 20, horizontal: 15) : null,
-      decoration: (isExam || isTask) || currentOverride ? BoxDecoration(
-        border: Border.all(
-          color: isExam ? AppColors.getTheme().errorRed.withValues(alpha: .5) :
-                 isTask ? Colors.amber.shade600.withValues(alpha: .5) :
-                 AppColors.getTheme().currentClassGreen.withValues(alpha: .5),
-          width: .75
-        ),
-        borderRadius: const BorderRadius.all(Radius.circular(20.0)),
-        color: isExam ? AppColors.getTheme().errorRed.withValues(alpha: .05) :
-               isTask ? Colors.amber.shade600.withValues(alpha: .05) :
-               AppColors.getTheme().currentClassGreen.withValues(alpha: .05)
-      ) : const BoxDecoration(
-        color: Colors.transparent
-      ),
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-
-            Container(
-              margin: const EdgeInsets.fromLTRB(0, 0, 20, 0),
-              child: (!isExam && !isTask) ? Text(
-                "$position.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: currentOverride ? AppColors.getTheme().currentClassGreen : AppColors.getTheme().onPrimaryContainer,
-                  fontWeight: FontWeight.w900,
-
-                  fontSize: 26.0 * fontScale,
-                ),
-                maxLines: 1,
-              ) : Icon(
-                  Icons.warning_rounded,
-                  color: isExam ? AppColors.getTheme().errorRed : Colors.amber.shade600,
-
-                  size: 28.0 * fontScale,
-              ),
-            ),
-
-            Expanded(
-              flex: 3,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: AppColors.getTheme().textColor,
-                      // Alap 15.0-ról 16.0-ra
-                      fontSize: 16.0 * fontScale,
-                      fontWeight: FontWeight.w700
-                    )
-                  ),
-                  const SizedBox(height: 2),
-                  Visibility(
-                    visible: entry.location.trim().isNotEmpty,
-                    child: Text(
-                      entry.location == "Nincs megadva" || entry.location.isEmpty || entry.location == "NULL"
-                          ? "⏳ Terem betöltése..."
-                          : entry.location,
-                      style: TextStyle(
-                          color: isExam ? AppColors.getTheme().errorRed.withValues(alpha: .8) : AppColors.getTheme().textColor.withValues(alpha: 0.8),
-                          fontSize: 13.0 * fontScale,
-                          fontWeight: FontWeight.w600
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              flex: 2,
-              child: currentOverride ? Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.timelapse_rounded,
-                    color: AppColors.getTheme().currentClassGreen,
-                    size: 20 * fontScale,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      '${(Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inHours.remainder(60).toString().padLeft(2, '0')}:${((Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inMinutes.remainder(60)).toString().padLeft(2, '0')}',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: AppColors.getTheme().currentClassGreen,
-                        fontWeight: FontWeight.w700,
-                        // Alap 14.0-ról 15.0-ra
-                        fontSize: 15.0 * fontScale,
-                      ),
-                    ),
-                  ),
-                ],
-              ) : Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    displayStartTime,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: isExam ? AppColors.getTheme().errorRed : AppColors.getTheme().onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
-                      fontSize: (!isExam ? 15.0 : 17.0) * fontScale,
-                    ),
-                  ),
-                  !isExam ?
-                  Text(
-                    displayEndTime,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: AppColors.getTheme().onPrimary.withValues(alpha: .8),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.0 * fontScale,
-                    ),
-                  ) : const SizedBox(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      )
-    ),
-  );
-}
+      return 'Óra';
+    }
+    return parts.join(' • ');
+  }
 }
 
 class BreakElementWidget extends StatelessWidget {
@@ -343,6 +507,7 @@ class BreakElementWidget extends StatelessWidget {
   final int endEpoch;
   final bool isCurrent;
   final String nextClassTitle;
+  final ToOfficeSlot? toOfficeSlot;
 
   const BreakElementWidget({
     super.key,
@@ -350,6 +515,7 @@ class BreakElementWidget extends StatelessWidget {
     required this.endEpoch,
     required this.isCurrent,
     this.nextClassTitle = '',
+    this.toOfficeSlot,
   });
 
   String _formatDuration(int ms) {
@@ -365,6 +531,7 @@ class BreakElementWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fontScale = storage.DataCache.getFontScale();
+    final theme = AppColors.getTheme();
     final startDate = DateTime.fromMillisecondsSinceEpoch(startEpoch);
     final endDate = DateTime.fromMillisecondsSinceEpoch(endEpoch);
     final startHour = startDate.hour.toString().padLeft(2, '0');
@@ -374,71 +541,106 @@ class BreakElementWidget extends StatelessWidget {
     final timeRange = "$startHour:$startMin - $endHour:$endMin";
     final breakDurationText = _formatDuration(endEpoch - startEpoch);
 
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final remainingMs = endEpoch - nowMs;
-    final remainingDur = Duration(milliseconds: remainingMs > 0 ? remainingMs : 0);
-    final remainingFormatted = "${remainingDur.inHours.toString().padLeft(2, '0')}:${(remainingDur.inMinutes.remainder(60)).toString().padLeft(2, '0')}";
+    final spineColor = theme.primary.withValues(alpha: 0.18);
+
+    // Timeline column for break: 46px wide, spine running from top to bottom
+    Widget timelineTrack = SizedBox(
+      width: 46,
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(
+              width: 2,
+              color: spineColor,
+            ),
+          ),
+          if (isCurrent) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.currentClassGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.arrow_right_rounded,
+                    size: 16,
+                    color: theme.currentClassGreen,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: 2,
+                color: spineColor,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    // Break card / capsule content:
+    Widget breakContent;
 
     if (isCurrent) {
-      // --- AKTÍV SZÜNET (Visszaszámláló órával és kiemeléssel) ---
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      // 1. Active break: highlight capsule with countdown
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final remainingMs = endEpoch - nowMs;
+      final remainingDur = Duration(milliseconds: remainingMs > 0 ? remainingMs : 0);
+      final remainingFormatted = "${remainingDur.inHours.toString().padLeft(2, '0')}:${(remainingDur.inMinutes.remainder(60)).toString().padLeft(2, '0')}";
+
+      breakContent = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
+          color: theme.currentClassGreen.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.6),
+            color: theme.currentClassGreen.withValues(alpha: 0.6),
             width: 1.2,
           ),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.15),
+                color: theme.currentClassGreen.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.coffee_rounded,
-                color: AppColors.getTheme().currentClassGreen,
-                size: 20 * fontScale,
+                color: theme.currentClassGreen,
+                size: 15 * fontScale,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        "Szünet most",
-                        style: TextStyle(
-                          color: AppColors.getTheme().currentClassGreen,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14 * fontScale,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "($breakDurationText)",
-                        style: TextStyle(
-                          color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                          fontSize: 12 * fontScale,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
                   Text(
-                    "$timeRange ${nextClassTitle.isNotEmpty ? '• Következő: $nextClassTitle' : ''}",
+                    "Szünet most • $breakDurationText",
                     style: TextStyle(
-                      color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
-                      fontSize: 12 * fontScale,
+                      color: theme.currentClassGreen,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5 * fontScale,
+                    ),
+                  ),
+                  Text(
+                    "$timeRange ${nextClassTitle.isNotEmpty ? '• Köv: $nextClassTitle' : ''}",
+                    style: TextStyle(
+                      color: theme.textColor.withValues(alpha: 0.7),
+                      fontSize: 11.0 * fontScale,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -451,16 +653,16 @@ class BreakElementWidget extends StatelessWidget {
               children: [
                 Icon(
                   Icons.timelapse_rounded,
-                  color: AppColors.getTheme().currentClassGreen,
-                  size: 18 * fontScale,
+                  color: theme.currentClassGreen,
+                  size: 14 * fontScale,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Text(
                   remainingFormatted,
                   style: TextStyle(
-                    color: AppColors.getTheme().currentClassGreen,
+                    color: theme.currentClassGreen,
                     fontWeight: FontWeight.w800,
-                    fontSize: 15 * fontScale,
+                    fontSize: 13.0 * fontScale,
                   ),
                 ),
               ],
@@ -468,71 +670,91 @@ class BreakElementWidget extends StatelessWidget {
           ],
         ),
       );
-    }
+    } else {
+      // 2. Normal break: clean capsule spanning full card width
+      final shortLoc = toOfficeSlot != null
+          ? (toOfficeSlot!.location.contains('FR') ? 'FR.210' : (toOfficeSlot!.location.contains('J') ? 'J.52' : toOfficeSlot!.location))
+          : '';
 
-    // --- NORMÁL ÓRA VONAL SZÜNET ELVÁLASZTÓ ---
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.getTheme().textColor.withValues(alpha: 0.0),
-                    AppColors.getTheme().textColor.withValues(alpha: 0.15),
-                  ],
-                ),
-              ),
-            ),
+      breakContent = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.textColor.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: theme.textColor.withValues(alpha: 0.09),
+            width: 1.0,
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
-                width: 0.8,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("☕", style: TextStyle(fontSize: 11.5 * fontScale)),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      "$breakDurationText szünet • $timeRange",
+                      style: TextStyle(
+                        color: theme.textColor.withValues(alpha: 0.65),
+                        fontSize: 11.5 * fontScale,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.coffee_rounded,
-                  size: 13 * fontScale,
-                  color: AppColors.getTheme().onPrimaryContainer.withValues(alpha: 0.7),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  "$breakDurationText szünet • $timeRange",
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11 * fontScale,
+            if (toOfficeSlot != null) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                child: GestureDetector(
+                  onTap: () => ToOfficeOverlayWidget.showDetailsDialog(context, toOfficeSlot!),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.4),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      "TO: ${toOfficeSlot!.timeFormatted} ($shortLoc)",
+                      style: TextStyle(
+                        color: Colors.orange.shade400,
+                        fontSize: 10.5 * fontScale,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.getTheme().textColor.withValues(alpha: 0.15),
-                    AppColors.getTheme().textColor.withValues(alpha: 0.0),
-                  ],
-                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            timelineTrack,
+            const SizedBox(width: 8),
+            Expanded(child: breakContent),
+          ],
+        ),
       ),
     );
   }
@@ -662,14 +884,29 @@ class WeekoffseterElementWidget extends StatelessWidget{
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            displayString,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.getTheme().textColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16.0,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                displayString,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.getTheme().textColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16.0,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: homePage.isCalendarOffline ? 'Offline / Cache' : 'Online / Szinkronizálva',
+                                child: Icon(
+                                  homePage.isCalendarOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+                                  size: 16,
+                                  color: AppColors.getTheme().primary.withValues(alpha: homePage.isCalendarOffline ? 0.65 : 0.95),
+                                ),
+                              ),
+                            ],
                           ),
                           if (homePage.currentWeekOffset != 1) ...[
                             const SizedBox(height: 4),
