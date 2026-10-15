@@ -1,0 +1,36 @@
+name: Auto Update University TO Schedules
+
+on:
+  schedule:
+    # Minden hétfőn éjjel 02:00-kor lefut automatikusan
+    - cron: '0 2 * * 1'
+  workflow_dispatch: # Kézzel is indítható bármikor a GitHub felületén
+
+permissions:
+  contents: write # írási jog a commit, push-hoz
+jobs:
+  update-schedules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run TO Schedule Verifier & Scraper
+        run: |
+          python .github/scripts/update_to_schedules.py
+
+      - name: Commit & Push changes if updated
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add universities_with_to_schedule.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update TO schedules and links" && git push)
