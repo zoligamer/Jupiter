@@ -8,12 +8,21 @@ class BottomNavigatorWidget extends StatelessWidget {
   final HomePageState homePage;
   const BottomNavigatorWidget({super.key, required this.homePage});
 
+  // A felhasználó által kért és megszeretett rugalmas (jiggly spring) cubic-bezier görbe
+  static const Curve jigglyCurve = Cubic(0.34, 1.45, 0.64, 1.0);
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
         color: AppColors.getTheme().rootBackground,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.getTheme().textColor.withValues(alpha: 0.06),
+            width: 1,
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -49,23 +58,39 @@ class BottomNavigatorWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 4),
-              // Menu Title Indicator in Primary Accent
-              Text(
-                _getNameOfMenu(homePage.currentView).toUpperCase(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.getTheme().primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10.5,
-                  letterSpacing: 1.2,
+              // Finoman animált menücímke kiemelő színnel
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.0, 0.25),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  _getNameOfMenu(homePage.currentView).toUpperCase(),
+                  key: ValueKey<int>(homePage.currentView),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.getTheme().primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10.5,
+                    letterSpacing: 1.2,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
-              // Modern Floating Pill Dock with Jiggly Sliding Indicator
+              // Lebegő dokk ruganyos (jiggly) sikló indikátorral
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth - 32; // 16 margin on left and right
-                  final tabWidth = (totalWidth - 12) / 5; // 6 padding on left and right
+                  final totalWidth = constraints.maxWidth - 32; // 16 margó mindkét oldalon
+                  final tabWidth = (totalWidth - 12) / 5; // 6 belső padding mindkét oldalon
 
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -79,11 +104,12 @@ class BottomNavigatorWidget extends StatelessWidget {
                       ),
                     ),
                     child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        // Sliding indicator pill with jiggly spring physics
+                        // Ruganyos túllendüléssel (jiggly spring) sikló kapszula indikátor
                         AnimatedPositioned(
-                          duration: const Duration(milliseconds: 380),
-                          curve: Curves.easeOutBack,
+                          duration: const Duration(milliseconds: 350),
+                          curve: jigglyCurve,
                           left: homePage.currentView * tabWidth,
                           width: tabWidth,
                           top: 0,
@@ -99,15 +125,15 @@ class BottomNavigatorWidget extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.getTheme().primary.withValues(alpha: 0.15),
-                                  blurRadius: 8,
+                                  color: AppColors.getTheme().primary.withValues(alpha: 0.2),
+                                  blurRadius: 10,
                                   spreadRadius: 1,
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        // Navigation buttons
+                        // Navigációs gombok
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: <Widget>[
@@ -180,7 +206,14 @@ class BottomNavigatorWidget extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           color: Colors.transparent,
-          child: Center(child: iconWidget),
+          child: Center(
+            child: AnimatedScale(
+              scale: isSelected ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 350),
+              curve: jigglyCurve,
+              child: iconWidget,
+            ),
+          ),
         ),
       ),
     );

@@ -178,7 +178,7 @@ class DataCache{
   late bool? _persistentSetting_showClassNotifications = true;
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
-  late bool? _persistentSetting_showToOfficeSchedule = true;
+  late bool? _persistentSetting_showToOfficeSchedule = false;
   late bool? _persistentSetting_showPeriodsInCalendar = true;
   late int? _persistentSetting_weekOffset = 0;
   late bool? _persistentSetting_needBetterHaptics = true;
@@ -321,7 +321,7 @@ class DataCache{
     }
 
     tmp = await getInt('SETTING_ShowToOfficeSchedule');
-    _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : true;
+    _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : false;
 
     tmp = await getInt('SETTING_ShowPeriodsInCalendar');
     _persistentSetting_showPeriodsInCalendar = tmp != null ? tmp != 0 : true;
@@ -596,7 +596,7 @@ class DataCache{
     await saveInt('SETTING_IsNeedPeriodsNotifications', value ?? 1);
   }
 
-  static bool getShowToOfficeSchedule() => _instance._persistentSetting_showToOfficeSchedule ?? true;
+  static bool getShowToOfficeSchedule() => _instance._persistentSetting_showToOfficeSchedule ?? false;
   static Future<void> setShowToOfficeSchedule(bool value) async {
     _instance._persistentSetting_showToOfficeSchedule = value;
     await saveInt('SETTING_ShowToOfficeSchedule', value ? 1 : 0);

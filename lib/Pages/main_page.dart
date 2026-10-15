@@ -189,7 +189,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       ICSCalendar.initialize();
     }
 
-    ToOfficeService.initialize().then((_) {
+    Future.microtask(() async {
+      await ToOfficeService.initialize();
+      await ToOfficeService.checkAndResolveFacultyAsync();
       ToOfficeService.fetchAndRefreshSchedule();
     });
 
@@ -285,7 +287,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
     currentMailPageController = ScrollController();
     currentMailPageController.addListener(() {
-      //debug.log(currentMailPageController.position.atEdge.toString() + " " + currentMailPageController.position.userScrollDirection.toString());
       if(currentMailPageController.position.atEdge && currentMailPageController.position.userScrollDirection == ScrollDirection.reverse && allLoadedMailCount < totalMailCount){
         if(currentMailLoadingDebounce){
           return;
@@ -408,6 +409,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   void userUnavailableAccountLogout(){
     Future.delayed(Duration.zero, ()async{
+      ToOfficeService.reset();
       await storage.DataCache.dataWipe();
       await AppNotifications.cancelScheduledNotifs();
     }).whenComplete((){
@@ -1401,36 +1403,68 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
   }
 
-  Widget _getSeparatorLine(String text, {bool expired = false}){
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 30),
-            color: expired ? AppColors.getTheme().errorRed.withValues(alpha: .3) : AppColors.getTheme().textColor.withValues(alpha: .3),
+  Widget _getSeparatorLine(String text, {bool expired = false}) {
+    final theme = AppColors.getTheme();
+    final badgeColor = expired ? theme.errorRed : theme.textColor;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    badgeColor.withValues(alpha: 0.0),
+                    badgeColor.withValues(alpha: 0.25),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color: expired ? AppColors.getTheme().errorRed.withValues(alpha: .6) : AppColors.getTheme().textColor.withValues(alpha: .6),
-              fontWeight: FontWeight.w600,
-              fontSize: 14
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5.0),
+            decoration: BoxDecoration(
+              color: expired
+                  ? theme.errorRed.withValues(alpha: 0.12)
+                  : theme.secondary.withValues(alpha: 0.40),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: expired
+                    ? theme.errorRed.withValues(alpha: 0.35)
+                    : theme.textColor.withValues(alpha: 0.12),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              text.toUpperCase(),
+              style: TextStyle(
+                color: expired
+                    ? theme.errorRed
+                    : theme.textColor.withValues(alpha: 0.85),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
           ),
-        ),
-        Expanded(
-          child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 30),
-            color: expired ? AppColors.getTheme().errorRed.withValues(alpha: .3) : AppColors.getTheme().textColor.withValues(alpha: .3),
+          Expanded(
+            child: Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    badgeColor.withValues(alpha: 0.25),
+                    badgeColor.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2050,7 +2084,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
     mailEntries = request;
-    //debug.log(request!.toString());
 
     if(force){
       return;
@@ -2287,52 +2320,60 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername() ?? '',
-            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
-        ),
-      body: SafeArea(
-        child: Stack(
-        children: [
-          Visibility(
-              visible: currentView == 0,
-              child: CalendarPageWidget(homePage: this, greetText: calendarGreetText, calendarTabs: calendarTabs, calendarTabViews: calendarTabViews)
-          ),
-          Visibility(
-              visible: currentView == 1,
-              child: MarkbookPageWidget(homePage: this, totalCredits: totalCredits, totalAvg: totalAvg, totalAvg30: totalAvg30,)
-          ),
-          Visibility(
-              visible: currentView == 2,
-              child: PaymentsPageWidget(homePage: this, totalMoney: totalMoney)
-          ),
-          Visibility(
-            visible: currentView == 3,
-            child: PeriodsPageWidget(homePage: this, currentSemester: currentSemester),
-          ),
-          Visibility(
-            visible: currentView == 4,
-            child: MailsPageWidget(homePage: this),
-          ),
-          Visibility(
-            visible: _showBlur,
-            child: AnimatedBuilder(
-              animation: blurController,
-              builder: (context, widget) {
-                return Positioned.fill(
-                  child: BackdropFilter(
-                     filter: ImageFilter.blur(sigmaX: blurAnimation.value * 15, sigmaY: blurAnimation.value * 15),
-                     child: Container(
-                       color: Colors.black.withValues(alpha: blurAnimation.value * 0.4),
-                     ),
-                   ),
-                );
-              },
-            ),
-          ),
-        ],
+      backgroundColor: AppColors.getTheme().rootBackground,
+      drawer: AppDrawer(
+          loggedInUsername: storage.DataCache.getUsername() ?? '',
+          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
       ),
-      )
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            Visibility(
+                visible: currentView == 0,
+                maintainState: true,
+                child: CalendarPageWidget(homePage: this, greetText: calendarGreetText, calendarTabs: calendarTabs, calendarTabViews: calendarTabViews)
+            ),
+            Visibility(
+                visible: currentView == 1,
+                maintainState: true,
+                child: MarkbookPageWidget(homePage: this, totalCredits: totalCredits, totalAvg: totalAvg, totalAvg30: totalAvg30,)
+            ),
+            Visibility(
+                visible: currentView == 2,
+                maintainState: true,
+                child: PaymentsPageWidget(homePage: this, totalMoney: totalMoney)
+            ),
+            Visibility(
+              visible: currentView == 3,
+              maintainState: true,
+              child: PeriodsPageWidget(homePage: this, currentSemester: currentSemester),
+            ),
+            Visibility(
+              visible: currentView == 4,
+              maintainState: true,
+              child: MailsPageWidget(homePage: this),
+            ),
+            Visibility(
+              visible: _showBlur,
+              child: AnimatedBuilder(
+                animation: blurController,
+                builder: (context, widget) {
+                  return Positioned.fill(
+                    child: BackdropFilter(
+                       filter: ImageFilter.blur(sigmaX: blurAnimation.value * 15, sigmaY: blurAnimation.value * 15),
+                       child: Container(
+                         color: Colors.black.withValues(alpha: blurAnimation.value * 0.4),
+                       ),
+                     ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: bottomnav.BottomNavigatorWidget(homePage: this),
     );
   }
 }
@@ -2350,88 +2391,74 @@ class CalendarPageWidget extends StatelessWidget{
     final dayText = api.Generic.dayToText(dayIndex + 1);
     final calendarHintText = '$dayText • ${homePage.weeksSinceStart}. hét';
 
-    return Scaffold(
-      backgroundColor: AppColors.getTheme().rootBackground,
-      drawer: AppDrawer(
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        topnav.TopNavigatorWidget(
+          homePage: homePage,
+          displayString: AppStrings.getLanguagePack().view_header_Calendar,
+          smallHintText: calendarHintText,
           loggedInUsername: storage.DataCache.getUsername() ?? '',
-          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
-      ),
-      body: SafeArea(
-        child: Stack(
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              topnav.TopNavigatorWidget(
-                homePage: homePage,
-                displayString: AppStrings.getLanguagePack().view_header_Calendar,
-                smallHintText: calendarHintText,
-                loggedInUsername: storage.DataCache.getUsername() ?? '',
-                loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", ''),
-              ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
-                      onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarBack : null,
-                      visualDensity: VisualDensity.compact,
-                      splashRadius: 18,
-                    ),
-                    Expanded(
-                      child: TabBar(
-                        tabs: calendarTabs,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.center,
-                        dividerColor: Colors.transparent,
-                        controller: homePage.calendarTabController,
-                        indicator: UnderlineTabIndicator(
-                          borderSide: BorderSide(
-                            width: 2.5,
-                            color: AppColors.getTheme().primary,
-                          ),
-                          insets: const EdgeInsets.symmetric(horizontal: 4),
-                        ),
-                        indicatorSize: TabBarIndicatorSize.label,
-                        labelColor: AppColors.getTheme().primary,
-                        unselectedLabelColor: AppColors.getTheme().textColor.withValues(alpha: 0.5),
-                        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                      color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
-                      onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarForward : null,
-                      visualDensity: VisualDensity.compact,
-                      splashRadius: 18,
-                    ),
-                  ],
-                ),
+          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", ''),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+                onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarBack : null,
+                visualDensity: VisualDensity.compact,
+                splashRadius: 18,
               ),
               Expanded(
-                child: TabBarView(
+                child: TabBar(
+                  tabs: calendarTabs,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
+                  dividerColor: Colors.transparent,
                   controller: homePage.calendarTabController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: calendarTabViews,
+                  indicator: UnderlineTabIndicator(
+                    borderSide: BorderSide(
+                      width: 2.5,
+                      color: AppColors.getTheme().onPrimaryContainer,
+                    ),
+                    insets: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelColor: AppColors.getTheme().onPrimaryContainer,
+                  unselectedLabelColor: AppColors.getTheme().textColor.withValues(alpha: 0.5),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
               ),
-              bottomnav.BottomNavigatorWidget(homePage: homePage),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+                onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarForward : null,
+                visualDensity: VisualDensity.compact,
+                splashRadius: 18,
+              ),
             ],
           ),
-          ],
         ),
-      ),
+        Expanded(
+          child: TabBarView(
+            controller: homePage.calendarTabController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: calendarTabViews,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2512,123 +2539,216 @@ class MarkbookPageWidget extends StatelessWidget{
         homePage._confettiController.reset();
       });
     }
-    return Scaffold(
-      drawer: AppDrawer(
-          loggedInUsername: storage.DataCache.getUsername() ?? '',
-          loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
-      ),
-      body: SafeArea(
-        child: Stack(
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Subjects, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_subjects_CreditsInSemester, [totalCredits]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
-              HomePageState.getSeparatorLine(context),
-              Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: onRefresh,
-                    child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        scrollDirection: Axis.vertical,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Visibility(
-                              visible: homePage.markbookList.isNotEmpty,
-                              child: Container(
-                                margin: const EdgeInsets.only(top: 10, left: 10, right: 10),
-                                padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 12),
-                                width: MediaQuery.of(context).size.width,
-                                decoration: BoxDecoration(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                                  borderRadius: BorderRadius.circular(20),
-                                  //border: Border.all(color: Colors.white.withOpacity(.2), width: 1)
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    EmojiRichText(
-                                      text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().markbookPage_AverageDisplay, [totalAvg.isNaN || totalAvg <= 0 ? AppStrings.getLanguagePack().markbookPage_NoGrades : totalAvg.toStringAsFixed(2), api.Generic.reactionForAvg(totalAvg)]),
-                                      defaultStyle: TextStyle(
-                                        color: AppColors.getTheme().onPrimaryContainer,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13.0,
-                                      ),
-                                      emojiStyle: TextStyle(
-                                          color: AppColors.getTheme().onPrimaryContainer,
-                                          fontSize: 14.0,
-                                          fontFamily: "Noto Color Emoji"
-                                      ),
-                                    ),
-                                    EmojiRichText(
-                                      text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().markbookPage_AverageScholarshipDisplay, [totalAvg30.isNaN || totalAvg30 <= 0 ? AppStrings.getLanguagePack().markbookPage_NoGrades : totalAvg30.toStringAsFixed(2), api.Generic.reactionForAvg(totalAvg30)]),
-                                      defaultStyle: TextStyle(
-                                        color: AppColors.getTheme().onPrimaryContainer,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13.0,
-                                      ),
-                                      emojiStyle: TextStyle(
-                                          color: AppColors.getTheme().onPrimaryContainer,
-                                          fontSize: 14.0,
-                                          fontFamily: "Noto Color Emoji"
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Container(
-                              margin: const EdgeInsets.all(15),
-                              decoration: BoxDecoration(
-                                color: homePage.markbookList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                mainAxisSize: MainAxisSize.max,
-                                children: homePage.markbookList.isNotEmpty ? homePage.markbookList : <Widget>[
-                                  Center(
-                                    child: SizedBox(
-                                      height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                      width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                      child: CircularProgressIndicator(
-                                      color: AppColors.getTheme().textColor,
-                                      ),
+    return Stack(
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: <Widget>[
+            topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Subjects, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_subjects_CreditsInSemester, [totalCredits]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+            HomePageState.getSeparatorLine(context),
+            Expanded(
+                child: RefreshIndicator(
+                  onRefresh: onRefresh,
+                  child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Visibility(
+                            visible: homePage.markbookList.isNotEmpty,
+                            child: Builder(
+                              builder: (context) {
+                                final theme = AppColors.getTheme();
+                                final isDark = theme.isDark;
+                                return Container(
+                                  margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  width: MediaQuery.of(context).size.width,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? theme.secondary.withValues(alpha: 0.35) : theme.secondary.withValues(alpha: 0.10),
+                                    borderRadius: BorderRadius.circular(16.0),
+                                    border: Border.all(
+                                      color: theme.textColor.withValues(alpha: isDark ? 0.08 : 0.06),
+                                      width: 1,
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                                        fontWeight: FontWeight.w300,
-                                        fontSize: 10
-                                    ),
-                                  )
-                                ]
-                              ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  totalAvg.isNaN || totalAvg <= 0 ? '-' : totalAvg.toStringAsFixed(2),
+                                                  style: TextStyle(
+                                                    fontFamily: 'monospace',
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: theme.textColor,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  api.Generic.reactionForAvg(totalAvg),
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontFamily: 'Noto Color Emoji',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'SÚLYOZOTT ÁTLAG',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: theme.textColor.withValues(alpha: 0.55),
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 36,
+                                        color: theme.textColor.withValues(alpha: 0.08),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  totalAvg30.isNaN || totalAvg30 <= 0 ? '-' : totalAvg30.toStringAsFixed(2),
+                                                  style: TextStyle(
+                                                    fontFamily: 'monospace',
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: theme.textColor,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  api.Generic.reactionForAvg(totalAvg30),
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontFamily: 'Noto Color Emoji',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'ÖSZTÖNDÍJINDEX',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: theme.textColor.withValues(alpha: 0.55),
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 36,
+                                        color: theme.textColor.withValues(alpha: 0.08),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: theme.roomHighlightColor.withValues(alpha: 0.18),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '$totalCredits',
+                                                style: TextStyle(
+                                                  fontFamily: 'monospace',
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: theme.roomHighlightColor,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'KREDIT',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: theme.textColor.withValues(alpha: 0.55),
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                    )
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.max,
+                              children: homePage.markbookList.isNotEmpty ? homePage.markbookList : <Widget>[
+                                Center(
+                                  child: SizedBox(
+                                    height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                                    width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                                    child: CircularProgressIndicator(
+                                    color: AppColors.getTheme().textColor,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: AppColors.getTheme().textColor.withValues(alpha: .2),
+                                      fontWeight: FontWeight.w300,
+                                      fontSize: 10
+                                  ),
+                                )
+                              ]
+                            ),
+                          ),
+                        ],
+                      ),
                   )
-              ),
-              HomePageState.getSeparatorLine(context),
-              bottomnav.BottomNavigatorWidget(homePage: homePage),
-            ],
-          ),
-          Stack(
-            children: _getConfetti(context),
-          )
-        ],
-      ),
-      ),
+                )
+            ),
+          ],
+        ),
+        Stack(
+          children: _getConfetti(context),
+        )
+      ],
     );
   }
 }
@@ -2657,68 +2777,49 @@ class PaymentsPageWidget extends StatelessWidget{
 
   @override
   Widget build(BuildContext context){
-    return Scaffold(
-        drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername() ?? '',
-            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+        HomePageState.getSeparatorLine(context),
+        Expanded(
+            child: RefreshIndicator(
+                onRefresh: onRefresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
+                        children: homePage.paymentsList.isNotEmpty ? homePage.paymentsList : <Widget>[
+                          Center(
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                              width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                              child: CircularProgressIndicator(
+                                color: AppColors.getTheme().textColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: AppColors.getTheme().textColor.withValues(alpha: .2),
+                                fontWeight: FontWeight.w300,
+                                fontSize: 10
+                            ),
+                          )
+                        ]
+                    ),
+                  ),
+                )
+            )
         ),
-      body: SafeArea(
-        child: Stack(
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
-              HomePageState.getSeparatorLine(context),
-              Expanded(
-                  child: RefreshIndicator(
-                      onRefresh: onRefresh,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        scrollDirection: Axis.vertical,
-                        child: Container(
-                          margin: const EdgeInsets.all(15),
-                          width: MediaQuery.of(context).size.width,
-                          decoration: BoxDecoration(
-                            color: homePage.paymentsList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              mainAxisSize: MainAxisSize.max,
-                              children: homePage.paymentsList.isNotEmpty ? homePage.paymentsList : <Widget>[
-                                Center(
-                                  child: SizedBox(
-                                    height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                    width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.getTheme().textColor,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                                      fontWeight: FontWeight.w300,
-                                      fontSize: 10
-                                  ),
-                                )
-                              ]
-                          ),
-                        ),
-                      )
-                  )
-              ),
-              HomePageState.getSeparatorLine(context),
-              bottomnav.BottomNavigatorWidget(homePage: homePage),
-            ],
-          ),
-        ],
-      ),
-    )
+      ],
     );
   }
 }
@@ -2735,68 +2836,49 @@ class PeriodsPageWidget extends StatelessWidget{
 
   @override
   Widget build(BuildContext context){
-    return Scaffold(
-        drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername() ?? '',
-            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
-        ),
-        body: SafeArea(
-          child: Stack(
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Periods, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_periods_MainHeader, [homePage.countActivePeriods, AppStrings.getLanguagePack().topheader_periods_ActiveText, homePage.countFuturePeriods, AppStrings.getLanguagePack().topheader_periods_FutureText, homePage.countExpiredPeriods, AppStrings.getLanguagePack().topheader_periods_ExpiredText]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
-                HomePageState.getSeparatorLine(context),
-                Expanded(
-                    child: RefreshIndicator(
-                        onRefresh: onRefresh,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          scrollDirection: Axis.vertical,
-                          child: Container(
-                            margin: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: homePage.periodList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: .03) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                mainAxisSize: MainAxisSize.max,
-                                children: homePage.periodList.isNotEmpty ? homePage.periodList : <Widget>[
-                                  Center(
-                                    child: SizedBox(
-                                      height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                      width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
-                                      child: CircularProgressIndicator(
-                                        color: AppColors.getTheme().textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                                        fontWeight: FontWeight.w300,
-                                        fontSize: 10
-                                    ),
-                                  )
-                                ]
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Periods, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_periods_MainHeader, [homePage.countActivePeriods, AppStrings.getLanguagePack().topheader_periods_ActiveText, homePage.countFuturePeriods, AppStrings.getLanguagePack().topheader_periods_FutureText, homePage.countExpiredPeriods, AppStrings.getLanguagePack().topheader_periods_ExpiredText]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+        HomePageState.getSeparatorLine(context),
+        Expanded(
+            child: RefreshIndicator(
+                onRefresh: onRefresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
+                        children: homePage.periodList.isNotEmpty ? homePage.periodList : <Widget>[
+                          Center(
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                              width: MediaQuery.of(context).size.width < MediaQuery.of(context).size.height ? MediaQuery.of(context).size.width * 0.10 : MediaQuery.of(context).size.height * 0.10,
+                              child: CircularProgressIndicator(
+                                color: AppColors.getTheme().textColor,
+                              ),
                             ),
                           ),
-                        )
-                    )
-                ),
-                HomePageState.getSeparatorLine(context),
-                bottomnav.BottomNavigatorWidget(homePage: homePage),
-              ],
-            ),
-          ],
+                          const SizedBox(height: 20),
+                          Text(
+                            api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: AppColors.getTheme().textColor.withValues(alpha: .2),
+                                fontWeight: FontWeight.w300,
+                                fontSize: 10
+                            ),
+                          )
+                        ]
+                    ),
+                  ),
+                )
+            )
         ),
-        ),
-        floatingActionButton: null
+      ],
     );
   }
 }
@@ -2812,18 +2894,10 @@ class MailsPageWidget extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        drawer: AppDrawer(
-            loggedInUsername: storage.DataCache.getUsername() ?? '',
-            loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
-        ),
-        body: SafeArea(
-          child: Stack(
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
                 HomePageState.getSeparatorLine(context),
                 if (homePage.mailEntries.isNotEmpty)
                   Container(
@@ -2909,14 +2983,10 @@ class MailsPageWidget extends StatelessWidget{
                           physics: const AlwaysScrollableScrollPhysics(),
                           scrollDirection: Axis.vertical,
                           controller: homePage.currentMailPageController,
-                          child: Container(
-                            margin: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: homePage.mailList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.max,
                                 children: homePage.mailList.isNotEmpty ? homePage.mailList : <Widget>[
                                   Center(
@@ -2944,13 +3014,7 @@ class MailsPageWidget extends StatelessWidget{
                         )
                     )
                 ),
-                HomePageState.getSeparatorLine(context),
-                bottomnav.BottomNavigatorWidget(homePage: homePage),
               ],
-            ),
-          ],
-        ),
-        )
-    );
+            );
   }
 }

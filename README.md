@@ -70,12 +70,15 @@ Hozzáadásukkal rengeteget segítesz a projekt fejlődésében!
 
 
 ### 🪐 v2.0.0 (Jupiter Release)
-* 🪐 **Új arculat & Jupiter:** Megújult alkalmazásnév, új ikonok és logók, letisztult indítás és első indítási nyelvválassztó kártyák.
+* 🪐 **Új arculat & Jupiter:** Megújult alkalmazásnév, új ikonok és logók, letisztult indítás és első indítási nyelvválasztó kártyák.
+* 🎨 **Egységes UI/UX kártyarendszer:** Az összes aloldal (Órarend, Tárgyak, Pénzügyek, Időszakok, Üzenetek) modern, 16px-es kártyákat kapott témakövető finom szegéllyel és háttérrel; a korábbi szürke konténerek eltávolításra kerültek.
+* 📊 **Tárgyak & Tanulmányi Dashboard:** Új 3 oszlopos statisztikai összegző (Súlyozott átlag reakció emojival, Ösztöndíjindex, Kreditszámláló), érdemjegy-matrica és céljegy-szimuláció finom haptikával (`AppHaptics.lightImpact()`).
+* 🎨 **Komplementer színelméleti kiemelések:** Nyomdai szabályok szerinti vibráló komplementer terem- és kreditkiemelő színek (`roomHighlightColor`) a hardcoded kék helyett minden színpalettához.
 * 📑 **Kérvénykezelés modul:** 3 fülös felület (Leadható, Leadott és Megkezdett kérvények), piszkozat-mentés és visszaállítás (`Invalidate`), dinamikus natív űrlapkitöltés és nagyítható A4-es dokumentum-előnézet.
-* 🏢 **Tanulmányi Iroda (TO) sáv:** Egybefüggő idősáv az órák mellett, valós idejű NYITVA / ZÁRVA állapotjelzés a rendszeridő alapján, és letisztázott szünetek.
+* 🏢 **Aszinkron Tanulmányi Iroda (TO) és kar-ellenőrzés:** Párhuzamosított háttérfolyamat, amely sosem blokkolja az app indítását hálózati késés esetén; valós idejű NYITVA/ZÁRVA sáv és zavartalan órarendi megjelenítés.
 * 📅 **Naptár & Idővonal:** Villámgyors (0.05s) azonnali órarend-megjelenítés (`Smart Dual-Cache`), élő napi haladási jelző és a választott témához illeszkedő mély háttérszínek.
-* 💳 **Pénzügyek & Ösztöndíjak:** Intelligens tranzakció-kategorizálás (pozitív ösztöndíjak és juttatások vs. valós költések, belső gyűjtőszámlás utalások kizárása).
-* 🧭 **Animált navigáció & Profil:** Ruganyos (spring physics) csúszó navbar animáció, élő olvasatlan üzenet badge és perzisztens becenév-beállítás a profilképed mellett.
+* 💳 **Pénzügyek & Időszakok:** Monospace határidő- és összegformázás, státuszkapszulák, valamint időarányos folyamatjelző (progress bar) az aktív időszakokhoz.
+* 🧭 **Animált navigáció & Profil:** Visszaállított és réteghelyes ruganyos ("jiggly" / spring physics) csúszó alsó navigáció, élő olvasatlan üzenet badge és perzisztens becenév-beállítás.
 * 🛠️ **Stabilitás és minőség:** 0 fordítási és analízis hiba, teljes körű magyar és angol nyelvi frissítés.
 
 ### 🚀 v1.0.5

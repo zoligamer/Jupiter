@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -21,6 +21,7 @@ import '../storage.dart';
 import 'main_page.dart' as main_page;
 import 'language_select_page.dart';
 import '../Misc/popup.dart';
+import '../Misc/to_office_service.dart';
 
 class SetupPageLoginTypeSelection extends StatefulWidget{
   const SetupPageLoginTypeSelection({super.key});
@@ -409,11 +410,9 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
     });
 
     if(widget.fetchData) {
-      if(!storage.DataCache.getHasNetwork()){
-        return;
-      }
       api.InstitutesRequest.fetchInstitudesJSON().then((value) {
-        if(value == null){
+        if(value == null || value.isEmpty){
+          widget.callback(false);
           return;
         }
         setState(() {
@@ -425,10 +424,14 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
             _filteredValues.add(item.Name);
           }
 
-          _selectedValue = _filteredValues[Random().nextInt(1000) % _filteredValues.length];
+          if (_filteredValues.isNotEmpty) {
+            _selectedValue = _filteredValues[Random().nextInt(1000) % _filteredValues.length];
+          }
           _hasData++;
         });
 
+        widget.callback(false);
+      }).catchError((_) {
         widget.callback(false);
       });
     }
@@ -1306,6 +1309,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
         storage.DataCache.setUsername(_username.toUpperCase());
         storage.DataCache.setPassword(_password);
         storage.DataCache.setHasLogin(1);
+        unawaited(ToOfficeService.checkAndResolveFacultyAsync());
         // proceed logic
         Navigator.popUntil(context, (route) => route.willHandlePopInternally);
         Navigator.push(
@@ -1331,6 +1335,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                 storage.DataCache.setUsername(_username.toUpperCase());
                 storage.DataCache.setPassword(_password);
                 storage.DataCache.setHasLogin(1);
+                unawaited(ToOfficeService.checkAndResolveFacultyAsync());
 
                 Navigator.popUntil(context, (route) => route.willHandlePopInternally);
                 Navigator.push(

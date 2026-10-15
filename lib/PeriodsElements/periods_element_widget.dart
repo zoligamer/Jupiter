@@ -1,11 +1,10 @@
-﻿import 'package:flutter/material.dart';
-import 'package:jupiter/Misc/emojirich_text.dart';
+import 'package:flutter/material.dart';
 import 'package:jupiter/language.dart';
 import '../API/api_coms.dart';
 import '../colors.dart';
-import '../storage.dart'; // ÚJ: Betűméret lekéréséhez
+import '../storage.dart';
 
-class PeriodsElementWidget extends StatelessWidget{
+class PeriodsElementWidget extends StatelessWidget {
   final String displayName;
   final String formattedStartTime;
   final String formattedStartTimeYear;
@@ -17,193 +16,334 @@ class PeriodsElementWidget extends StatelessWidget{
   final int startTime;
   final bool expired;
 
-  const PeriodsElementWidget({super.key, required this.displayName, required this.formattedStartTime, required this.formattedEndTime, required this.formattedEndTimeYear, required this.formattedStartTimeYear, required this.isActive, required this.periodType, required this.startTime, required this.endTime, required this.expired});
+  const PeriodsElementWidget({
+    super.key,
+    required this.displayName,
+    required this.formattedStartTime,
+    required this.formattedEndTime,
+    required this.formattedEndTimeYear,
+    required this.formattedStartTimeYear,
+    required this.isActive,
+    required this.periodType,
+    required this.startTime,
+    required this.endTime,
+    required this.expired,
+  });
 
-  EmojiRichText? getIconFromType(PeriodType periodType, double fontScale){
-    String emoji = '❓';
-    switch (periodType) {
-      case PeriodType.timetableRegistration: emoji = '📄'; break;
-      case PeriodType.gradingTime: emoji = '⭐'; break;
-      case PeriodType.loginTime: emoji = '🪪'; break;
-      case PeriodType.pregivenGradingAccepting: emoji = '📑'; break;
-      case PeriodType.timetableFinalization: emoji = '📝'; break;
-      case PeriodType.coursesRegistration: emoji = '📚'; break;
-      case PeriodType.nerdTime: emoji = '🤓'; break;
-      case PeriodType.examTime: emoji = '🎓'; break;
-      case PeriodType.signinTime: emoji = '🖋️'; break;
-      default: emoji = '❓'; break;
+  String _getTypeLabel(PeriodType type) {
+    switch (type) {
+      case PeriodType.timetableRegistration:
+        return 'ÓRARENDFELVÉTEL';
+      case PeriodType.gradingTime:
+        return 'VIZSGAIDŐSZAK';
+      case PeriodType.loginTime:
+        return 'BEJELENTKEZÉS';
+      case PeriodType.pregivenGradingAccepting:
+        return 'MEGTEKINTÉS';
+      case PeriodType.timetableFinalization:
+        return 'VÉGLEGESÍTÉS';
+      case PeriodType.coursesRegistration:
+        return 'TÁRGYFELVÉTEL';
+      case PeriodType.nerdTime:
+        return 'SZORGALMI IDŐSZAK';
+      case PeriodType.examTime:
+        return 'VIZSGÁK';
+      case PeriodType.signinTime:
+        return 'BEIRATKOZÁS';
+      default:
+        return 'IDŐSZAK';
     }
-    return EmojiRichText(
-      text: emoji,
-      defaultStyle: TextStyle(
-        color: AppColors.getTheme().onPrimaryContainer,
-        fontWeight: FontWeight.w900,
-        fontSize: 22.0 * fontScale, // Skálázott
-      ),
-      emojiStyle: TextStyle(
-          color: AppColors.getTheme().onPrimaryContainer,
-          fontSize: 22.0 * fontScale, // Skálázott
-          fontFamily: "Noto Color Emoji"
-      ),
-    );
+  }
+
+  IconData _getTypeIcon(PeriodType type) {
+    switch (type) {
+      case PeriodType.timetableRegistration:
+        return Icons.event_note_rounded;
+      case PeriodType.gradingTime:
+        return Icons.star_rounded;
+      case PeriodType.loginTime:
+        return Icons.badge_rounded;
+      case PeriodType.pregivenGradingAccepting:
+        return Icons.fact_check_rounded;
+      case PeriodType.timetableFinalization:
+        return Icons.checklist_rounded;
+      case PeriodType.coursesRegistration:
+        return Icons.menu_book_rounded;
+      case PeriodType.nerdTime:
+        return Icons.school_rounded;
+      case PeriodType.examTime:
+        return Icons.history_edu_rounded;
+      case PeriodType.signinTime:
+        return Icons.app_registration_rounded;
+      default:
+        return Icons.date_range_rounded;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    double fontScale = DataCache.getFontScale(); // ÚJ: Betűméret szorzó
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
+    final double fontScale = DataCache.getFontScale();
 
-    final currVal = Duration(milliseconds: endTime - DateTime.now().millisecondsSinceEpoch).inDays + 0.0;
-    final maxVal = Duration(milliseconds: endTime-startTime).inDays + 0.0;
     final now = DateTime.now().millisecondsSinceEpoch;
+    final totalDuration = (endTime - startTime).clamp(1, double.infinity);
+    final elapsed = (now - startTime).clamp(0, totalDuration);
+    final double progress = (elapsed / totalDuration).clamp(0.0, 1.0);
 
-    final cardColor = expired ? AppColors.getTheme().errorRed :
-    isActive ? AppColors.getTheme().currentClassGreen :
-    AppColors.getTheme().textColor;
+    Color cardBg = isDark
+        ? theme.secondary.withValues(alpha: 0.35)
+        : theme.secondary.withValues(alpha: 0.10);
+    Color cardBorder = isDark
+        ? theme.secondary.withValues(alpha: 0.55)
+        : theme.secondary.withValues(alpha: 0.25);
+    double borderWidth = 1.0;
+
+    if (isActive) {
+      cardBorder = theme.currentClassGreen;
+      cardBg = isDark
+          ? theme.currentClassGreen.withValues(alpha: 0.08)
+          : theme.currentClassGreen.withValues(alpha: 0.04);
+      borderWidth = 1.4;
+    } else if (expired) {
+      cardBg = isDark
+          ? theme.secondary.withValues(alpha: 0.18)
+          : theme.secondary.withValues(alpha: 0.05);
+      cardBorder = isDark
+          ? theme.secondary.withValues(alpha: 0.30)
+          : theme.secondary.withValues(alpha: 0.15);
+    }
+
+    final accentColor = isActive
+        ? theme.currentClassGreen
+        : (expired ? theme.textColor.withValues(alpha: 0.5) : theme.primary);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-      width: MediaQuery.of(context).size.width,
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16.0),
         border: Border.all(
-            color: cardColor.withValues(alpha: 0.3),
-            width: 1
+          color: cardBorder,
+          width: borderWidth,
         ),
-        // Megtartottuk a menő folyamatjelződet, csak az új opacity rendszerrel!
-        gradient: isActive ? LinearGradient(
-            colors: [
-              AppColors.getTheme().currentClassGreen.withValues(alpha: 0.15),
-              cardColor.withValues(alpha: 0.02)
-            ],
-            stops: [1 - (currVal / maxVal), 1 - (currVal / maxVal)]
-        ) : null,
-        color: !isActive ? cardColor.withValues(alpha: 0.03) : null,
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: theme.currentClassGreen.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // 1. SOR: Időszak típus matrica balra, Státusz badge jobbra
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _getTypeIcon(periodType),
+                      size: 12 * fontScale,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _getTypeLabel(periodType),
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 10.5 * fontScale,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'monospace',
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Jobb oldali státusz badge
+              if (isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.currentClassGreen,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.currentClassGreen.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "AKTÍV",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 10.5 * fontScale,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (expired)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.textColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    "LEJÁRT",
+                    style: TextStyle(
+                      color: theme.textColor.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10.5 * fontScale,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.primary.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    "KÖVETKEZŐ",
+                    style: TextStyle(
+                      color: theme.primary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10.5 * fontScale,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 7),
+
+          // 2. SOR: Időszak címe
           Text(
             displayName,
             style: TextStyle(
-              color: expired ? AppColors.getTheme().errorRed : AppColors.getTheme().textColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 15.0 * fontScale, // Skálázott
+              color: isDark ? Colors.white : theme.textColor,
+              fontSize: 15.5 * fontScale,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 10),
-          isActive ? Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              getIconFromType(periodType, fontScale) ?? const SizedBox(),
-              const SizedBox(width: 5),
-              Expanded(
-                  flex: 2,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Text(
-                        formattedStartTimeYear,
-                        style: TextStyle(
-                          color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12.0 * fontScale,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      Text(
-                        formattedStartTime,
-                        style: TextStyle(
-                          color: AppColors.getTheme().onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.0 * fontScale,
-                        ),
-                        textAlign: TextAlign.center,
-                      )
-                    ],
-                  )
-              ),
-              const Expanded(flex: 1, child: SizedBox()),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Text(
-                      formattedEndTimeYear,
-                      style: TextStyle(
-                        color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w400,
-                        fontSize: 12.0 * fontScale,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      formattedEndTime,
-                      style: TextStyle(
-                        color: AppColors.getTheme().onPrimaryContainer,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.0 * fontScale,
-                      ),
-                      textAlign: TextAlign.center,
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ) :
+          const SizedBox(height: 7),
+
+          // 3. SOR: Dátumtartomány balra, Hátralévő idő jobbra
           Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              getIconFromType(periodType, fontScale) ?? const SizedBox(),
-              Expanded(
-                flex: 1,
+              Flexible(
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Flexible(
-                      child: Text(
-                        expired ? AppStrings.getLanguagePack().periodPage_Expired : AppStrings.getLanguagePack().periodPage_Starts,
-                        style: TextStyle(
-                          color: expired ? AppColors.getTheme().errorRed : AppColors.getTheme().textColor.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.0 * fontScale,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    Icon(
+                      Icons.schedule_rounded,
+                      size: 13 * fontScale,
+                      color: theme.textColor.withValues(alpha: 0.6),
                     ),
+                    const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        expired ? '$formattedEndTimeYear $formattedEndTime' : '$formattedStartTimeYear $formattedStartTime',
+                        "$formattedStartTime – $formattedEndTime",
                         style: TextStyle(
-                          color: expired ? AppColors.getTheme().errorRed : AppColors.getTheme().textColor.withValues(alpha: 0.7),
+                          color: theme.textColor.withValues(alpha: 0.75),
+                          fontSize: 11.5 * fontScale,
                           fontWeight: FontWeight.w600,
-                          fontSize: 13.0 * fontScale,
+                          fontFamily: 'monospace',
                         ),
-                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              Text(
+                expired
+                    ? AppStrings.getStringWithParams(
+                        AppStrings.getLanguagePack().periodPage_ExpiredDays,
+                        [-(Duration(milliseconds: endTime - now).inDays + 1) * (Duration(milliseconds: endTime - now).inDays == 0 ? -1 : 1)],
+                      )
+                    : !isActive
+                        ? AppStrings.getStringWithParams(
+                            AppStrings.getLanguagePack().periodPage_StartDays,
+                            [Duration(milliseconds: startTime - now).inDays + 1],
+                          )
+                        : AppStrings.getStringWithParams(
+                            AppStrings.getLanguagePack().periodPage_ActiveDays,
+                            [Duration(milliseconds: endTime - now).inDays + 1],
+                          ),
+                style: TextStyle(
+                  color: isActive
+                      ? theme.currentClassGreen
+                      : theme.textColor.withValues(alpha: 0.6),
+                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 11.5 * fontScale,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            expired ? AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_ExpiredDays, [-(Duration(milliseconds: endTime - now).inDays + 1) * (Duration(milliseconds: endTime - now).inDays == 0 ? -1 : 1)]) : !isActive ? AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_StartDays, [Duration(milliseconds: startTime - now).inDays + 1]) : AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_ActiveDays, [Duration(milliseconds: endTime - now).inDays + 1]),
-            style: TextStyle(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w600,
-              fontSize: 12.0 * fontScale,
+
+          // Aktív időszak esetén haladási sáv
+          if (isActive) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: theme.currentClassGreen.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.currentClassGreen),
+                minHeight: 3,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
+          ],
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../Misc/to_office_service.dart';
 import '../colors.dart';
 import '../haptics.dart';
@@ -13,12 +14,43 @@ class ToOfficeOverlayWidget extends StatelessWidget {
     this.isCurrent = false,
   });
 
+  static String extractRoomNumber(String loc) {
+    if (loc.isEmpty) return '';
+    final trimmed = loc.trim();
+    if (trimmed.contains('FR.210') || trimmed.contains('FR')) return 'FR.210';
+    if (trimmed.contains('J.52') || trimmed.contains('J.53') || trimmed.contains('J.')) return 'J.52';
+
+    // Ha kar vagy intézmény megnevezés, nem teremszám:
+    final lower = trimmed.toLowerCase();
+    if (lower.contains('kar') ||
+        lower.contains('faculty') ||
+        lower.contains('egyetem') ||
+        lower.contains('tanulmányi') ||
+        lower.contains('főiskola') ||
+        lower.contains('campus')) {
+      return '';
+    }
+
+    if (ToOfficeService.currentFacultyName.isNotEmpty &&
+        lower.contains(ToOfficeService.currentFacultyName.toLowerCase())) {
+      return '';
+    }
+
+    // Ha tényleges teremszám formátum:
+    if (trimmed.length <= 10 && RegExp(r'\d').hasMatch(trimmed)) {
+      return trimmed;
+    }
+
+    return '';
+  }
+
   static void showDetailsDialog(BuildContext context, ToOfficeSlot slot) {
     AppHaptics.lightImpact();
     showDialog(
       context: context,
       builder: (context) {
         final allSlots = ToOfficeService.getSlotsForDay(slot.weekday);
+        final room = extractRoomNumber(slot.location);
         return AlertDialog(
           backgroundColor: AppColors.getTheme().rootBackground,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -101,27 +133,41 @@ class ToOfficeOverlayWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text(
-                '📍 Helyszínek:',
-                style: TextStyle(
-                  color: AppColors.getTheme().textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+              if (room.isNotEmpty || slot.location.contains('J.') || slot.location.contains('FR')) ...[
+                const SizedBox(height: 14),
+                Text(
+                  '📍 Helyszínek / Terem:',
+                  style: TextStyle(
+                    color: AppColors.getTheme().textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '• József körút 6. J.52-53\n• Frangepán utca 50. FR.210',
-                style: TextStyle(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.8),
-                  fontSize: 13,
-                  height: 1.4,
+                const SizedBox(height: 6),
+                Text(
+                  room.isNotEmpty ? '• $room' : '• József körút 6. J.52-53\n• Frangepán utca 50. FR.210',
+                  style: TextStyle(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.8),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           actions: [
+            if (ToOfficeService.currentToUrl.isNotEmpty)
+              TextButton.icon(
+                icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                label: const Text('Weboldal'),
+                onPressed: () async {
+                  AppHaptics.lightImpact();
+                  final uri = Uri.parse(ToOfficeService.currentToUrl);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
@@ -141,7 +187,7 @@ class ToOfficeOverlayWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentlyOpen = isCurrent || ToOfficeService.isSlotCurrentlyOpen(slot);
-    final shortLoc = slot.location.contains('FR') ? 'FR.210' : (slot.location.contains('J') ? 'J.52' : slot.location);
+    final room = extractRoomNumber(slot.location);
     final isSecondSlot = slot.note.contains('II') || slot.startHour >= 13;
     final sh = slot.startHour.toString().padLeft(2, '0');
     final sm = slot.startMinute.toString().padLeft(2, '0');
@@ -220,22 +266,24 @@ class ToOfficeOverlayWidget extends StatelessWidget {
                 fontSize: 9.0,
               ),
             ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                shortLoc,
-                style: TextStyle(
-                  color: AppColors.isDarktheme() ? Colors.orange.shade300 : Colors.orange.shade900,
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.bold,
+            if (room.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  room,
+                  style: TextStyle(
+                    color: AppColors.isDarktheme() ? Colors.orange.shade300 : Colors.orange.shade900,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -309,13 +357,18 @@ class ToOfficeStandaloneBanner extends StatelessWidget {
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${slot.timeFormatted} • ${slot.location}',
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
-                    fontSize: 11,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final room = ToOfficeOverlayWidget.extractRoomNumber(slot.location);
+                    final sub = room.isNotEmpty ? '${slot.timeFormatted} • $room' : slot.timeFormatted;
+                    return Text(
+                      sub,
+                      style: TextStyle(
+                        color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:jupiter/API/ics_calendar.dart';
 import 'package:jupiter/Misc/clickable_text_span.dart';
@@ -524,27 +525,58 @@ import '../storage.dart';
   }
   
   class InstitutesRequest{
-    static Future<List<dynamic>?> fetchInstitudesJSON() async{
-      //return _APIRequest.postRequest(Uri.parse(URLs.INSTITUTIONS_URL), '{}');
-      var json;
-      try{
-        json = await getRawJsonWithNameUrlPairs();
+    static List<dynamic>? _inMemoryInstitutes;
+
+    static Future<List<dynamic>?> fetchInstitudesJSON() async {
+      // 1. Memóriából azonnal (0 ms)
+      if (_inMemoryInstitutes != null && _inMemoryInstitutes!.isNotEmpty) {
+        unawaited(_fetchFromGitHubAndCache());
+        return _inMemoryInstitutes;
       }
-      catch(error){
-      }
-      return json;
+
+      // 2. Mentett SharedPreferences cache-ből azonnal (0 ms)
+      try {
+        final cached = await storage.getString('CACHED_INSTITUTES_JSON');
+        if (cached != null && cached.isNotEmpty) {
+          final Map<String, dynamic> jsonMap = conv.json.decode(cached);
+          _inMemoryInstitutes = jsonMap["Institutes"];
+          unawaited(_fetchFromGitHubAndCache());
+          return _inMemoryInstitutes;
+        }
+      } catch (_) {}
+
+      // 3. Beépített assets/universityNameUrlPairs.json fájlból azonnal (offline fallback, azonnali indulás!)
+      try {
+        final assetString = await rootBundle.loadString('assets/universityNameUrlPairs.json');
+        final Map<String, dynamic> jsonMap = conv.json.decode(assetString);
+        _inMemoryInstitutes = jsonMap["Institutes"];
+        unawaited(_fetchFromGitHubAndCache());
+        return _inMemoryInstitutes;
+      } catch (_) {}
+
+      // 4. Végső fallback: GitHub letöltés 4 másodperces timeouttal
+      return await _fetchFromGitHubAndCache();
     }
 
-    static Future<List<dynamic>?> getRawJsonWithNameUrlPairs() async{
-      final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/universityNameUrlPairs.json');
-      final response = await http.get(url);
+    static Future<List<dynamic>?> _fetchFromGitHubAndCache() async {
+      try {
+        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/universityNameUrlPairs.json');
+        final response = await http.get(url).timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonMap = conv.json.decode(response.body);
+          final institutes = jsonMap["Institutes"];
+          if (institutes is List && institutes.isNotEmpty) {
+            _inMemoryInstitutes = institutes;
+            await storage.saveString('CACHED_INSTITUTES_JSON', response.body);
+            return institutes;
+          }
+        }
+      } catch (_) {}
+      return _inMemoryInstitutes;
+    }
 
-      if (response.statusCode != 200) {
-        return null;
-      }
-
-      Map<String, dynamic> jsonMap = conv.json.decode(response.body);
-      return jsonMap["Institutes"];
+    static Future<List<dynamic>?> getRawJsonWithNameUrlPairs() async {
+      return await fetchInstitudesJSON();
     }
   
     static List<Institute> getDataFromInstitudesJSON(List<dynamic> jsonMap){
@@ -716,6 +748,114 @@ import '../storage.dart';
         }
       } catch (e) { }
       return false;
+    }
+
+    static Future<StudentTrainingInfo?> getStudentGeneralTrainingData() async {
+      final isModern = storage.DataCache.getIsModernApi();
+      final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+      if (baseUrl.isEmpty) return null;
+
+      if (isModern) {
+        try {
+          final token = await storage.DataCache.getAccessToken() ?? '';
+          if (token.isEmpty) return null;
+
+          // 1. Elsődleges: GetGeneralTrainingData a Burp log alapján
+          final candidates = <String>[
+            "$baseUrl/api/RegistrySheet/GetGeneralTrainingData",
+          ];
+          if (!baseUrl.contains('/ujhallgato')) {
+            final baseRoot = baseUrl.replaceAll(RegExp(r'/hallgato.*$', caseSensitive: false), '');
+            candidates.add("$baseRoot/ujhallgato/api/RegistrySheet/GetGeneralTrainingData");
+          }
+
+          for (final uriStr in candidates) {
+            try {
+              final raw = await _APIRequest.getRequest(Uri.parse(uriStr), bearerToken: token);
+              if (raw.isNotEmpty && !raw.contains('ErrorMessage') && raw.contains('"data"')) {
+                final decoded = conv.json.decode(raw);
+                final data = decoded['data'];
+                if (data is Map<String, dynamic>) {
+                  final desc = (data['description'] ?? '').toString();
+                  final code = (data['trainingCode'] ?? '').toString();
+                  final name = (data['trainingName'] ?? '').toString();
+                  final id = (data['trainingId'] ?? '').toString();
+                  if (desc.isNotEmpty || code.isNotEmpty || name.isNotEmpty) {
+                    return StudentTrainingInfo(
+                      description: desc,
+                      trainingCode: code,
+                      trainingName: name,
+                      trainingId: id,
+                    );
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+
+          // 2. Másodlagos: GetCurrentProfessions a Burp log alapján
+          try {
+            final profUrl = Uri.parse("$baseUrl/api/RegistrySheet/GetCurrentProfessions");
+            final profRaw = await _APIRequest.getRequest(profUrl, bearerToken: token);
+            if (profRaw.isNotEmpty && !profRaw.contains('ErrorMessage')) {
+              final profDecoded = conv.json.decode(profRaw);
+              if (profDecoded['data'] is List && (profDecoded['data'] as List).isNotEmpty) {
+                final item = (profDecoded['data'] as List).first as Map<String, dynamic>;
+                return StudentTrainingInfo(
+                  description: (item['description'] ?? item['studyName'] ?? '').toString(),
+                  trainingCode: (item['studyCode'] ?? item['studyShortName'] ?? '').toString(),
+                  trainingName: (item['studyName'] ?? '').toString(),
+                  trainingId: (item['studyId'] ?? '').toString(),
+                );
+              }
+            }
+          } catch (_) {}
+
+          // 3. Harmadlagos: MyTrainings
+          try {
+            final mtUrl = Uri.parse("$baseUrl/api/ContextUserProfile/MyTrainings");
+            final mtRaw = await _APIRequest.getRequest(mtUrl, bearerToken: token);
+            if (mtRaw.isNotEmpty && !mtRaw.contains('ErrorMessage')) {
+              final mtDecoded = conv.json.decode(mtRaw);
+              if (mtDecoded['data'] is List && (mtDecoded['data'] as List).isNotEmpty) {
+                final item = (mtDecoded['data'] as List).first as Map<String, dynamic>;
+                return StudentTrainingInfo(
+                  description: (item['trainingFaculty'] ?? item['facultyName'] ?? item['description'] ?? '').toString(),
+                  trainingCode: (item['trainingCode'] ?? '').toString(),
+                  trainingName: (item['trainingName'] ?? '').toString(),
+                  trainingId: (item['studentTrainingId'] ?? '').toString(),
+                );
+              }
+            }
+          } catch (_) {}
+        } catch (_) {}
+      } else {
+        // Hagyományos (régi) Neptun API
+        try {
+          final username = storage.DataCache.getUsername();
+          final password = storage.DataCache.getPassword();
+          if (username != null && password != null) {
+            final oldApiUrl = Uri.parse(baseUrl + (baseUrl.endsWith("/MobileService.svc") ? "" : "/MobileService.svc") + URLs.TRAININGS_URL);
+            final request = await _APIRequest.postRequest(
+                oldApiUrl,
+                _APIRequest.getGenericPostData(username, password)
+            );
+            if (request.trim().startsWith('{')) {
+              final decodedResponse = conv.json.decode(request);
+              if (decodedResponse["Trainings"] is List && (decodedResponse["Trainings"] as List).isNotEmpty) {
+                final item = (decodedResponse["Trainings"] as List).first as Map<String, dynamic>;
+                return StudentTrainingInfo(
+                  description: (item['Faculty'] ?? item['FacultyName'] ?? item['Description'] ?? '').toString(),
+                  trainingCode: (item['TrainingCode'] ?? item['Code'] ?? '').toString(),
+                  trainingName: (item['TrainingName'] ?? item['Name'] ?? '').toString(),
+                  trainingId: (item['Id'] ?? '').toString(),
+                );
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      return null;
     }
 
     static Future<int?> getFirstStudyweek({String? termId}) async{
@@ -2157,6 +2297,24 @@ class MailRequest{
   
     getUrl() => Uri.parse(URL);
   }
+
+  class StudentTrainingInfo {
+    final String description;
+    final String trainingCode;
+    final String trainingName;
+    final String trainingId;
+
+    const StudentTrainingInfo({
+      this.description = '',
+      this.trainingCode = '',
+      this.trainingName = '',
+      this.trainingId = '',
+    });
+
+    @override
+    String toString() => 'StudentTrainingInfo(desc: "$description", code: "$trainingCode", name: "$trainingName", id: "$trainingId")';
+  }
+
 class CalendarEntry {
   late int startEpoch;
   late int endEpoch;

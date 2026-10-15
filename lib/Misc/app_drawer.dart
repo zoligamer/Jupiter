@@ -16,6 +16,7 @@ import '../Pages/petitions_page.dart';
 import '../Pages/profile_hub_page.dart';
 import '../Pages/document_storage_page.dart';
 import '../Misc/auto_updater.dart';
+import 'to_office_service.dart';
 import 'dart:convert' as conv;
 
 class AppDrawer extends StatefulWidget {
@@ -750,6 +751,7 @@ class _AppDrawerState extends State<AppDrawer> {
               onTap: () {
                 AppHaptics.lightImpact();
                 Future.delayed(Duration.zero, ()async{
+                  ToOfficeService.reset();
                   await storage.DataCache.dataWipe();
                   await AppNotifications.cancelScheduledNotifs();
                 }).whenComplete((){

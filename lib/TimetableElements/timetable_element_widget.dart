@@ -85,9 +85,9 @@ class TimetableElementWidget extends StatelessWidget {
       cardBorder = Colors.amber.shade600.withValues(alpha: 0.45);
       borderWidth = 1.0;
     } else if (currentOverride) {
-      cardBg = theme.primary.withValues(alpha: 0.12);
-      cardBorder = theme.primary.withValues(alpha: 0.85);
-      borderWidth = 1.5;
+      cardBg = const Color(0xFF00F0FF).withValues(alpha: 0.08);
+      cardBorder = const Color(0xFF00F0FF);
+      borderWidth = 2.0;
     } else {
       cardBg = AppColors.isDarktheme()
           ? theme.secondary.withValues(alpha: 0.35)
@@ -104,9 +104,9 @@ class TimetableElementWidget extends StatelessWidget {
     } else if (isTask) {
       cardTimeColor = Colors.amber.shade600;
     } else if (currentOverride) {
-      cardTimeColor = theme.primary;
+      cardTimeColor = const Color(0xFF00F0FF);
     } else {
-      cardTimeColor = theme.onPrimaryContainer;
+      cardTimeColor = const Color(0xFFFF2A85);
     }
 
     return Container(
@@ -127,7 +127,7 @@ class TimetableElementWidget extends StatelessWidget {
                     displayStartTime,
                     style: TextStyle(
                       color: currentOverride
-                          ? theme.primary
+                          ? const Color(0xFF00F0FF)
                           : (isPast
                               ? theme.textColor.withValues(alpha: 0.35)
                               : theme.textColor.withValues(alpha: 0.70)),
@@ -146,11 +146,11 @@ class TimetableElementWidget extends StatelessWidget {
                           height: 15,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: theme.primary,
+                            color: const Color(0xFF00F0FF),
                             boxShadow: [
                               BoxShadow(
-                                color: theme.primary.withValues(alpha: 0.5),
-                                blurRadius: 6,
+                                color: const Color(0xFF00F0FF).withValues(alpha: 0.65),
+                                blurRadius: 8,
                                 spreadRadius: 1,
                               ),
                             ],
@@ -170,7 +170,7 @@ class TimetableElementWidget extends StatelessWidget {
                         Icon(
                           Icons.arrow_right_rounded,
                           size: 16,
-                          color: theme.primary,
+                          color: const Color(0xFF00F0FF),
                         ),
                       ] else if (isPast) ...[
                         Container(
@@ -232,9 +232,9 @@ class TimetableElementWidget extends StatelessWidget {
                     boxShadow: currentOverride
                         ? [
                             BoxShadow(
-                              color: theme.primary.withValues(alpha: 0.15),
-                              blurRadius: 12,
-                              offset: const Offset(0, 3),
+                              color: const Color(0xFF00F0FF).withValues(alpha: 0.30),
+                              blurRadius: 16,
+                              offset: const Offset(0, 2),
                             ),
                           ]
                         : null,
@@ -252,30 +252,37 @@ class TimetableElementWidget extends StatelessWidget {
                             "$displayStartTime - $displayEndTime",
                             style: TextStyle(
                               color: cardTimeColor,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               fontSize: 12.0 * fontScale,
                               fontFamily: 'monospace',
                             ),
                           ),
                           if (location.trim().isNotEmpty && location != "NULL" && location != "Nincs megadva")
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: theme.textColor.withValues(alpha: 0.07),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: theme.textColor.withValues(alpha: 0.12),
-                                  width: 0.8,
-                                ),
+                                color: isExam
+                                    ? theme.errorRed
+                                    : theme.roomHighlightColor,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
                               child: Text(
                                 location,
                                 style: TextStyle(
                                   color: isExam
-                                      ? theme.errorRed.withValues(alpha: 0.9)
-                                      : theme.textColor.withValues(alpha: 0.85),
-                                  fontSize: 11.0 * fontScale,
-                                  fontWeight: FontWeight.w700,
+                                      ? Colors.white
+                                      : theme.onRoomHighlightColor,
+                                  fontSize: 11.5 * fontScale,
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ),
@@ -283,13 +290,14 @@ class TimetableElementWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
 
-                      // 2. SOR: Tárgynév félkövéren
+                      // 2. SOR: Tárgynév kiemelve nagy fehér betűkkel
                       Text(
                         title,
                         style: TextStyle(
-                          color: currentOverride ? theme.primary : theme.textColor,
-                          fontSize: 14.5 * fontScale,
+                          color: Colors.white,
+                          fontSize: 16.5 * fontScale,
                           fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -306,7 +314,7 @@ class TimetableElementWidget extends StatelessWidget {
                               style: TextStyle(
                                 color: isExam
                                     ? theme.errorRed.withValues(alpha: 0.8)
-                                    : theme.textColor.withValues(alpha: 0.6),
+                                    : theme.textColor.withValues(alpha: 0.65),
                                 fontSize: 11.5 * fontScale,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -321,15 +329,15 @@ class TimetableElementWidget extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.timelapse_rounded,
-                                  color: theme.primary,
+                                  color: const Color(0xFF00F0FF),
                                   size: 14 * fontScale,
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
                                   '${(Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inHours.remainder(60).toString().padLeft(2, '0')}:${((Duration(milliseconds: endDateNormalized.millisecondsSinceEpoch - DateTime.now().millisecondsSinceEpoch)).inMinutes.remainder(60)).toString().padLeft(2, '0')}',
                                   style: TextStyle(
-                                    color: theme.primary,
-                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF00F0FF),
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 12.0 * fontScale,
                                   ),
                                 ),
@@ -671,9 +679,11 @@ class BreakElementWidget extends StatelessWidget {
         ),
       );
     } else {
-      // 2. Normal break: clean capsule spanning full card width
-      final shortLoc = toOfficeSlot != null
-          ? (toOfficeSlot!.location.contains('FR') ? 'FR.210' : (toOfficeSlot!.location.contains('J') ? 'J.52' : toOfficeSlot!.location))
+      final room = toOfficeSlot != null
+          ? ToOfficeOverlayWidget.extractRoomNumber(toOfficeSlot!.location)
+          : '';
+      final toText = toOfficeSlot != null
+          ? (room.isNotEmpty ? "TO: ${toOfficeSlot!.timeFormatted} ($room)" : "TO: ${toOfficeSlot!.timeFormatted}")
           : '';
 
       breakContent = Container(
@@ -726,7 +736,7 @@ class BreakElementWidget extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      "TO: ${toOfficeSlot!.timeFormatted} ($shortLoc)",
+                      toText,
                       style: TextStyle(
                         color: Colors.orange.shade400,
                         fontSize: 10.5 * fontScale,

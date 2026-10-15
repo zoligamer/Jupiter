@@ -3,6 +3,9 @@
 *.log
 *.pyc
 *.swp
+*.bak
+*.tmp
+devtools_options.yaml
 .DS_Store
 .atom/
 .buildlog/
