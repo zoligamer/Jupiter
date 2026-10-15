@@ -1,0 +1,3035 @@
+{
+   "version": "1.0.0",
+   "last_updated": "2026-10-15",
+   "Institutes": [
+      {
+         "Name": "A Tan Kapuja Buddhista Főiskola",
+         "Url": "https://host.sdakft.hu/tkbfhw",
+         "ToUrl": "https://www.tkbf.hu/tanulmanyi-hivatal/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Központi épület"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Központi épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Központi épület"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Központi épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Központi épület"
+            }
+         ]
+      },
+      {
+         "Name": "Állatorvostudományi Egyetem",
+         "Url": "https://neptun.univet.hu/ate_hw",
+         "ToUrl": "https://univet.hu/hu/oktatas/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "István u. 2. J épület"
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "István u. 2. J épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "István u. 2. J épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "István u. 2. J épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "István u. 2. J épület"
+            }
+         ]
+      },
+      {
+         "Name": "Apor Vilmos Katolikus Főiskola",
+         "Url": "https://neptun.avkf.hu/hallgatoiangular",
+         "ToUrl": "https://avkf.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Vác, Konstantin tér 1-5."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Vác, Konstantin tér 1-5."
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Vác, Konstantin tér 1-5."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Vác, Konstantin tér 1-5."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Vác, Konstantin tér 1-5."
+            }
+         ]
+      },
+      {
+         "Name": "Bhaktivedanta Hittudományi Főiskola",
+         "Url": "https://host.sdakft.hu/bhfhw",
+         "ToUrl": "https://bhf.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "1039 Budapest, Attila u. 8."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "1039 Budapest, Attila u. 8."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "1039 Budapest, Attila u. 8."
+            }
+         ]
+      },
+      {
+         "Name": "Brenner János Hittudományi Főiskola",
+         "Url": "https://host.sdakft.hu/bjhfhw",
+         "ToUrl": "https://bjhf.hu/tanulmanyi-ugyek/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Káptalandomb 7."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Káptalandomb 7."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Káptalandomb 7."
+            }
+         ]
+      },
+      {
+         "Name": "Budapesti Corvinus Egyetem",
+         "Url": "https://neptun3r.web.uni-corvinus.hu/Hallgatoi",
+         "ToUrl": "https://www.uni-corvinus.hu/fooldal/hallgatoi-szolgaltatasok/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Főépület, Student Services E.180"
+            }
+         ]
+      },
+      {
+         "Name": "Budapesti Gazdasági Egyetem",
+         "Url": "https://neptun18.uni-bge.hu/hallgato",
+         "ToUrl": "https://uni-bge.hu/hu/hallgatoi-ugyfelszolgalat",
+         "Faculties": [
+            {
+               "FacultyName": "Kereskedelmi, Vendéglátóipari és Idegenforgalmi Kar (KVIK)",
+               "ToUrl": "https://uni-bge.hu/hu/kvik/ugyintezes",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Alkotmány u. 9-11."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Alkotmány u. 9-11."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Alkotmány u. 9-11."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Alkotmány u. 9-11."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Alkotmány u. 9-11."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Külkereskedelmi Kar (KKK)",
+               "ToUrl": "https://uni-bge.hu/hu/kkk/ugyintezes",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Diósy Lajos u. 22-24."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Diósy Lajos u. 22-24."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Diósy Lajos u. 22-24."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Diósy Lajos u. 22-24."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Diósy Lajos u. 22-24."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Pénzügyi és Számviteli Kar (PSZK)",
+               "ToUrl": "https://uni-bge.hu/hu/pszk/ugyintezes",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Buzogány u. 10-12."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Buzogány u. 10-12."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Buzogány u. 10-12."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Buzogány u. 10-12."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Buzogány u. 10-12."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Budapesti Metropolitan Egyetem",
+         "Url": "https://neptunweb1.metropolitan.hu/hallgato",
+         "ToUrl": "https://www.metropolitan.hu/hallgatoi-informacios-kozpont",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 16,
+               "endMinute": 30,
+               "location": "Nagy Lajos király útja 1-9."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 16,
+               "endMinute": 30,
+               "location": "Nagy Lajos király útja 1-9."
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 16,
+               "endMinute": 30,
+               "location": "Nagy Lajos király útja 1-9."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 16,
+               "endMinute": 30,
+               "location": "Nagy Lajos király útja 1-9."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Nagy Lajos király útja 1-9."
+            }
+         ]
+      },
+      {
+         "Name": "Budapesti Műszaki és Gazdaságtudományi Egyetem",
+         "Url": "https://neptun.bme.hu/hallgatoi",
+         "ToUrl": "https://kth.bme.hu/nyitvatartas/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "R épület aula"
+            },
+            {
+               "weekday": 2,
+               "startHour": 11,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "R épület aula"
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 30,
+               "location": "R épület aula"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "R épület aula"
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "R épület aula"
+            }
+         ]
+      },
+      {
+         "Name": "Debreceni Egyetem",
+         "Url": "https://www-h-ng.neptun.unideb.hu/hallgato_ng",
+         "ToUrl": "https://unideb.hu/tanulmanyi-ugyek",
+         "Faculties": [
+            {
+               "FacultyName": "Informatikai Kar (IK)",
+               "ToUrl": "https://inf.unideb.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Kassai út 26. IF22"
+                  },
+                  {
+                     "weekday": 1,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Kassai út 26. IF22"
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Kassai út 26. IF22"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Kassai út 26. IF22"
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Kassai út 26. IF22"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Kassai út 26. IF22"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Természettudományi és Technológiai Kar (TTK)",
+               "ToUrl": "https://ttk.unideb.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 1."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 1."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 1."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 1."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 1."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Gazdaságtudományi Kar (GTK)",
+               "ToUrl": "https://econ.unideb.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Böszörményi út 138."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Böszörményi út 138."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Böszörményi út 138."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Böszörményi út 138."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Böszörményi út 138."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Debreceni Református Hittudományi Egyetem",
+         "Url": "https://host.sdakft.hu/drhehw",
+         "ToUrl": "https://drhe.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Kálvin tér 16."
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Kálvin tér 16."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Kálvin tér 16."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Kálvin tér 16."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Kálvin tér 16."
+            }
+         ]
+      },
+      {
+         "Name": "Dunaújvárosi Egyetem",
+         "Url": "https://nappw.dfad.duf.hu/hallgato_ng",
+         "ToUrl": "https://uniduna.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Táncsics M. u. 1/A."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Táncsics M. u. 1/A."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Táncsics M. u. 1/A."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Táncsics M. u. 1/A."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Táncsics M. u. 1/A."
+            }
+         ]
+      },
+      {
+         "Name": "Edutus Főiskola",
+         "Url": "https://neptun.edutus.hu/hallgato",
+         "ToUrl": "https://www.edutus.hu/hallgatoknak/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1114 Budapest, Villányi út 11-13."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1114 Budapest, Villányi út 11-13."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1114 Budapest, Villányi út 11-13."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1114 Budapest, Villányi út 11-13."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "1114 Budapest, Villányi út 11-13."
+            }
+         ]
+      },
+      {
+         "Name": "Eötvös József Főiskola",
+         "Url": "https://neptun.ejf.hu/hallgato_ng",
+         "ToUrl": "https://ejf.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Baja, Szegedi út 2."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Baja, Szegedi út 2."
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Baja, Szegedi út 2."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Baja, Szegedi út 2."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Baja, Szegedi út 2."
+            }
+         ]
+      },
+      {
+         "Name": "Eötvös Loránd Tudományegyetem",
+         "Url": "https://neptun.elte.hu/Account",
+         "ToUrl": "https://neptun.elte.hu/qter",
+         "Faculties": [
+            {
+               "FacultyName": "Központi Quaestura Hallgatói Ügyfélszolgálat",
+               "ToUrl": "https://neptun.elte.hu/qter",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 5."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 5."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 12,
+                     "startMinute": 0,
+                     "endHour": 19,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 5."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 5."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 14,
+                     "endMinute": 0,
+                     "location": "Egyetem tér 5."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Informatikai Kar (IK)",
+               "ToUrl": "https://inf.elte.hu/thfogadoora",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 10,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Lágymányos, Déli épület 0.418"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 30,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Lágymányos, Déli épület 0.418"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 10,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Lágymányos, Déli épület 0.418"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Bölcsészettudományi Kar (BTK)",
+               "ToUrl": "https://btk.elte.hu/tanulmanyi-hivatal",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Múzeum krt. 4/A"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Múzeum krt. 4/A"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Múzeum krt. 4/A"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Természettudományi Kar (TTK)",
+               "ToUrl": "https://ttk.elte.hu/th",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Lágymányos, Északi tömb 0.81"
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Lágymányos, Északi tömb 0.81"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Lágymányos, Északi tömb 0.81"
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Lágymányos, Északi tömb 0.81"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Lágymányos, Északi tömb 0.81"
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Eszterházy Károly Katolikus Egyetem",
+         "Url": "https://neptunh.uni-eszterhazy.hu/Hallgato",
+         "ToUrl": "https://uni-eszterhazy.hu/oktatas/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Eger, Eszterházy tér 1."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Eger, Eszterházy tér 1."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Eger, Eszterházy tér 1."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Eger, Eszterházy tér 1."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Eger, Eszterházy tér 1."
+            }
+         ]
+      },
+      {
+         "Name": "Gábor Dénes Egyetem",
+         "Url": "https://neptun.gde.hu/hallgato",
+         "ToUrl": "https://gde.hu/hallgatoknak/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1119 Budapest, Fejér Lipót u. 70."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1119 Budapest, Fejér Lipót u. 70."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1119 Budapest, Fejér Lipót u. 70."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1119 Budapest, Fejér Lipót u. 70."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "1119 Budapest, Fejér Lipót u. 70."
+            }
+         ]
+      },
+      {
+         "Name": "Gál Ferenc Egyetem",
+         "Url": "https://host.sdakft.hu/gfehw",
+         "ToUrl": "https://gfe.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Szeged, Dóm tér 6."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Szeged, Dóm tér 6."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Szeged, Dóm tér 6."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Szeged, Dóm tér 6."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Szeged, Dóm tér 6."
+            }
+         ]
+      },
+      {
+         "Name": "IBS Nemzetközi Üzleti Főiskola",
+         "Url": "https://neptun.ibs-b.hu/student",
+         "ToUrl": "https://www.ibs-b.hu/student-services",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Záhony u. 7."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Záhony u. 7."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Záhony u. 7."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Záhony u. 7."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Záhony u. 7."
+            }
+         ]
+      },
+      {
+         "Name": "Károli Gáspár Református Egyetem",
+         "Url": "https://neptun.kre.hu/hallgato",
+         "ToUrl": "https://portal.kre.hu/index.php/hallgatoi-ugyintezes.html",
+         "Faculties": [
+            {
+               "FacultyName": "Állam- és Jogtudományi Kar (ÁJK)",
+               "ToUrl": "https://ajk.kre.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Bocskai út 38-40."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Bocskai út 38-40."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Bocskai út 38-40."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Bölcsészet- és Társadalomtudományi Kar (BTK)",
+               "ToUrl": "https://btk.kre.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Reviczky u. 4."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Reviczky u. 4."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Reviczky u. 4."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Reviczky u. 4."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Kodolányi János Egyetem",
+         "Url": "https://neptun.kodolanyi.hu/hallgato_NG",
+         "ToUrl": "https://www.kodolanyi.hu/hallgatoknak/tanulmanyi_hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Budapest, Frangepán u. 50-56."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Budapest, Frangepán u. 50-56."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Budapest, Frangepán u. 50-56."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Budapest, Frangepán u. 50-56."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Budapest, Frangepán u. 50-56."
+            }
+         ]
+      },
+      {
+         "Name": "Liszt Ferenc Zeneművészeti Egyetem",
+         "Url": "https://neptun.lfze.hu/hallgato",
+         "ToUrl": "https://lfze.hu/oktatasi-es-tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Wesselényi u. 52."
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 30,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Wesselényi u. 52."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Wesselényi u. 52."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 30,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Wesselényi u. 52."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Wesselényi u. 52."
+            }
+         ]
+      },
+      {
+         "Name": "Magyar Agrár- és Élettudományi Egyetem",
+         "Url": "https://hallgato.uni-mate.hu/hallgato_ng",
+         "ToUrl": "https://uni-mate.hu/tanulmanyi-ugyek",
+         "Faculties": [
+            {
+               "FacultyName": "Szent István Campus (Gödöllő)",
+               "ToUrl": "https://uni-mate.hu/godollo-to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Gödöllő, Páter K. u. 1."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Gödöllő, Páter K. u. 1."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Gödöllő, Páter K. u. 1."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Gödöllő, Páter K. u. 1."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Gödöllő, Páter K. u. 1."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Budai Campus",
+               "ToUrl": "https://uni-mate.hu/buda-to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Villányi út 29-43. K épület"
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Villányi út 29-43. K épület"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Villányi út 29-43. K épület"
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Villányi út 29-43. K épület"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Villányi út 29-43. K épület"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Kaposvári Campus",
+               "ToUrl": "https://uni-mate.hu/kaposvar-to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Kaposvár, Guba Sándor u. 40."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Kaposvár, Guba Sándor u. 40."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Kaposvár, Guba Sándor u. 40."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Magyar Képzőművészeti Egyetem",
+         "Url": "https://mke-neptun.mke.hu/hallgato/MobileService.svc",
+         "ToUrl": "https://www.mke.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Andrássy út 69-71."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Andrássy út 69-71."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Andrássy út 69-71."
+            }
+         ]
+      },
+      {
+         "Name": "Magyar Táncművészeti Egyetem",
+         "Url": "https://host.sdakft.hu/mtfhw",
+         "ToUrl": "https://mte.eu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Columbus u. 87-89."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Columbus u. 87-89."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Columbus u. 87-89."
+            }
+         ]
+      },
+      {
+         "Name": "Milton Friedman Egyetem",
+         "Url": "https://neptun.uni-milton.hu/hallgato",
+         "ToUrl": "https://uni-milton.hu/hallgatoknak/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Kelta u. 2."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Kelta u. 2."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Kelta u. 2."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Kelta u. 2."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Kelta u. 2."
+            }
+         ]
+      },
+      {
+         "Name": "Miskolci Egyetem",
+         "Url": "https://neptunweb1.uni-miskolc.hu/hallgato_ng",
+         "ToUrl": "https://www.uni-miskolc.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Egyetemváros A/4 épület"
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Egyetemváros A/4 épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Egyetemváros A/4 épület"
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Egyetemváros A/4 épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Egyetemváros A/4 épület"
+            }
+         ]
+      },
+      {
+         "Name": "Moholy-Nagy Művészeti Egyetem",
+         "Url": "https://host.sdakft.hu/momehw",
+         "ToUrl": "https://mome.hu/hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Zugligeti út 9."
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 30,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Zugligeti út 9."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Zugligeti út 9."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 30,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Zugligeti út 9."
+            }
+         ]
+      },
+      {
+         "Name": "Nemzeti Közszolgálati Egyetem",
+         "Url": "https://neptunweb.uni-nke.hu/hallgato_ng",
+         "ToUrl": "https://uni-nke.hu/oktatas/kozponti-tanulmanyi-iroda",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ludovika tér 2."
+            }
+         ]
+      },
+      {
+         "Name": "Neumann János Egyetem",
+         "Url": "https://neptun.nje.hu/hallgato",
+         "ToUrl": "https://nje.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Kecskemét, Izsáki út 10."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Kecskemét, Izsáki út 10."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Kecskemét, Izsáki út 10."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Kecskemét, Izsáki út 10."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Kecskemét, Izsáki út 10."
+            }
+         ]
+      },
+      {
+         "Name": "Nyíregyházi Egyetem",
+         "Url": "https://neptunweb.nye.hu/hallgato",
+         "ToUrl": "https://nye.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sóstói út 31/B."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sóstói út 31/B."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Sóstói út 31/B."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sóstói út 31/B."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sóstói út 31/B."
+            }
+         ]
+      },
+      {
+         "Name": "Óbudai Egyetem",
+         "Url": "https://neptun.uni-obuda.hu/ujhallgato",
+         "ToUrl": "https://bgk.uni-obuda.hu/tanulmanyi-iroda/",
+         "Faculties": [
+            {
+               "FacultyName": "Bánki Donát Gépész és Biztonságtechnikai Kar (BGK)",
+               "ToUrl": "https://bgk.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 45,
+                     "endHour": 11,
+                     "endMinute": 45,
+                     "location": "J.52-53 / FR.210"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 8,
+                     "startMinute": 45,
+                     "endHour": 11,
+                     "endMinute": 45,
+                     "location": "J.52-53 / FR.210",
+                     "note": "I. idősáv"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 15,
+                     "endHour": 14,
+                     "endMinute": 30,
+                     "location": "J.52-53 / FR.210",
+                     "note": "II. idősáv"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 45,
+                     "endHour": 11,
+                     "endMinute": 45,
+                     "location": "J.52-53 / FR.210"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Neumann János Informatikai Kar (NIK)",
+               "ToUrl": "https://nik.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Bécsi út 96/b Fsz. 19."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Bécsi út 96/b Fsz. 19."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Bécsi út 96/b Fsz. 19."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Bécsi út 96/b Fsz. 19."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Bécsi út 96/b Fsz. 19."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Kandó Kálmán Villamosmérnöki Kar (KVK)",
+               "ToUrl": "https://kvk.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Tavaszmező u. 17. A.118"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Tavaszmező u. 17. A.118"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Tavaszmező u. 17. A.118"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Keleti Károly Gazdasági Kar (KGK)",
+               "ToUrl": "https://kgk.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 45,
+                     "endHour": 11,
+                     "endMinute": 45,
+                     "location": "Tavaszmező u. 15-17. E.09"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Tavaszmező u. 15-17. E.09"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 45,
+                     "endHour": 11,
+                     "endMinute": 45,
+                     "location": "Tavaszmező u. 15-17. E.09"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Rejtő Sándor Könnyűipari és Környezetmérnöki Kar (RKK)",
+               "ToUrl": "https://rkk.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Doberdó út 6."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 0,
+                     "location": "Doberdó út 6."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Doberdó út 6."
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Ybl Miklós Építéstudományi Kar (YBL)",
+               "ToUrl": "https://ybl.uni-obuda.hu/tanulmanyi-iroda/",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Thököly út 74. A1115"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Thököly út 74. A1115"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Thököly út 74. A1115"
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Országos Rabbiképző - Zsidó Egyetem",
+         "Url": "https://neptun.or-zse.hu/hallgato",
+         "ToUrl": "https://or-zse.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Bérkocsis u. 2."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Bérkocsis u. 2."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Bérkocsis u. 2."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Bérkocsis u. 2."
+            }
+         ]
+      },
+      {
+         "Name": "Pannon Egyetem",
+         "Url": "https://neptun-ws01.uni-pannon.hu/hallgato",
+         "ToUrl": "https://www.uni-pannon.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Veszprém, Egyetem u. 10. A épület"
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Veszprém, Egyetem u. 10. A épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Veszprém, Egyetem u. 10. A épület"
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Veszprém, Egyetem u. 10. A épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Veszprém, Egyetem u. 10. A épület"
+            }
+         ]
+      },
+      {
+         "Name": "Pázmány Péter Katolikus Egyetem",
+         "Url": "https://neptun3.ppke.hu/hallgato2_uj",
+         "ToUrl": "https://ppke.hu/tanulmanyi-ugyek",
+         "Faculties": [
+            {
+               "FacultyName": "Információs Technológiai és Bionikai Kar (ITK)",
+               "ToUrl": "https://itk.ppke.hu/tanulmanyi-osztaly",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Práter u. 50/A"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Práter u. 50/A"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Práter u. 50/A"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Jog- és Államtudományi Kar (JÁK)",
+               "ToUrl": "https://jak.ppke.hu/to",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Szentkirályi u. 28."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Szentkirályi u. 28."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Szentkirályi u. 28."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 9,
+                     "startMinute": 0,
+                     "endHour": 12,
+                     "endMinute": 0,
+                     "location": "Szentkirályi u. 28."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Pécsi Tudományegyetem",
+         "Url": "https://neptun-web4.tr.pte.hu/hallgato",
+         "ToUrl": "https://pte.hu/hu/oktatas/kozponti-tanulmanyi-iroda",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 3,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Ifjúság útja 6."
+            }
+         ]
+      },
+      {
+         "Name": "Sapientia Erdélyi Magyar Tudományegyetem",
+         "Url": "https://host.sdakft.hu/semtehw/MobileService.svc",
+         "ToUrl": "https://sapientia.ro/hu/hallgatoknak/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Kolozsvár, Mátyás király u. 4."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Kolozsvár, Mátyás király u. 4."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Kolozsvár, Mátyás király u. 4."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Kolozsvár, Mátyás király u. 4."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Kolozsvár, Mátyás király u. 4."
+            }
+         ]
+      },
+      {
+         "Name": "Sapientia Szerzetesi Hittudományi Főiskola",
+         "Url": "https://neptun3r.sapientia.hu/hallgato",
+         "ToUrl": "https://sapientia.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Piarista köz 1."
+            },
+            {
+               "weekday": 2,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Piarista köz 1."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Piarista köz 1."
+            },
+            {
+               "weekday": 4,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Piarista köz 1."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Piarista köz 1."
+            }
+         ]
+      },
+      {
+         "Name": "Semmelweis Egyetem",
+         "Url": "https://neptunweb.semmelweis.hu/hallgato",
+         "ToUrl": "https://semmelweis.hu/oktatas/tanulmanyi-ugyek/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Nagyvárad téri Elméleti Tömb (NET)"
+            }
+         ]
+      },
+      {
+         "Name": "Soproni Egyetem",
+         "Url": "https://neptun3r.uni-sopron.hu/hallgato_ng",
+         "ToUrl": "https://uni-sopron.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Bajcsy-Zsilinszky u. 4."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Bajcsy-Zsilinszky u. 4."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Bajcsy-Zsilinszky u. 4."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Bajcsy-Zsilinszky u. 4."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 11,
+               "endMinute": 30,
+               "location": "Bajcsy-Zsilinszky u. 4."
+            }
+         ]
+      },
+      {
+         "Name": "Széchenyi István Egyetem",
+         "Url": "https://neptun-hweb.sze.hu/hallgato_ng",
+         "ToUrl": "https://to.sze.hu/ugyfelfogadas-a-tanulmanyi-osztalyon-2",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Egyetem tér 1. Igazgatási épület"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Egyetem tér 1. Igazgatási épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 12,
+               "startMinute": 30,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Győr, Egyetem tér 1. Igazgatási épület"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Egyetem tér 1. Igazgatási épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Győr, Egyetem tér 1. Igazgatási épület"
+            }
+         ]
+      },
+      {
+         "Name": "Szegedi Tudományegyetem",
+         "Url": "https://neptun.szte.hu/hallgato",
+         "ToUrl": "https://u-szeged.hu/tik/nyitvatartas",
+         "Faculties": [
+            {
+               "FacultyName": "Központi Hallgatói Szolgáltató Iroda (TIK)",
+               "ToUrl": "https://u-szeged.hu/tik/nyitvatartas",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 18,
+                     "endMinute": 0,
+                     "location": "Ady tér 10. TIK"
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 18,
+                     "endMinute": 0,
+                     "location": "Ady tér 10. TIK"
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 18,
+                     "endMinute": 0,
+                     "location": "Ady tér 10. TIK"
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 18,
+                     "endMinute": 0,
+                     "location": "Ady tér 10. TIK"
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 0,
+                     "endHour": 16,
+                     "endMinute": 0,
+                     "location": "Ady tér 10. TIK"
+                  }
+               ]
+            },
+            {
+               "FacultyName": "Természettudományi és Informatikai Kar (TTIK)",
+               "ToUrl": "https://sci.u-szeged.hu/karunkrol/szervezeti-felepites/tanulmanyi-osztaly",
+               "ToSchedule": [
+                  {
+                     "weekday": 1,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Aradi vértanúk tere 1."
+                  },
+                  {
+                     "weekday": 2,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Aradi vértanúk tere 1."
+                  },
+                  {
+                     "weekday": 3,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Aradi vértanúk tere 1."
+                  },
+                  {
+                     "weekday": 4,
+                     "startHour": 13,
+                     "startMinute": 0,
+                     "endHour": 15,
+                     "endMinute": 30,
+                     "location": "Aradi vértanúk tere 1."
+                  },
+                  {
+                     "weekday": 5,
+                     "startHour": 8,
+                     "startMinute": 30,
+                     "endHour": 11,
+                     "endMinute": 30,
+                     "location": "Aradi vértanúk tere 1."
+                  }
+               ]
+            }
+         ]
+      },
+      {
+         "Name": "Szent Atanáz Görög Katolikus Hittudományi Főiskola",
+         "Url": "https://neptun.szentatanaz.hu/hallgato",
+         "ToUrl": "https://szentatanaz.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Nyíregyháza, Bethlen Gábor u. 13-19."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Nyíregyháza, Bethlen Gábor u. 13-19."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Nyíregyháza, Bethlen Gábor u. 13-19."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Nyíregyháza, Bethlen Gábor u. 13-19."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Nyíregyháza, Bethlen Gábor u. 13-19."
+            }
+         ]
+      },
+      {
+         "Name": "Szent Pál Akadémia",
+         "Url": "https://neptun.szpa.hu/hallgato/MobileService.svc",
+         "ToUrl": "https://szpa.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "1103 Budapest, Gyömrői út 69."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "1103 Budapest, Gyömrői út 69."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "1103 Budapest, Gyömrői út 69."
+            }
+         ]
+      },
+      {
+         "Name": "Színház- és Filmművészeti Egyetem",
+         "Url": "https://host.sdakft.hu/szfehw",
+         "ToUrl": "https://szfe.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Szentkirályi u. 32/a"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Szentkirályi u. 32/a"
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Szentkirályi u. 32/a"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "Szentkirályi u. 32/a"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Szentkirályi u. 32/a"
+            }
+         ]
+      },
+      {
+         "Name": "Testnevelési Egyetem",
+         "Url": "https://neptun.tf.hu/hallgato",
+         "ToUrl": "https://tf.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            },
+            {
+               "weekday": 1,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Alkotás u. 44. K1 épület"
+            }
+         ]
+      },
+      {
+         "Name": "Tokaj-Hegyalja Egyetem",
+         "Url": "https://neptun.unithe.hu/hallgato",
+         "ToUrl": "https://unithe.hu/tanulmanyi-hivatal",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sárospatak, Eötvös út 7."
+            },
+            {
+               "weekday": 2,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sárospatak, Eötvös út 7."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Sárospatak, Eötvös út 7."
+            },
+            {
+               "weekday": 4,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sárospatak, Eötvös út 7."
+            },
+            {
+               "weekday": 5,
+               "startHour": 8,
+               "startMinute": 30,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Sárospatak, Eötvös út 7."
+            }
+         ]
+      },
+      {
+         "Name": "Tomori Pál Főiskola",
+         "Url": "https://host.sdakft.hu/tpfhw",
+         "ToUrl": "https://tpf.hu/tanulmanyi-hivatal/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1223 Budapest, Művelődés u. 21-27."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1223 Budapest, Művelődés u. 21-27."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1223 Budapest, Művelődés u. 21-27."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1223 Budapest, Művelődés u. 21-27."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 13,
+               "endMinute": 0,
+               "location": "1223 Budapest, Művelődés u. 21-27."
+            }
+         ]
+      },
+      {
+         "Name": "Veszprémi Érseki Foiskola",
+         "Url": "https://neptun.vhf.hu/hallgato_ng",
+         "ToUrl": "https://ersekifojskola.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Veszprém, Jutasi út 18/2."
+            },
+            {
+               "weekday": 3,
+               "startHour": 13,
+               "startMinute": 0,
+               "endHour": 15,
+               "endMinute": 30,
+               "location": "Veszprém, Jutasi út 18/2."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 12,
+               "endMinute": 0,
+               "location": "Veszprém, Jutasi út 18/2."
+            }
+         ]
+      },
+      {
+         "Name": "Wekerle Sándor Üzleti Főiskola",
+         "Url": "https://neptun.wsne.hu/hallgato",
+         "ToUrl": "https://wsuf.hu/tanulmanyi-osztaly",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1083 Budapest, Jázmin u. 10."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1083 Budapest, Jázmin u. 10."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1083 Budapest, Jázmin u. 10."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 16,
+               "endMinute": 0,
+               "location": "1083 Budapest, Jázmin u. 10."
+            },
+            {
+               "weekday": 5,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "1083 Budapest, Jázmin u. 10."
+            }
+         ]
+      },
+      {
+         "Name": "Wesley János Lelkészképző Főiskola",
+         "Url": "https://host.sdakft.hu/wjlfhw",
+         "ToUrl": "https://wjlf.hu/tanulmanyi-osztaly/",
+         "ToSchedule": [
+            {
+               "weekday": 1,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Dankó u. 11."
+            },
+            {
+               "weekday": 2,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Dankó u. 11."
+            },
+            {
+               "weekday": 3,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Dankó u. 11."
+            },
+            {
+               "weekday": 4,
+               "startHour": 9,
+               "startMinute": 0,
+               "endHour": 14,
+               "endMinute": 0,
+               "location": "Dankó u. 11."
+            }
+         ]
+      }
+   ]
+}
