@@ -134,7 +134,14 @@
       },
       {
          "Name":"Óbudai Egyetem",
-         "Url":"https://neptun.uni-obuda.hu/ujhallgato"
+         "Url":"https://neptun.uni-obuda.hu/ujhallgato",
+         "ToUrl":"https://bgk.uni-obuda.hu/tanulmanyi-iroda/",
+         "ToSchedule":[
+            {"weekday": 1, "startHour": 8, "startMinute": 45, "endHour": 11, "endMinute": 45, "location": "J.52-53 / FR.210"},
+            {"weekday": 3, "startHour": 8, "startMinute": 45, "endHour": 11, "endMinute": 45, "location": "J.52-53 / FR.210", "note": "I. idősáv"},
+            {"weekday": 3, "startHour": 13, "startMinute": 15, "endHour": 14, "endMinute": 30, "location": "J.52-53 / FR.210", "note": "II. idősáv"},
+            {"weekday": 5, "startHour": 8, "startMinute": 45, "endHour": 11, "endMinute": 45, "location": "J.52-53 / FR.210"}
+         ]
       },
       {
          "Name":"Országos Rabbiképző - Zsidó Egyetem",
