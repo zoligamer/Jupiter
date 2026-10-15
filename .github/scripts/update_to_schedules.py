@@ -3,7 +3,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
-JSON_PATH = "universities_with_to_schedule.json"
+JSON_PATH = "universityNameUrlPairs.json"
 
 def check_and_update_urls():
     if not os.path.exists(JSON_PATH):
@@ -49,6 +49,11 @@ def check_and_update_urls():
 
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=3)
+
+    for other_path in ["universityNameUrlPairs.json", "assets/universityNameUrlPairs.json"]:
+        if os.path.exists(other_path):
+            with open(other_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=3)
 
     print("Ellenőrzés befejezve, JSON frissítve.")
 
