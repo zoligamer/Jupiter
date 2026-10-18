@@ -16,7 +16,7 @@ import '../colors.dart';
 
 class AppUpdater {
   static const String repoOwner = "zoligamer";
-  static const String repoName = "Neptun-Mobile-fork";
+  static const String repoName = "Jupiter";
 
   /// Reaktív értesítők a felület számára
   static final ValueNotifier<bool> hasUpdateNotifier = ValueNotifier<bool>(false);

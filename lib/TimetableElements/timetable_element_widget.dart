@@ -31,13 +31,23 @@ class TimetableElementWidget extends StatelessWidget {
 
   late final bool isTask;
   final bool fullWidthMargin;
+  final bool isOverlapping;
+  late final bool isLongLesson;
+  final List<api.CalendarEntry>? embeddedEntries;
 
   TimetableElementWidget(
-      {super.key, required this.entry, required this.position, required this.isCurrent, this.fullWidthMargin = true}) {
+      {super.key,
+      required this.entry,
+      required this.position,
+      required this.isCurrent,
+      this.fullWidthMargin = true,
+      this.isOverlapping = false,
+      this.embeddedEntries}) {
     isExam = entry.isExam;
     isTask = entry.isTask;
     title = entry.title;
     location = entry.location;
+    isLongLesson = (entry.endEpoch - entry.startEpoch) >= (3 * 3600 * 1000);
 
     // start date
     var startDate = DateTime.fromMillisecondsSinceEpoch(entry.startEpoch);
@@ -106,111 +116,239 @@ class TimetableElementWidget extends StatelessWidget {
     } else if (currentOverride) {
       cardTimeColor = const Color(0xFF00F0FF);
     } else {
-      cardTimeColor = const Color(0xFFFF2A85);
+      cardTimeColor = theme.primary; // Theme based primary colors as requested
     }
 
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: fullWidthMargin ? 14 : 0,
-        vertical: 4,
+        vertical: 0, // No vertical margin on outer container so left spine connects seamlessly
       ),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- LEFT TIMELINE TRACK (Width: 46px) ---
+            // --- LEFT SOLID TIMELINE TRACK (Width: 48px) ---
             SizedBox(
-              width: 46,
-              child: Column(
+              width: 48,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Text(
-                    displayStartTime,
-                    style: TextStyle(
-                      color: currentOverride
-                          ? const Color(0xFF00F0FF)
-                          : (isPast
-                              ? theme.textColor.withValues(alpha: 0.35)
-                              : theme.textColor.withValues(alpha: 0.70)),
-                      fontWeight: currentOverride ? FontWeight.w800 : FontWeight.w600,
-                      fontSize: 11.5 * fontScale,
-                      fontFamily: 'monospace',
+                  // Folytonos, töretlen gerincvonal tetőtől talpig (0px gap a szomszédos kártyákhoz)
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 2,
+                        color: theme.primary.withValues(alpha: 0.20),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (currentOverride) ...[
-                        Container(
-                          width: 15,
-                          height: 15,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF00F0FF),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00F0FF).withValues(alpha: 0.65),
-                                blurRadius: 8,
-                                spreadRadius: 1,
+                  // Tartalom a vonalon: Időpont címkék és állapotcsomópontok
+                  if (embeddedEntries != null && embeddedEntries!.isNotEmpty) ...[
+                    // 1+3 Hybrid: Tömbóra teteje, beágyazott óra(ák) és a tömbóra zárópontja a vonalon
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Kezdőpont (pl. 08:55)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: theme.rootBackground,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  displayStartTime,
+                                  style: TextStyle(
+                                    color: currentOverride ? const Color(0xFF00F0FF) : theme.primary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 11.0 * fontScale,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.rootBackground,
+                                  border: Border.all(color: theme.primary, width: 2),
+                                ),
                               ),
                             ],
                           ),
-                          child: Center(
-                            child: Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                        ),
+                        // Beágyazott átfedő órák időpontjai a vonalon
+                        for (var emb in embeddedEntries!) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: theme.rootBackground,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: theme.errorRed.withValues(alpha: 0.4), width: 0.8),
+                                  ),
+                                  child: Text(
+                                    "${DateTime.fromMillisecondsSinceEpoch(emb.startEpoch).hour.toString().padLeft(2, '0')}:${DateTime.fromMillisecondsSinceEpoch(emb.startEpoch).minute.toString().padLeft(2, '0')}",
+                                    style: TextStyle(
+                                      color: theme.errorRed,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 10.5 * fontScale,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: theme.errorRed,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: theme.errorRed.withValues(alpha: 0.5),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        // Zárópont (pl. 17:00)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.rootBackground,
+                                  border: Border.all(color: theme.primary.withValues(alpha: 0.7), width: 2),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: theme.rootBackground,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  displayEndTime,
+                                  style: TextStyle(
+                                    color: theme.textColor.withValues(alpha: 0.6),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 10.5 * fontScale,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    // Normál idősáv megjelenítés
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: theme.rootBackground,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            displayStartTime,
+                            style: TextStyle(
+                              color: currentOverride
+                                  ? const Color(0xFF00F0FF)
+                                  : (isPast
+                                      ? theme.textColor.withValues(alpha: 0.35)
+                                      : theme.textColor.withValues(alpha: 0.70)),
+                              fontWeight: currentOverride ? FontWeight.w800 : FontWeight.w600,
+                              fontSize: 11.5 * fontScale,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        if (currentOverride) ...[
+                          // Élő haladási nyíl az épp zajló óránál
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00F0FF),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00F0FF).withValues(alpha: 0.65),
+                                  blurRadius: 10,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 14,
+                                  color: theme.rootBackground,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else if (isPast) ...[
+                          Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: theme.textColor.withValues(alpha: 0.22),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.check,
+                                size: 9,
                                 color: theme.rootBackground,
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.arrow_right_rounded,
-                          size: 16,
-                          color: const Color(0xFF00F0FF),
-                        ),
-                      ] else if (isPast) ...[
-                        Container(
-                          width: 14,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.textColor.withValues(alpha: 0.22),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.check,
-                              size: 9,
+                        ] else ...[
+                          Container(
+                            width: 13,
+                            height: 13,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
                               color: theme.rootBackground,
+                              border: Border.all(
+                                color: theme.primary.withValues(alpha: 0.5),
+                                width: 2,
+                              ),
                             ),
                           ),
-                        ),
-                      ] else ...[
-                        Container(
-                          width: 13,
-                          height: 13,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.rootBackground,
-                            border: Border.all(
-                              color: theme.primary.withValues(alpha: 0.4),
-                              width: 2,
-                            ),
-                          ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: theme.primary.withValues(alpha: 0.18),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -221,13 +359,23 @@ class TimetableElementWidget extends StatelessWidget {
               child: GestureDetector(
                 onTap: () => _handleTap(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+                  margin: EdgeInsets.only(
+                    top: 4,
+                    bottom: 4,
+                    left: isOverlapping ? 14 : 0, // Vizuális eltolás párhuzamos óráknál
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    vertical: (embeddedEntries != null && embeddedEntries!.isNotEmpty) ? 14 : (isLongLesson ? 20 : 11),
+                    horizontal: 13,
+                  ),
                   decoration: BoxDecoration(
-                    color: cardBg,
+                    color: isOverlapping
+                        ? cardBg.withValues(alpha: AppColors.isDarktheme() ? 0.45 : 0.18)
+                        : cardBg,
                     borderRadius: BorderRadius.circular(16.0),
                     border: Border.all(
-                      color: cardBorder,
-                      width: borderWidth,
+                      color: isOverlapping ? theme.secondary : cardBorder,
+                      width: isOverlapping ? 1.5 : borderWidth,
                     ),
                     boxShadow: currentOverride
                         ? [
@@ -243,19 +391,60 @@ class TimetableElementWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 1. SOR: Idősáv a bal oldalon, Terem kártya a jobb oldalon
+                      // 1. SOR: Idősáv balra, opcionális tömbóra/párhuzamos badge és terem jobbra
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            "$displayStartTime - $displayEndTime",
-                            style: TextStyle(
-                              color: cardTimeColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12.0 * fontScale,
-                              fontFamily: 'monospace',
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "$displayStartTime - $displayEndTime",
+                                style: TextStyle(
+                                  color: cardTimeColor,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.0 * fontScale,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                              if (isLongLesson) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: theme.primary.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    AppStrings.getLanguagePack().timetable_badge_long_lesson,
+                                    style: TextStyle(
+                                      color: theme.primary,
+                                      fontSize: 10 * fontScale,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (isOverlapping) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade700.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    AppStrings.getLanguagePack().timetable_badge_overlapping,
+                                    style: TextStyle(
+                                      color: Colors.amber.shade700,
+                                      fontSize: 10 * fontScale,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           if (location.trim().isNotEmpty && location != "NULL" && location != "Nincs megadva")
                             Container(
@@ -290,13 +479,13 @@ class TimetableElementWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
 
-                      // 2. SOR: Tárgynév kiemelve nagy fehér betűkkel
+                      // 2. SOR: Tárgynév kiemelve félkövér (bold) betűkkel
                       Text(
                         title,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.5 * fontScale,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.bold, // Bolded text ahogy kérték
                           letterSpacing: -0.2,
                         ),
                         maxLines: 2,
@@ -304,7 +493,7 @@ class TimetableElementWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
 
-                      // 3. SOR: Típus • Oktató + visszaszámláló aktív óránál
+                      // 3. SOR: Típus • Oktató (neutrális/finomított) + visszaszámláló aktív óránál
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -314,9 +503,9 @@ class TimetableElementWidget extends StatelessWidget {
                               style: TextStyle(
                                 color: isExam
                                     ? theme.errorRed.withValues(alpha: 0.8)
-                                    : theme.textColor.withValues(alpha: 0.65),
+                                    : theme.textColor.withValues(alpha: 0.55), // Neutrális oktató/típus
                                 fontSize: 11.5 * fontScale,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w400,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -346,6 +535,34 @@ class TimetableElementWidget extends StatelessWidget {
                           ],
                         ],
                       ),
+
+                      // --- 1+3 HYBRID: Egymásba ágyazott átfedő órák szekciója ---
+                      if (embeddedEntries != null && embeddedEntries!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: theme.textColor.withValues(alpha: 0.15), thickness: 1, endIndent: 8)),
+                            Text(
+                              '• • •  ⚡ ÁTFEDŐ ÓRA  • • •',
+                              style: TextStyle(
+                                color: theme.errorRed,
+                                fontSize: 9.5 * fontScale,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            Expanded(child: Divider(color: theme.textColor.withValues(alpha: 0.15), thickness: 1, indent: 8)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        for (final emb in embeddedEntries!)
+                          _buildEmbeddedCard(context, emb, theme, fontScale),
+                        const SizedBox(height: 6),
+                        _buildContinuationFooter(theme, fontScale),
+                      ] else if (isLongLesson) ...[
+                        const SizedBox(height: 8),
+                        _buildContinuationFooter(theme, fontScale),
+                      ],
                     ],
                   ),
                 ),
@@ -357,35 +574,183 @@ class TimetableElementWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildEmbeddedCard(BuildContext context, api.CalendarEntry emb, AppPalette theme, double fontScale) {
+    final embStart = DateTime.fromMillisecondsSinceEpoch(emb.startEpoch);
+    final embEnd = DateTime.fromMillisecondsSinceEpoch(emb.endEpoch);
+    final embStartStr = "${embStart.hour.toString().padLeft(2, '0')}:${embStart.minute.toString().padLeft(2, '0')}";
+    final embEndStr = "${embEnd.hour.toString().padLeft(2, '0')}:${embEnd.minute.toString().padLeft(2, '0')}";
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _handleEntryTap(context, emb),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.isDarktheme() ? const Color(0xFF191211) : theme.rootBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: theme.errorRed,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.errorRed.withValues(alpha: 0.22),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "$embStartStr - $embEndStr",
+                      style: TextStyle(
+                        color: theme.errorRed,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12.0 * fontScale,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: theme.errorRed.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: theme.errorRed, width: 0.8),
+                      ),
+                      child: Text(
+                        AppStrings.getLanguagePack().timetable_badge_overlapping,
+                        style: TextStyle(
+                          color: theme.errorRed,
+                          fontSize: 10 * fontScale,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (emb.location.isNotEmpty && emb.location != "NULL" && emb.location != "Nincs megadva")
+                        ? theme.roomHighlightColor
+                        : theme.roomHighlightColor.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    (emb.location.isNotEmpty && emb.location != "NULL") ? emb.location : "Nincs terem",
+                    style: TextStyle(
+                      color: theme.onRoomHighlightColor,
+                      fontSize: 11 * fontScale,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              emb.title,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.5 * fontScale,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              '${(emb.courseType != null && emb.courseType!.trim().isNotEmpty && emb.courseType != "-") ? emb.courseType!.trim() : "Óra"} • ${emb.teacher}',
+              style: TextStyle(
+                color: theme.textColor.withValues(alpha: 0.65),
+                fontSize: 11.5 * fontScale,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinuationFooter(AppPalette theme, double fontScale) {
+    final diffMs = entry.endEpoch - entry.startEpoch;
+    final hours = (diffMs / (3600 * 1000)).toStringAsFixed(1);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.textColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: theme.primary, width: 2.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Délutáni zárás: $displayEndTime',
+            style: TextStyle(
+              color: theme.textColor.withValues(alpha: 0.7),
+              fontSize: 11 * fontScale,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'Összesen: $hours óra',
+            style: TextStyle(
+              color: theme.primary,
+              fontSize: 11 * fontScale,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleTap(BuildContext context) {
-    if (isExam) {
-      TimetableCurrentlySelected.entry = entry;
+    _handleEntryTap(context, entry);
+  }
+
+  void _handleEntryTap(BuildContext context, api.CalendarEntry target) {
+    AppHaptics.lightImpact();
+    if (target.isExam) {
+      TimetableCurrentlySelected.entry = target;
       PopupWidgetHandler(mode: 5, callback: (_) {});
       PopupWidgetHandler.doPopup(context);
       return;
     }
-    if (isTask && entry.taskId != null && entry.taskId!.isNotEmpty) {
+    if (target.isTask && target.taskId != null && target.taskId!.isNotEmpty) {
       showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
               backgroundColor: AppColors.getTheme().rootBackground,
-              title: Text(title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+              title: Text(target.title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
               content: FutureBuilder<String?>(
-                future: storage.getString('task_type_${entry.taskId}'),
+                future: storage.getString('task_type_${target.taskId}'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()));
                   }
 
                   return FutureBuilder<String?>(
-                      future: storage.getString('task_res_${entry.taskId}'),
+                      future: storage.getString('task_res_${target.taskId}'),
                       builder: (context, resSnapshot) {
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("📚 Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                            Text("📚 Tárgy: ${target.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                             const SizedBox(height: 10),
                             Text("📝 Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                             const SizedBox(height: 10),
@@ -408,15 +773,15 @@ class TimetableElementWidget extends StatelessWidget {
       return;
     }
     // HA VAN CLASSINSTANCE ID (Modern API), Akkor a mi új ablakunk jön be!
-    if (entry.classInstanceId != null && entry.classInstanceId!.isNotEmpty) {
+    if (target.classInstanceId != null && target.classInstanceId!.isNotEmpty) {
       showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
             backgroundColor: AppColors.getTheme().rootBackground,
-            title: Text(title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+            title: Text(target.title, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
             content: FutureBuilder<Map<String, String>>(
-              future: api.CalendarRequest.getCourseDetails(entry.classInstanceId!),
+              future: api.CalendarRequest.getCourseDetails(target.classInstanceId!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
@@ -425,10 +790,10 @@ class TimetableElementWidget extends StatelessWidget {
                   );
                 }
                 final data = snapshot.data ?? {};
-                final room = (data['room'] != null && data['room']!.isNotEmpty && data['room'] != 'Nincs terem') ? data['room']! : entry.location;
-                final teacher = (data['teacher'] != null && data['teacher']!.isNotEmpty && data['teacher'] != 'Nincs tanár') ? data['teacher']! : entry.teacher;
-                final courseType = (data['type'] != null && data['type']!.isNotEmpty) ? data['type']! : (entry.courseType ?? '');
-                final subjectCode = (data['code'] != null && data['code']!.isNotEmpty && data['code'] != '-') ? data['code']! : entry.subjectCode;
+                final room = (data['room'] != null && data['room']!.isNotEmpty && data['room'] != 'Nincs terem') ? data['room']! : target.location;
+                final teacher = (data['teacher'] != null && data['teacher']!.isNotEmpty && data['teacher'] != 'Nincs tanár') ? data['teacher']! : target.teacher;
+                final courseType = (data['type'] != null && data['type']!.isNotEmpty) ? data['type']! : (target.courseType ?? '');
+                final subjectCode = (data['code'] != null && data['code']!.isNotEmpty && data['code'] != '-') ? data['code']! : target.subjectCode;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -484,7 +849,7 @@ class TimetableElementWidget extends StatelessWidget {
       );
       return;
     } else {
-      TimetableCurrentlySelected.entry = entry;
+      TimetableCurrentlySelected.entry = target;
       PopupWidgetHandler(mode: 4, callback: (_) {});
       PopupWidgetHandler.doPopup(context);
     }
@@ -549,49 +914,44 @@ class BreakElementWidget extends StatelessWidget {
     final timeRange = "$startHour:$startMin - $endHour:$endMin";
     final breakDurationText = _formatDuration(endEpoch - startEpoch);
 
-    final spineColor = theme.primary.withValues(alpha: 0.18);
+    final spineColor = theme.primary.withValues(alpha: 0.20);
 
-    // Timeline column for break: 46px wide, spine running from top to bottom
+    // Folytonos, töretlen bal oldali idővonal a szünet elemhez (48px széles)
     Widget timelineTrack = SizedBox(
-      width: 46,
-      child: Column(
+      width: 48,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Expanded(
-            child: Container(
-              width: 2,
-              color: spineColor,
-            ),
-          ),
-          if (isCurrent) ...[
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: theme.currentClassGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Icon(
-                    Icons.arrow_right_rounded,
-                    size: 16,
-                    color: theme.currentClassGreen,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.center,
               child: Container(
                 width: 2,
                 color: spineColor,
               ),
             ),
-          ],
+          ),
+          if (isCurrent)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.currentClassGreen,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.currentClassGreen.withValues(alpha: 0.6),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  size: 14,
+                  color: theme.rootBackground,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -600,14 +960,16 @@ class BreakElementWidget extends StatelessWidget {
     Widget breakContent;
 
     if (isCurrent) {
-      // 1. Active break: highlight capsule with countdown
+      // 1. Aktív szünet: visszaszámláló óra helyett százalékos készültségi kijelzés
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      final remainingMs = endEpoch - nowMs;
-      final remainingDur = Duration(milliseconds: remainingMs > 0 ? remainingMs : 0);
-      final remainingFormatted = "${remainingDur.inHours.toString().padLeft(2, '0')}:${(remainingDur.inMinutes.remainder(60)).toString().padLeft(2, '0')}";
+      final totalBreakMs = endEpoch - startEpoch;
+      final elapsedMs = nowMs - startEpoch;
+      final progress = totalBreakMs > 0 ? (elapsedMs / totalBreakMs).clamp(0.0, 1.0) : 0.0;
+      final percentInt = (progress * 100).toInt();
 
       breakContent = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: theme.currentClassGreen.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
@@ -616,64 +978,93 @@ class BreakElementWidget extends StatelessWidget {
             width: 1.2,
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: theme.currentClassGreen.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.coffee_rounded,
-                color: theme.currentClassGreen,
-                size: 15 * fontScale,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Szünet most • $breakDurationText",
-                    style: TextStyle(
-                      color: theme.currentClassGreen,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12.5 * fontScale,
-                    ),
-                  ),
-                  Text(
-                    "$timeRange ${nextClassTitle.isNotEmpty ? '• Köv: $nextClassTitle' : ''}",
-                    style: TextStyle(
-                      color: theme.textColor.withValues(alpha: 0.7),
-                      fontSize: 11.0 * fontScale,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
             Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.timelapse_rounded,
-                  color: theme.currentClassGreen,
-                  size: 14 * fontScale,
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  remainingFormatted,
-                  style: TextStyle(
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: theme.currentClassGreen.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.coffee_rounded,
                     color: theme.currentClassGreen,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13.0 * fontScale,
+                    size: 15 * fontScale,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "${AppStrings.getLanguagePack().timetable_break_title} • $breakDurationText",
+                        style: TextStyle(
+                          color: theme.currentClassGreen,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12.5 * fontScale,
+                        ),
+                      ),
+                      Text(
+                        "$timeRange ${nextClassTitle.isNotEmpty ? '• ${AppStrings.getLanguagePack().timetable_next_class_prefix} $nextClassTitle' : ''}",
+                        style: TextStyle(
+                          color: theme.textColor.withValues(alpha: 0.7),
+                          fontSize: 11.0 * fontScale,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Százalékos készültség kijelzése
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.currentClassGreen.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.currentClassGreen.withValues(alpha: 0.5),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.timelapse_rounded,
+                        color: theme.currentClassGreen,
+                        size: 13 * fontScale,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "$percentInt%",
+                        style: TextStyle(
+                          color: theme.currentClassGreen,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13.0 * fontScale,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: theme.currentClassGreen.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.currentClassGreen),
+                minHeight: 4,
+              ),
             ),
           ],
         ),
@@ -868,127 +1259,130 @@ class WeekoffseterElementWidget extends StatelessWidget{
         homePage.calendarWeekSwitchValue += e.delta.dx;
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 2),
-        color: Colors.black.withValues(alpha: 0.01),
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width,
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                margin: const EdgeInsets.only(top: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(21),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      onPressed: !canDoPaging ? null : onBackPressed,
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                displayString,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.getTheme().textColor,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16.0,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Tooltip(
-                                message: homePage.isCalendarOffline ? 'Offline / Cache' : 'Online / Szinkronizálva',
-                                child: Icon(
-                                  homePage.isCalendarOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-                                  size: 16,
-                                  color: AppColors.getTheme().primary.withValues(alpha: homePage.isCalendarOffline ? 0.65 : 0.95),
-                                ),
-                              ),
-                            ],
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            IconButton(
+              onPressed: !canDoPaging ? null : onBackPressed,
+              icon: const Icon(Icons.arrow_back_rounded, size: 18),
+              color: canDoPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+              visualDensity: VisualDensity.compact,
+              splashRadius: 20,
+            ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayString,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.getTheme().textColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: homePage.isCalendarOffline
+                            ? AppStrings.getLanguagePack().calendar_status_offline
+                            : AppStrings.getLanguagePack().calendar_status_online,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: (homePage.isCalendarOffline ? Colors.orange : AppColors.getTheme().primary).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          if (homePage.currentWeekOffset != 1) ...[
-                            const SizedBox(height: 4),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                AppHaptics.lightImpact();
-                                homePage.currentWeekOffset = 1;
-                                await homePage.onCalendarRefresh(false);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.getTheme().primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.getTheme().primary, width: 1),
+                          child: Icon(
+                            homePage.isCalendarOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+                            size: 13,
+                            color: homePage.isCalendarOffline ? Colors.orange : AppColors.getTheme().primary,
+                          ),
+                        ),
+                      ),
+                      if (homePage.currentWeekOffset != 1) ...[
+                        const SizedBox(width: 7),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () async {
+                              await homePage.jumpToCurrentWeekAndToday();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.getTheme().primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.getTheme().primary.withValues(alpha: 0.8),
+                                  width: 1,
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.today_rounded,
-                                      size: 13,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.today_rounded,
+                                    size: 11,
+                                    color: AppColors.getTheme().primary,
+                                  ),
+                                  const SizedBox(width: 3.5),
+                                  Text(
+                                    AppStrings.getLanguagePack().calendarPage_weekNav_JumpToCurrentWeek,
+                                    style: TextStyle(
                                       color: AppColors.getTheme().primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10.5,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      AppStrings.getLanguagePack().calendarPage_weekNav_JumpToCurrentWeek,
-                                      style: TextStyle(
-                                        color: AppColors.getTheme().primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                        onPressed: !canDoPaging ? null : onForwardPressed,
-                        icon: const Icon(Icons.arrow_forward_rounded)
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                margin: const EdgeInsets.only(bottom: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.only(bottomRight: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                ),
-                child: EmojiRichText(
-                  text: displayString2,
-                  defaultStyle: TextStyle(
-                    color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                    fontWeight: FontWeight.w300,
-                    fontSize: 12.0,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  emojiStyle: TextStyle(
-                      color: AppColors.getTheme().textColor,
-                      fontSize: 12.0,
-                      fontFamily: "Noto Color Emoji"
+                  const SizedBox(height: 2),
+                  EmojiRichText(
+                    text: displayString2,
+                    defaultStyle: TextStyle(
+                      color: AppColors.getTheme().textColor.withValues(alpha: .55),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 11.5,
+                    ),
+                    emojiStyle: const TextStyle(
+                      fontSize: 11.5,
+                      fontFamily: "Noto Color Emoji",
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            IconButton(
+              onPressed: !canDoPaging ? null : onForwardPressed,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+              color: canDoPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
+              visualDensity: VisualDensity.compact,
+              splashRadius: 20,
+            ),
+          ],
         ),
       ),
     );

@@ -276,20 +276,22 @@ class TopNavigatorWidget extends StatelessWidget {
                       letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  EmojiRichText(
-                    text: smallHintText,
-                    defaultStyle: TextStyle(
-                      fontSize: 12.0,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.getTheme().primary,
+                  if (smallHintText.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    EmojiRichText(
+                      text: smallHintText,
+                      defaultStyle: TextStyle(
+                        fontSize: 12.0,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.getTheme().primary,
+                      ),
+                      emojiStyle: TextStyle(
+                        fontSize: 13.0,
+                        color: AppColors.getTheme().primary,
+                        fontFamily: "Noto Color Emoji",
+                      ),
                     ),
-                    emojiStyle: TextStyle(
-                      fontSize: 13.0,
-                      color: AppColors.getTheme().primary,
-                      fontFamily: "Noto Color Emoji",
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),

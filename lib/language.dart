@@ -182,6 +182,15 @@ class AppStrings{
       calendarPage_weekNav_ClassesThisWeekLoading: 'Gondolkodunk... 🤔',
       calendarPage_weekNav_StudyWeek: '%0. oktatási hét',
       calendarPage_weekNav_JumpToCurrentWeek: 'Ugrás a mai hétre',
+      calendar_status_online: 'Online / Szinkronizálva',
+      calendar_status_offline: 'Offline / Helyi gyorsítótár',
+      timetable_badge_overlapping: '⚡ Ütköző',
+      timetable_badge_long_lesson: '3+ óra',
+      timetable_break_title: 'Szünet',
+      timetable_next_class_prefix: 'Köv:',
+      popup_2fa_title: 'Kétlépcsős azonosítás',
+      popup_2fa_desc: 'Add meg a hitelesítő alkalmazásban generált 6 jegyű kódot!',
+      popup_2fa_cancel: 'Mégsem',
       markbookPage_AverageDisplay: 'Átlagod: %0 %1',
       markbookPage_AverageScholarshipDisplay: 'Ösztöndíj indexed: %0 %1',
       markbookPage_NoGrades: 'nincs jegyed',
@@ -215,6 +224,8 @@ class AppStrings{
       popup_case1_settingOption4_PaymentNotificationsDescription: 'Ha van befizetnivalód, értesíteni fog az app, minden nap, amíg nem fizeted be. Hasznos, ha feledékeny vagy, vagy nem szeretnéd lekésni a határidőt.',
       popup_case1_settingOption5_PeriodsNotifications: 'Időszak értesítők',
       popup_case1_settingOption5_PeriodsNotificationsDescription: 'Ha valamilyen új időszak lesz, értesíteni fog az app, az adott időszak előtt 1 nappal, és aznap fogsz értesítést kapni. Hasznos, ha nem akarsz lemaradni az adott időszakokról. (pl: tárgyfelvételi időszak)',
+      popup_case1_settingOption_MessageNotifications: 'Új üzenet értesítők',
+      popup_case1_settingOption_MessageNotificationsDescription: 'Értesítést küld, ha új olvasatlan Neptun üzeneted érkezik.',
       popup_case1_settingOption6_AppHaptics: 'App haptika',
       popup_case1_settingOption6_AppHapticsDescription: 'Beállíthatod, hogy kapj haptikai visszajelzést az appban történő dolgokról. (Rezgés)',
       popup_case1_settingOption7_WeekOffset: 'Tanulmányi hét eltolás',
@@ -422,6 +433,15 @@ class AppStrings{
       calendarPage_weekNav_ClassesThisWeekLoading: 'Thinking... 🤔',
       calendarPage_weekNav_StudyWeek: '%0. education week',
       calendarPage_weekNav_JumpToCurrentWeek: 'Jump to current week',
+      calendar_status_online: 'Online / Synced',
+      calendar_status_offline: 'Offline / Cached',
+      timetable_badge_overlapping: '⚡ Overlapping',
+      timetable_badge_long_lesson: '3+ hrs',
+      timetable_break_title: 'Break',
+      timetable_next_class_prefix: 'Next:',
+      popup_2fa_title: 'Two-factor Authentication',
+      popup_2fa_desc: 'Enter the 6-digit code generated in your authenticator app!',
+      popup_2fa_cancel: 'Cancel',
       markbookPage_AverageDisplay: 'Average: %0 %1',
       markbookPage_AverageScholarshipDisplay: 'Scholarship index: %0 %1',
       markbookPage_NoGrades: 'You have no grades',
@@ -455,6 +475,8 @@ class AppStrings{
       popup_case1_settingOption4_PaymentNotificationsDescription: 'If you have payments due, the app will notify you every day, until they are paid. Useful if you tend to forget, or just don\'t want to miss a due date.',
       popup_case1_settingOption5_PeriodsNotifications: 'Period notifications',
       popup_case1_settingOption5_PeriodsNotificationsDescription: 'If a new period is about to become active, the app will notify you 1 day before the given period, and the day they become active. Useful if you don\'t want to miss something important tied to periods (ex: class registration period).',
+      popup_case1_settingOption_MessageNotifications: 'New message notifications',
+      popup_case1_settingOption_MessageNotificationsDescription: 'Sends a notification when a new unread Neptun message arrives.',
       popup_case1_settingOption6_AppHaptics: 'App haptics',
       popup_case1_settingOption6_AppHapticsDescription: 'You can set if you want the app to give you haptic feedback (vibrate).',
       popup_case1_settingOption7_WeekOffset: 'Study week offset',
@@ -787,6 +809,15 @@ class LanguagePack{
   final String calendarPage_weekNav_ClassesThisWeekEmpty;
   final String calendarPage_FreeDay;
   final String calendarPage_weekNav_JumpToCurrentWeek;
+  final String calendar_status_online;
+  final String calendar_status_offline;
+  final String timetable_badge_overlapping;
+  final String timetable_badge_long_lesson;
+  final String timetable_break_title;
+  final String timetable_next_class_prefix;
+  final String popup_2fa_title;
+  final String popup_2fa_desc;
+  final String popup_2fa_cancel;
 
   final String markbookPage_AverageDisplay;
   final String markbookPage_AverageScholarshipDisplay;
@@ -826,6 +857,8 @@ class LanguagePack{
   final String popup_case1_settingOption4_PaymentNotificationsDescription;
   final String popup_case1_settingOption5_PeriodsNotifications;
   final String popup_case1_settingOption5_PeriodsNotificationsDescription;
+  final String popup_case1_settingOption_MessageNotifications;
+  final String popup_case1_settingOption_MessageNotificationsDescription;
   final String popup_case1_settingOption6_AppHaptics;
   final String popup_case1_settingOption6_AppHapticsDescription;
   final String popup_case1_settingOption7_WeekOffset;
@@ -1025,6 +1058,15 @@ class LanguagePack{
     required this.calendarPage_weekNav_ClassesThisWeekOneDay,
     required this.calendarPage_weekNav_StudyWeek,
     required this.calendarPage_weekNav_JumpToCurrentWeek,
+    required this.calendar_status_online,
+    required this.calendar_status_offline,
+    required this.timetable_badge_overlapping,
+    required this.timetable_badge_long_lesson,
+    required this.timetable_break_title,
+    required this.timetable_next_class_prefix,
+    required this.popup_2fa_title,
+    required this.popup_2fa_desc,
+    required this.popup_2fa_cancel,
     required this.calendarPage_weekNav_ClassesThisWeekEmpty,
     required this.calendarPage_weekNav_ClassesThisWeekLoading,
     required this.markbookPage_AverageDisplay,
@@ -1062,6 +1104,8 @@ class LanguagePack{
     required this.popup_case1_settingOption4_PaymentNotificationsDescription,
     required this.popup_case1_settingOption5_PeriodsNotifications,
     required this.popup_case1_settingOption5_PeriodsNotificationsDescription,
+    required this.popup_case1_settingOption_MessageNotifications,
+    required this.popup_case1_settingOption_MessageNotificationsDescription,
     required this.popup_case1_settingOption6_AppHaptics,
     required this.popup_case1_settingOption6_AppHapticsDescription,
     required this.popup_case1_settingOption7_WeekOffset,
@@ -1288,6 +1332,15 @@ class LanguagePack{
         calendarPage_weekNav_ClassesThisWeekOneDay: getStr('calendarPage_weekNav_ClassesThisWeekOneDay', en.calendarPage_weekNav_ClassesThisWeekOneDay),
         calendarPage_weekNav_StudyWeek: getStr('calendarPage_weekNav_StudyWeek', en.calendarPage_weekNav_StudyWeek),
         calendarPage_weekNav_JumpToCurrentWeek: getStr('calendarPage_weekNav_JumpToCurrentWeek', en.calendarPage_weekNav_JumpToCurrentWeek),
+        calendar_status_online: getStr('calendar_status_online', en.calendar_status_online),
+        calendar_status_offline: getStr('calendar_status_offline', en.calendar_status_offline),
+        timetable_badge_overlapping: getStr('timetable_badge_overlapping', en.timetable_badge_overlapping),
+        timetable_badge_long_lesson: getStr('timetable_badge_long_lesson', en.timetable_badge_long_lesson),
+        timetable_break_title: getStr('timetable_break_title', en.timetable_break_title),
+        timetable_next_class_prefix: getStr('timetable_next_class_prefix', en.timetable_next_class_prefix),
+        popup_2fa_title: getStr('popup_2fa_title', en.popup_2fa_title),
+        popup_2fa_desc: getStr('popup_2fa_desc', en.popup_2fa_desc),
+        popup_2fa_cancel: getStr('popup_2fa_cancel', en.popup_2fa_cancel),
         calendarPage_weekNav_ClassesThisWeekEmpty: getStr('calendarPage_weekNav_ClassesThisWeekEmpty', en.calendarPage_weekNav_ClassesThisWeekEmpty),
         calendarPage_weekNav_ClassesThisWeekLoading: getStr('calendarPage_weekNav_ClassesThisWeekLoading', en.calendarPage_weekNav_ClassesThisWeekLoading),
         markbookPage_AverageDisplay: getStr('markbookPage_AverageDisplay', en.markbookPage_AverageDisplay),
@@ -1325,6 +1378,8 @@ class LanguagePack{
         popup_case1_settingOption4_PaymentNotificationsDescription: getStr('popup_case1_settingOption4_PaymentNotificationsDescription', en.popup_case1_settingOption4_PaymentNotificationsDescription),
         popup_case1_settingOption5_PeriodsNotifications: getStr('popup_case1_settingOption5_PeriodsNotifications', en.popup_case1_settingOption5_PeriodsNotifications),
         popup_case1_settingOption5_PeriodsNotificationsDescription: getStr('popup_case1_settingOption5_PeriodsNotificationsDescription', en.popup_case1_settingOption5_PeriodsNotificationsDescription),
+        popup_case1_settingOption_MessageNotifications: getStr('popup_case1_settingOption_MessageNotifications', en.popup_case1_settingOption_MessageNotifications),
+        popup_case1_settingOption_MessageNotificationsDescription: getStr('popup_case1_settingOption_MessageNotificationsDescription', en.popup_case1_settingOption_MessageNotificationsDescription),
         popup_case1_settingOption6_AppHaptics: getStr('popup_case1_settingOption6_AppHaptics', en.popup_case1_settingOption6_AppHaptics),
         popup_case1_settingOption6_AppHapticsDescription: getStr('popup_case1_settingOption6_AppHapticsDescription', en.popup_case1_settingOption6_AppHapticsDescription),
         popup_case1_settingOption7_WeekOffset: getStr('popup_case1_settingOption7_WeekOffset', en.popup_case1_settingOption7_WeekOffset),
@@ -1551,6 +1606,15 @@ class LanguagePack{
       'calendarPage_weekNav_ClassesThisWeekOneDay':lang.calendarPage_weekNav_ClassesThisWeekOneDay,
       'calendarPage_weekNav_StudyWeek':lang.calendarPage_weekNav_StudyWeek,
       'calendarPage_weekNav_JumpToCurrentWeek':lang.calendarPage_weekNav_JumpToCurrentWeek,
+      'calendar_status_online':lang.calendar_status_online,
+      'calendar_status_offline':lang.calendar_status_offline,
+      'timetable_badge_overlapping':lang.timetable_badge_overlapping,
+      'timetable_badge_long_lesson':lang.timetable_badge_long_lesson,
+      'timetable_break_title':lang.timetable_break_title,
+      'timetable_next_class_prefix':lang.timetable_next_class_prefix,
+      'popup_2fa_title':lang.popup_2fa_title,
+      'popup_2fa_desc':lang.popup_2fa_desc,
+      'popup_2fa_cancel':lang.popup_2fa_cancel,
       'calendarPage_weekNav_ClassesThisWeekEmpty':lang.calendarPage_weekNav_ClassesThisWeekEmpty,
       'calendarPage_weekNav_ClassesThisWeekLoading':lang.calendarPage_weekNav_ClassesThisWeekLoading,
       'markbookPage_AverageDisplay':lang.markbookPage_AverageDisplay,
@@ -1588,6 +1652,8 @@ class LanguagePack{
       'popup_case1_settingOption4_PaymentNotificationsDescription':lang.popup_case1_settingOption4_PaymentNotificationsDescription,
       'popup_case1_settingOption5_PeriodsNotifications':lang.popup_case1_settingOption5_PeriodsNotifications,
       'popup_case1_settingOption5_PeriodsNotificationsDescription':lang.popup_case1_settingOption5_PeriodsNotificationsDescription,
+      'popup_case1_settingOption_MessageNotifications':lang.popup_case1_settingOption_MessageNotifications,
+      'popup_case1_settingOption_MessageNotificationsDescription':lang.popup_case1_settingOption_MessageNotificationsDescription,
       'popup_case1_settingOption6_AppHaptics':lang.popup_case1_settingOption6_AppHaptics,
       'popup_case1_settingOption6_AppHapticsDescription':lang.popup_case1_settingOption6_AppHapticsDescription,
       'popup_case1_settingOption7_WeekOffset':lang.popup_case1_settingOption7_WeekOffset,

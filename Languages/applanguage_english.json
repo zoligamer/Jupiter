@@ -179,6 +179,17 @@
   "topmenu_MessagesTitle": "Messages",
   "topmenu_PaymentsTitle": "Payments",
   "calendarPage_weekNav_JumpToCurrentWeek": "Jump to current week",
+  "calendar_status_online": "Online / Synced",
+  "calendar_status_offline": "Offline / Cached",
+  "timetable_badge_overlapping": "⚡ Overlapping",
+  "timetable_badge_long_lesson": "3+ hrs",
+  "timetable_break_title": "Break",
+  "timetable_next_class_prefix": "Next:",
+  "popup_2fa_title": "Two-factor Authentication",
+  "popup_2fa_desc": "Enter the 6-digit code generated in your authenticator app!",
+  "popup_2fa_cancel": "Cancel",
+  "popup_case1_settingOption_MessageNotifications": "New message notifications",
+  "popup_case1_settingOption_MessageNotificationsDescription": "Sends a notification when a new unread Neptun message arrives.",
   "messagePage_MarkAllAsRead": "Mark all as read",
   "messagePage_AllMarkedAsReadToast": "All messages marked as read! ✉️"
 }

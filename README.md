@@ -7,16 +7,16 @@
 
 ---
 
-[![GitHub all releases](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/total?style=for-the-badge&logo=github&color=0078D7)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
-[![GitHub release (latest by asset)](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/latest/total?style=for-the-badge&logo=android&color=2ea44f)](https://github.com/zoligamer/Neptun-Mobile-fork/releases/latest)
-[![Issues](https://img.shields.io/github/issues/zoligamer/Neptun-Mobile-fork?style=for-the-badge&logo=github&color=ff4757)](https://github.com/zoligamer/Neptun-Mobile-fork/issues)
-[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/zoligamer/Jupiter/total?style=for-the-badge&logo=github&color=0078D7)](https://github.com/zoligamer/Jupiter/releases)
+[![GitHub release (latest by asset)](https://img.shields.io/github/downloads/zoligamer/Jupiter/latest/total?style=for-the-badge&logo=android&color=2ea44f)](https://github.com/zoligamer/Jupiter/releases/latest)
+[![Issues](https://img.shields.io/github/issues/zoligamer/Jupiter?style=for-the-badge&logo=github&color=ff4757)](https://github.com/zoligamer/Jupiter/issues)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/zoligamer/Jupiter/releases)
 
 <br/>
 
-[📥 **Legfrissebb verzió letöltése**](https://github.com/zoligamer/Neptun-Mobile-fork/releases/latest) •
-[🐛 **Hibabejelentés & Ötletek**](https://github.com/zoligamer/Neptun-Mobile-fork/issues/new/choose) •
-[📜 **Kiadások listája**](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+[📥 **Legfrissebb verzió letöltése**](https://github.com/zoligamer/Jupiter/releases/latest) •
+[🐛 **Hibabejelentés & Ötletek**](https://github.com/zoligamer/Jupiter/issues/new/choose) •
+[📜 **Kiadások listája**](https://github.com/zoligamer/Jupiter/releases)
 
 ---
 
@@ -44,7 +44,7 @@
 
 ## 🚀 Telepítés & Frissítés
 
-1. Nyisd meg a [Legfrissebb kiadás (Latest Release)](https://github.com/zoligamer/Neptun-Mobile-fork/releases/latest) oldalt.
+1. Nyisd meg a [Legfrissebb kiadás (Latest Release)](https://github.com/zoligamer/Jupiter/releases/latest) oldalt.
 2. Töltsd le az `.apk` telepítőfájlt a telefonodra.
 3. Engedélyezd az ismeretlen forrásból származó alkalmazások telepítését (amennyiben szükséges).
 4. Telepítsd az appot, lépj be a Neptun-adataiddal, és kész! 🎉
@@ -57,7 +57,7 @@
 Találtál egy hibát, furcsán viselkedik az app, vagy van egy jó ötleted az új funkciókra?  
 Hozzáadásukkal rengeteget segítesz a projekt fejlődésében!
 
-👉 **[Kattints ide egy Issue / Hibajegy nyitásához!](https://github.com/zoligamer/Neptun-Mobile-fork/issues/new/choose)** 👈
+👉 **[Kattints ide egy Issue / Hibajegy nyitásához!](https://github.com/zoligamer/Jupiter/issues/new/choose)** 👈
 
 ---
 
@@ -68,6 +68,21 @@ Hozzáadásukkal rengeteget segítesz a projekt fejlődésében!
 
 
 
+
+### 🪐 v2.1.0 (Ghost & Collision Update)
+* ⚡ **Egymásba ágyazott Hibrid Ütközéskártya:** A 3+ órás tömbórák 3x hangsúlyosabb megjelenést kaptak, és a közben futó egyéb órák (pl. Testnevelés) elegánsan a befoglaló kártyán belül, `• • • ⚡ ÁTFEDŐ ÓRA • • •` választóval jelennek meg.
+* 👆 **Független érintés & Haptika:** A beágyazott és a szülőkártya önállóan érinthető, mindkettő saját popup adatlapot nyit meg rezgéses visszajelzéssel (`AppHaptics.lightImpact()`).
+* 📏 **Folytonos Idővonali Gerinc:** Megszakításmentes 2px-es idővonal élő nyíllal (`▶`), beágyazott piros fénylő idősáv-node-dal és szünet-százalékos folyamatjelzővel.
+* 🌆 **Délutáni folytatás lábléc:** Jelzi a tömbórák délutáni zárási idejét és a teljes összóraszámot.
+* 🔮 **Tárgyfelvétel "Ghost Interface":** Statikus 06:00–22:00 idősávos szimulációs rács, interaktív kurzusválasztó, Testnevelési sportágválasztó és kötegelt felvételi gyorsítótár.
+* 🚥 **`LedMarqueeText` Ledszalagos Futószöveg:** Automatikusan gördülő ledszalagos szövegek a szűk helyeken lévő tárgynevekhez, túlcsordulási hibák nélkül.
+* 🛡️ **RenderFlex Túlcsordulás-védelem:** Magasított kártyatest (48px min.) és rugalmas szövegdobozok, megszüntetve a 45 perces kurzusok kilógási hibáit.
+* 🔀 **Párhuzamos kurzusok egymás mellett (Side-by-Side):** Az egy napon egy időben induló választható órák egymás mellé rendeződnek sávos elrendezésben.
+* 🔄 **Reaktív Hétváltás & Állapotmegőrzés:** Vasárnap balra lapozva átugrik a következő hét hétfőjére, hétfőn jobbra lapozva az előző hét vasárnapjára. A kiválasztott hét és nap perzisztens marad frissítéskor.
+* ☁️ **"Ugrás a mai hétre" & Felhő Indikátor:** Ergonomikus chip gomb és élő online/offline szinkronizációs állapotjelző.
+* 🏥 **Semmelweis Egyetem & 2FA Teljes Stabilitás:** Tárgylista és félévlekérés modernizálása, session-cookie lánc a 2FA kérésekhez, és kötelező rendszerüzenetek automatikus átugrása.
+* 📬 **Új üzenet értesítések:** Automatikus helyi értesítés érkező új Neptun üzeneteknél a háttérben.
+* 🔗 **Repository Domain Migráció:** Minden belső API, frissítő és letöltő hivatkozás átirányítva a hivatalos `zoligamer/Jupiter` repóra.
 
 ### 🪐 v2.0.0 (Jupiter Release)
 * 🪐 **Új arculat & Jupiter:** Megújult alkalmazásnév, új ikonok és logók, letisztult indítás és első indítási nyelvválasztó kártyák.

@@ -96,15 +96,18 @@ class PopupWidgetHandler{
   }
 
   static closePopup(BuildContext context){
-    if(!_instance!._inUse){
+    if(_instance == null || !_instance!._inUse){
+      PopupWidgetHandler._hasPopupActive = false;
       return;
     }
     _instance!._inUse = false;
+    PopupWidgetHandler._hasPopupActive = false;
     if(_instance!.widgetAnimController != null){
       _instance!.widgetAnimController!.reverse(from: 1).whenComplete((){
-        PopupWidgetHandler._hasPopupActive = false;
         Future.delayed(Duration.zero, (){
-          Navigator.of(context).pop();
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         });
         if(_instance!._settingsLanguageCurrent != _instance!._settingsLanguagePrevious || _instance!._settingsThemesCurrent != _instance!._settingsThemesPrevious){
           Navigator.popUntil(context, (route) => route.willHandlePopInternally);
@@ -113,7 +116,6 @@ class PopupWidgetHandler{
             MaterialPageRoute(builder: (context) => const Splitter()),
           );
         }
-        _instance!.widgetAnimController!.dispose();
       });
     }
 
@@ -186,7 +188,70 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
     _themesCurrSelect = AppColors.getTheme().paletteName;
   }
 
+  @override
+  void dispose() {
+    PopupWidgetHandler._hasPopupActive = false;
+    if (PopupWidgetHandler._instance != null) {
+      PopupWidgetHandler._instance!._inUse = false;
+      PopupWidgetHandler._instance!.onCloseCallback?.call();
+      if (PopupWidgetHandler._instance!._closeBlurCallback != null) {
+        PopupWidgetHandler._instance!._closeBlurCallback!();
+      } else {
+        HomePageState.showBlurPopup(false);
+      }
+    }
+    popupController.dispose();
+    super.dispose();
+  }
+
   int selectionValue = -1;
+
+  
+  Widget _buildActionButton({
+    required BuildContext context,
+    required String text,
+    required VoidCallback onPressed,
+    Color? customColor,
+  }) {
+    final theme = AppColors.getTheme();
+    final primaryColor = customColor ?? theme.primary;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextButton(
+        onPressed: onPressed,
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.16)),
+          overlayColor: WidgetStateProperty.all(primaryColor.withValues(alpha: 0.25)),
+          shape: WidgetStateProperty.all(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: primaryColor.withValues(alpha: 0.40),
+              width: 1.2,
+            ),
+          )),
+          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 40, vertical: 14)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: theme.onPrimaryContainer,
+            fontWeight: FontWeight.w800,
+            fontSize: 16.0,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+    );
+  }
 
   List<Widget> getWidgets(int mode){
     List<Widget> list = <Widget>[];
@@ -347,30 +412,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               ),
             )
         );
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(selectionValue);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
 
         return list;
@@ -458,7 +509,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -504,6 +555,63 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             Expanded(flex: 2, child: Container(
               margin: const EdgeInsets.all(10),
               child: Text(
+                AppStrings.getLanguagePack().popup_case1_settingOption_MessageNotifications,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTheme().textColor
+                ),
+              ),
+            )),
+            Container(
+              decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  color: AppColors.getTheme().textColor.withValues(alpha: .06)
+              ),
+              child: IconButton(
+                onPressed: (){
+                  _showSnackbar(AppStrings.getLanguagePack().popup_case1_settingOption_MessageNotificationsDescription, 8);
+                  AppHaptics.attentionLightImpact();
+                },
+                icon: Icon(
+                  Icons.question_mark_rounded,
+                  color: AppColors.getTheme().textColor.withValues(alpha: .4),
+                ),
+                enableFeedback: true,
+                iconSize: 24,
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.all(10),
+              child: Switch(
+                value: DataCache.getNeedMessageNotifications() ?? true,
+                onChanged: (b){
+                  DataCache.setNeedMessageNotifications(b ? 1 : 0);
+                  AppHaptics.lightImpact();
+                  if(mounted) {setState((){});}
+                },
+                activeThumbColor: AppColors.getTheme().secondary,
+                activeTrackColor: AppColors.getTheme().onPrimaryContainer,
+                hoverColor: AppColors.getTheme().textColor.withValues(alpha: .1),
+                inactiveTrackColor: AppColors.getTheme().buttonDisabled,
+                inactiveThumbColor: AppColors.getTheme().textColor,
+              ),
+            )
+          ],
+        ));
+        list.add(Container(
+          height: 1,
+          color: AppColors.getTheme().textColor.withValues(alpha: .1),
+        ));
+        list.add(Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(flex: 2, child: Container(
+              margin: const EdgeInsets.all(10),
+              child: Text(
                 AppStrings.getLanguagePack().popup_case1_settingOption2_ExamNotifications,
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -515,7 +623,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -574,7 +682,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -633,7 +741,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -692,7 +800,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -755,7 +863,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -808,7 +916,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -969,7 +1077,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -1144,7 +1252,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                     )),
                     Container(
                       decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.all(Radius.circular(90)),
+                          borderRadius: const BorderRadius.all(Radius.circular(12)),
                           color: AppColors.getTheme().textColor.withValues(alpha: .06)
                       ),
                       child: IconButton(
@@ -1289,30 +1397,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             ),
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
 
@@ -1345,30 +1439,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontWeight: FontWeight.w400
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_case2_RateButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_case2_RateButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
       case 3:
@@ -1468,7 +1548,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           text: AppStrings.getLanguagePack().popup_case4_SubjectInfo,
           defaultStyle: TextStyle(
             color: AppColors.getTheme().textColor,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             fontSize: 22.0,
           ),
           emojiStyle: TextStyle(
@@ -1477,173 +1557,137 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontFamily: "Noto Color Emoji"
           ),
         ));
-        list.add(const SizedBox(height: 3));
         list.add(Container(
-          color: AppColors.getTheme().textColor.withValues(alpha: 0.3),
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          height: 2,
+          color: AppColors.getTheme().textColor.withValues(alpha: 0.12),
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          height: 1.2,
         ));
         final entry = TimetableCurrentlySelected.entry;
-        list.add(SelectableText.rich(
-            TextSpan(
-              text: entry!.title,
-              style: TextStyle(
-                  color: AppColors.getTheme().textColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20
-              ),
-            )
+        final theme = AppColors.getTheme();
+        list.add(SelectableText(
+          entry!.title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: theme.textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 18.5,
+          ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-                child: Icon(
-                  Icons.person_rounded,
-                  color: AppColors.getTheme().onPrimaryContainer,
-                  size: 24,
-                )
+        list.add(const SizedBox(height: 16));
+
+        Widget buildDetailCard({
+          required IconData icon,
+          required String label,
+          required String value,
+          Color? accentColor,
+        }) {
+          final col = accentColor ?? theme.primary;
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.textColor.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: theme.textColor.withValues(alpha: 0.08),
+                width: 1.0,
+              ),
             ),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-            Flexible(
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: entry.teacher,
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14
-                    ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: col.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                )
-            )
-          ],
-        ));
+                  child: Icon(icon, color: col, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: theme.textColor.withValues(alpha: 0.5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SelectableText(
+                        value,
+                        style: TextStyle(
+                          color: theme.textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (entry.teacher.trim().isNotEmpty && entry.teacher != 'Nincs megadva' && entry.teacher != 'Nincs tanár') {
+          list.add(buildDetailCard(
+            icon: Icons.person_rounded,
+            label: "Oktató",
+            value: entry.teacher,
+            accentColor: theme.onPrimaryContainer,
+          ));
+        }
+
         if (entry.courseType != null && entry.courseType!.trim().isNotEmpty && entry.courseType != '-') {
-          list.add(const SizedBox(height: 4));
-          list.add(Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                  child: Icon(
-                    Icons.menu_book_rounded,
-                    color: AppColors.getTheme().currentClassGreen,
-                    size: 24,
-                  )
-              ),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-              Flexible(
-                  child: SelectableText.rich(
-                    TextSpan(
-                      text: entry.courseType!,
-                      style: TextStyle(
-                          color: AppColors.getTheme().currentClassGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14
-                      ),
-                    ),
-                  )
-              )
-            ],
+          list.add(buildDetailCard(
+            icon: Icons.menu_book_rounded,
+            label: "Típus",
+            value: entry.courseType!,
+            accentColor: theme.currentClassGreen,
           ));
         }
-        if(entry.location.trim().isNotEmpty){
-          list.add(const SizedBox(height: 4));
-          list.add(Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                  child: Icon(
-                    Icons.location_on_rounded,
-                    color: AppColors.getTheme().onPrimaryContainer,
-                    size: 24,
-                  )
-              ),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-              Flexible(
-                  child: SelectableText.rich(
-                    TextSpan(
-                      text: entry.location,
-                      style: TextStyle(
-                          color: AppColors.getTheme().textColor,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 14
-                      ),
-                    ),
-                  )
-              )
-            ],
+
+        if (entry.location.trim().isNotEmpty && entry.location != 'NULL' && entry.location != 'Nincs megadva') {
+          list.add(buildDetailCard(
+            icon: Icons.location_on_rounded,
+            label: "Terem / Helyszín",
+            value: entry.location,
+            accentColor: theme.roomHighlightColor,
           ));
         }
+
         final timeStart = DateTime.fromMillisecondsSinceEpoch(entry.startEpoch);
         final timeEnd = DateTime.fromMillisecondsSinceEpoch(entry.endEpoch);
-        list.add(const SizedBox(height: 4));
-        list.add(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-                child: Icon(
-                  Icons.access_time_filled_rounded,
-                  color: AppColors.getTheme().onPrimaryContainer,
-                  size: 24,
-                )
-            ),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-            Flexible(
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: '${timeStart.hour.toString().padLeft(2, '0')}:${timeStart.minute.toString().padLeft(2, '0')} - ${timeEnd.hour.toString().padLeft(2, '0')}:${timeEnd.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14
-                    ),
-                  ),
-                )
-            )
-          ],
+        list.add(buildDetailCard(
+          icon: Icons.access_time_filled_rounded,
+          label: "Időtartam",
+          value: '${timeStart.hour.toString().padLeft(2, '0')}:${timeStart.minute.toString().padLeft(2, '0')} - ${timeEnd.hour.toString().padLeft(2, '0')}:${timeEnd.minute.toString().padLeft(2, '0')}',
+          accentColor: theme.primary,
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
+
       case 5:
         list.add(EmojiRichText(
           text: AppStrings.getLanguagePack().popup_case5_ExamInfo,
           defaultStyle: TextStyle(
             color: AppColors.getTheme().textColor,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             fontSize: 22.0,
           ),
           emojiStyle: TextStyle(
@@ -1652,132 +1696,118 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontFamily: "Noto Color Emoji"
           ),
         ));
-        list.add(const SizedBox(height: 3));
         list.add(Container(
-          color: AppColors.getTheme().textColor.withValues(alpha: 0.3),
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          height: 2,
+          color: AppColors.getTheme().textColor.withValues(alpha: 0.12),
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          height: 1.2,
         ));
-        final entry = TimetableCurrentlySelected.entry;
-        list.add(SelectableText.rich(
-            TextSpan(
-              text: entry!.title,
-              style: TextStyle(
-                  color: AppColors.getTheme().textColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20
+        final entryExam = TimetableCurrentlySelected.entry;
+        final themeExam = AppColors.getTheme();
+        list.add(SelectableText(
+          entryExam!.title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: themeExam.textColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 18.5,
+          ),
+        ));
+        list.add(const SizedBox(height: 16));
+
+        Widget buildExamDetailCard({
+          required IconData icon,
+          required String label,
+          required String value,
+          Color? accentColor,
+        }) {
+          final col = accentColor ?? themeExam.primary;
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: themeExam.textColor.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: themeExam.textColor.withValues(alpha: 0.08),
+                width: 1.0,
               ),
-            )
-        ));
-        list.add(const SizedBox(height: 20));
-        list.add(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-                child: Icon(
-                  Icons.tag_rounded,
-                  color: AppColors.getTheme().onPrimaryContainer,
-                  size: 24,
-                )
             ),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-            Flexible(
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: entry.subjectCode,
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14
-                    ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: col.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                )
-            )
-          ],
-        ));
-        list.add(const SizedBox(height: 4));
-        list.add(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-                child: Icon(
-                  Icons.location_on_rounded,
-                  color: AppColors.getTheme().onPrimaryContainer,
-                  size: 24,
-                )
+                  child: Icon(icon, color: col, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: themeExam.textColor.withValues(alpha: 0.5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SelectableText(
+                        value,
+                        style: TextStyle(
+                          color: themeExam.textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-            Flexible(
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: entry.location,
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14
-                    ),
-                  ),
-                )
-            )
-          ],
+          );
+        }
+
+        if (entryExam.subjectCode.trim().isNotEmpty && entryExam.subjectCode != '-') {
+          list.add(buildExamDetailCard(
+            icon: Icons.tag_rounded,
+            label: "Tárgykód",
+            value: entryExam.subjectCode,
+            accentColor: themeExam.onPrimaryContainer,
+          ));
+        }
+
+        if (entryExam.location.trim().isNotEmpty && entryExam.location != 'NULL' && entryExam.location != 'Nincs megadva') {
+          list.add(buildExamDetailCard(
+            icon: Icons.location_on_rounded,
+            label: "Terem / Helyszín",
+            value: entryExam.location,
+            accentColor: themeExam.roomHighlightColor,
+          ));
+        }
+
+        final timeStartExam = DateTime.fromMillisecondsSinceEpoch(entryExam.startEpoch);
+        list.add(buildExamDetailCard(
+          icon: Icons.access_time_filled_rounded,
+          label: "Kezdés",
+          value: '${timeStartExam.hour.toString().padLeft(2, '0')}:${timeStartExam.minute.toString().padLeft(2, '0')}',
+          accentColor: themeExam.errorRed,
         ));
-        final timeStart = DateTime.fromMillisecondsSinceEpoch(entry.startEpoch);
-        list.add(const SizedBox(height: 4));
-        list.add(Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-                child: Icon(
-                  Icons.access_time_filled_rounded,
-                  color: AppColors.getTheme().onPrimaryContainer,
-                  size: 24,
-                )
-            ),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 5)),
-            Flexible(
-                child: SelectableText.rich(
-                  TextSpan(
-                    text: '${timeStart.hour.toString().padLeft(2, '0')}:${timeStart.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14
-                    ),
-                  ),
-                )
-            )
-          ],
-        ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
       case 6:
@@ -1809,30 +1839,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontWeight: FontWeight.w400
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
       case 7:
@@ -1868,30 +1884,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontFamily: "Noto Color Emoji"
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_case7_ButtonUpdateNow,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_case7_ButtonUpdateNow,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
       case 8:
@@ -1927,53 +1929,101 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontFamily: "Noto Color Emoji"
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.popupLangPrev_Button,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.popupLangPrev_Button,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
       case 9: // 2FA Mód
-        list.add(Text("Kétlépcsős azonosítás", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 22, fontWeight: FontWeight.bold)));
+        list.add(Text(
+          AppStrings.getLanguagePack().popup_2fa_title,
+          style: TextStyle(
+            color: AppColors.getTheme().textColor,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ));
         list.add(const SizedBox(height: 10));
-        list.add(Text("Add meg a(z) Hitelesítő alkalmazásban generált 6 jegyű kódot!", textAlign: TextAlign.center, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7))));
+        list.add(Text(
+          AppStrings.getLanguagePack().popup_2fa_desc,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppColors.getTheme().textColor.withValues(alpha: 0.7),
+            fontSize: 14,
+          ),
+        ));
         list.add(const SizedBox(height: 25));
         list.add(TextField(
           autofocus: true,
           keyboardType: TextInputType.number,
           maxLength: 6,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 28, letterSpacing: 8, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppColors.getTheme().textColor,
+            fontSize: 28,
+            letterSpacing: 8,
+            fontWeight: FontWeight.bold,
+          ),
           decoration: InputDecoration(
+            counterText: "",
             filled: true,
             fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: AppColors.getTheme().textColor.withValues(alpha: 0.15),
+                width: 1.2,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(
+                color: AppColors.getTheme().primary,
+                width: 1.8,
+              ),
+            ),
           ),
           onChanged: (val) {
             if (val.length == 6) {
-              PopupWidgetHandler._instance!.callback(val); // Amint beírta a 6. számot, visszaküldi a loginnak!
+              PopupWidgetHandler._instance!.callback(val);
             }
           },
+        ));
+        list.add(const SizedBox(height: 15));
+        list.add(Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () {
+                PopupWidgetHandler.closePopup(context);
+              },
+              style: ButtonStyle(
+                padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 10)),
+                shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.20),
+                    width: 1.0,
+                  ),
+                )),
+              ),
+              child: Text(
+                AppStrings.getLanguagePack().popup_2fa_cancel,
+                style: TextStyle(
+                  color: AppColors.getTheme().textColor.withValues(alpha: 0.75),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ));
         return list;
       default:
@@ -1990,30 +2040,16 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               fontFamily: "Noto Color Emoji"
           ),
         ));
-        list.add(const SizedBox(height: 20));
-        list.add(TextButton(
-          onPressed: (){
-            if(!PopupWidgetHandler._instance!._inUse || !mounted){
-              return;
-            }
+        list.add(const SizedBox(height: 24));
+        list.add(_buildActionButton(
+          context: context,
+          text: AppStrings.getLanguagePack().popup_caseAll_OkButton,
+          onPressed: () {
+            if(!PopupWidgetHandler._instance!._inUse || !mounted) return;
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
-            overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 45, vertical: 15),
-            child: Text(AppStrings.getLanguagePack().popup_caseAll_OkButton,
-              style: TextStyle(
-                color: AppColors.getTheme().onPrimaryContainer,
-                fontWeight: FontWeight.w900,
-                fontSize: 18.0,
-              ),
-            ),
-          ),
         ));
         return list;
     }

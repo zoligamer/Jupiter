@@ -1310,22 +1310,34 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
         storage.DataCache.setPassword(_password);
         storage.DataCache.setHasLogin(1);
         unawaited(ToOfficeService.checkAndResolveFacultyAsync());
-        // proceed logic
-        Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-        Navigator.push(
+        unawaited(api.MailRequest.bypassRequiredToReadMessages());
+        // proceed logic - pushAndRemoveUntil prevents stack destruction and black screen
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+          (route) => false,
         );
         return;
       }
       else if(value == 2){ // 2: 2FA SZÜKSÉGES
         setState(() {
           _isLoading = false; // Kikapcsoljuk a töltőképernyőt a 2FA-hoz!
+          _canProceed = true; // Készültségben tartjuk a beküldő gombot, ha a popup eltűnne
         });
         PopupWidgetHandler(
             mode: 9,
+            onCloseCallback: () {
+              if (mounted) {
+                setState(() {
+                  _canProceed = true;
+                  _isLoading = false;
+                });
+              }
+            },
             callback: (kod) async {
-              // JAVÍTVA: Hozzáadva az InstitutesRequest és a .toString()
+              setState(() {
+                _isLoading = true;
+              });
               bool isOk = await api.InstitutesRequest.submitTwoFactorCode(_username.toUpperCase(), _password, kod.toString());
 
               if (isOk) {
@@ -1336,14 +1348,18 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                 storage.DataCache.setPassword(_password);
                 storage.DataCache.setHasLogin(1);
                 unawaited(ToOfficeService.checkAndResolveFacultyAsync());
+                unawaited(api.MailRequest.bypassRequiredToReadMessages());
 
-                Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const main_page.HomePage()),
-                );
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+                    (route) => false,
+                  );
+                }
               } else {
-                // Rossz 2FA kód esetén pirosra festjük a beviteli mezőket
+                AppHaptics.attentionLightImpact();
+                _showSnackbar("Hibás kétlépcsős azonosítási kód! Kérjük, próbáld újra.", 5);
                 setState(() {
                   _paintRed = true;
                   _canProceed = true;
@@ -1353,7 +1369,14 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
               }
             }
         );
-        PopupWidgetHandler.doPopup(context, blur: (){}, closeBlur: (){});
+        PopupWidgetHandler.doPopup(context, blur: (){}, closeBlur: (){
+          if (mounted) {
+            setState(() {
+              _canProceed = true;
+              _isLoading = false;
+            });
+          }
+        });
         return;
       }
       else { // 0: HIBÁS JELSZÓ VAGY NEPTUN KÓD

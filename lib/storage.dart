@@ -1,3 +1,5 @@
+import 'dart:convert' as conv;
+import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -88,6 +90,7 @@ class DataCache{
     _cachedSubmittedPetitionsRaw = [];
     _cachedStartedPetitionsRaw = [];
     _cachedUserAvatarBase64 = null;
+    _cachedAvatarBytes = null;
     _cachedFallbackColor = null;
     _cachedPersonalDataRaw = null;
     _cachedPersonalContactsRaw = null;
@@ -178,6 +181,7 @@ class DataCache{
   late bool? _persistentSetting_showClassNotifications = true;
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
+  late bool? _persistentSetting_showMessageNotifications = true;
   late bool? _persistentSetting_showToOfficeSchedule = false;
   late bool? _persistentSetting_showPeriodsInCalendar = true;
   late int? _persistentSetting_weekOffset = 0;
@@ -198,6 +202,7 @@ class DataCache{
   List<String> _cachedSubmittedPetitionsRaw = [];
   List<String> _cachedStartedPetitionsRaw = [];
   String? _cachedUserAvatarBase64;
+  Uint8List? _cachedAvatarBytes;
   String? _cachedFallbackColor;
   String? _cachedPersonalDataRaw;
   String? _cachedPersonalContactsRaw;
@@ -212,6 +217,9 @@ class DataCache{
   String? _userNickname;
   bool _isNicknameVisible = false;
   bool _isLoginNameVisible = true;
+
+  String? _stickyServerId;
+  String? _cachedDeviceCookie;
 
   late String? _icsLocationPath = '';
   late bool? _icsIsUploaded = false;
@@ -248,6 +256,10 @@ class DataCache{
 
     _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
     _sessionCookieName = await _secureStorage.read(key: 'neptun_session_cookie_name');
+    _stickyServerId = await getString('StickyServerId');
+    if (_username != null && _username!.isNotEmpty) {
+      _cachedDeviceCookie = await _secureStorage.read(key: 'devicecookie_${_username!.toUpperCase()}');
+    }
 
     tmp = await getInt('IsModernApi');
     _isModernApi = tmp != null && tmp != 0;
@@ -320,6 +332,12 @@ class DataCache{
       _persistentSetting_showPeriodsNotifications = true;  // this is the default value, not false
     }
 
+    tmp = await getInt('SETTING_IsNeedMessageNotifications');
+    _persistentSetting_showMessageNotifications = tmp != null && tmp != 0;
+    if(tmp == null){
+      _persistentSetting_showMessageNotifications = true;
+    }
+
     tmp = await getInt('SETTING_ShowToOfficeSchedule');
     _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : false;
 
@@ -347,6 +365,15 @@ class DataCache{
     _cachedSubmittedPetitionsRaw = await getStringList('CACHED_SubmittedPetitions') ?? [];
     _cachedStartedPetitionsRaw = await getStringList('CACHED_StartedPetitions') ?? [];
     _cachedUserAvatarBase64 = await getString('USER_CachedAvatarBase64');
+    if (_cachedUserAvatarBase64 != null && _cachedUserAvatarBase64!.isNotEmpty) {
+      try {
+        _cachedAvatarBytes = conv.base64Decode(_cachedUserAvatarBase64!);
+      } catch (_) {
+        _cachedAvatarBytes = null;
+      }
+    } else {
+      _cachedAvatarBytes = null;
+    }
     _cachedFallbackColor = await getString('USER_FallbackAvatarColor');
     _cachedPersonalDataRaw = await getString('USER_PersonalDataRaw');
     _cachedPersonalContactsRaw = await getString('USER_PersonalContactsRaw');
@@ -463,7 +490,21 @@ class DataCache{
     return await _secureStorage.read(key: 'devicecookie_${username.toUpperCase()}');
   }
 
+  static String? getDeviceCookieSync() => _instance._cachedDeviceCookie;
+
+  static String? getStickyServerId() => _instance._stickyServerId;
+  static Future<void> setStickyServerId(String? id) async {
+    _instance._stickyServerId = id;
+    if (id == null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('StickyServerId');
+    } else {
+      await saveString('StickyServerId', id);
+    }
+  }
+
   static Future<void> setDeviceCookie(String username, String? cookieValue) async {
+    _instance._cachedDeviceCookie = cookieValue;
     if (cookieValue == null) {
       await _secureStorage.delete(key: 'devicecookie_${username.toUpperCase()}');
     } else {
@@ -594,6 +635,12 @@ class DataCache{
   static Future<void> setNeedPeriodsNotifications(int? value) async{
     _instance._persistentSetting_showPeriodsNotifications = value != null && value != 0;
     await saveInt('SETTING_IsNeedPeriodsNotifications', value ?? 1);
+  }
+
+  static bool? getNeedMessageNotifications(){return _instance._persistentSetting_showMessageNotifications;}
+  static Future<void> setNeedMessageNotifications(int? value) async{
+    _instance._persistentSetting_showMessageNotifications = value != null && value != 0;
+    await saveInt('SETTING_IsNeedMessageNotifications', value ?? 1);
   }
 
   static bool getShowToOfficeSchedule() => _instance._persistentSetting_showToOfficeSchedule ?? false;
@@ -764,8 +811,18 @@ class DataCache{
 
   // --- Profil és Avatar gyorsítótár ---
   static String? getCachedUserAvatarBase64() => _instance._cachedUserAvatarBase64;
+  static Uint8List? getCachedAvatarBytes() => _instance._cachedAvatarBytes;
   static Future<void> setCachedUserAvatarBase64(String? value) async {
     _instance._cachedUserAvatarBase64 = value;
+    if (value != null && value.isNotEmpty) {
+      try {
+        _instance._cachedAvatarBytes = conv.base64Decode(value);
+      } catch (_) {
+        _instance._cachedAvatarBytes = null;
+      }
+    } else {
+      _instance._cachedAvatarBytes = null;
+    }
     if (value == null || value.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('USER_CachedAvatarBase64');

@@ -41,7 +41,7 @@ class HomePage extends StatefulWidget{
   State<HomePage> createState() => HomePageState();
 }
 
-class HomePageState extends State<HomePage> with TickerProviderStateMixin{
+class HomePageState extends State<HomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
 
   final List<Widget> _confettiList = [];
   final List<ConfettiHelper> _confettiHelperList = [];
@@ -146,6 +146,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool canDoCalendarPaging = false;
   int weeksSinceStart = 1;
   int currentWeekOffset = 1;
+  int? _pendingDayTabIndex;
   late TabController calendarTabController;
   int currentView = 0;
   String calendarGreetText = "";
@@ -193,6 +194,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       await ToOfficeService.initialize();
       await ToOfficeService.checkAndResolveFacultyAsync();
       ToOfficeService.fetchAndRefreshSchedule();
+      unawaited(api.MailRequest.bypassRequiredToReadMessages());
     });
 
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
@@ -323,6 +325,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     });
 
     AppNotifications.initialize();
+    WidgetsBinding.instance.addObserver(this);
+    _mailCheckTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      if (mounted && (storage.DataCache.getNeedMessageNotifications() ?? true)) {
+        await fetchMails();
+        setupMails();
+      }
+    });
     Future.delayed(Duration.zero, ()async{
       if(((await storage.getInt('NextFirstWeekCacheTime')) ?? 0) < DateTime.now().millisecondsSinceEpoch){
         storage.DataCache.setHasCachedFirstWeekEpoch(0);
@@ -375,6 +384,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     });
 
     setupCalendarGreetText();
+    final currWkday = DateTime.now().weekday;
+    int todayIndex = currWkday - 1;
+    if (todayIndex < 0 || todayIndex > 6) todayIndex = 0;
+    _pendingDayTabIndex = todayIndex;
     setupCalendarController(true, true);
 
     // Instant paint (~0.05s) from permanent cache on launch
@@ -808,16 +821,76 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     // Sort entries chronologically
     calendarEntries.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
 
+    // Pre-calculate embedded entries for overlapping classes
+    final Map<int, List<api.CalendarEntry>> entriesByWeekday = {};
+    for (var item in calendarEntries) {
+      final wkday = DateTime.fromMillisecondsSinceEpoch(item.startEpoch).weekday;
+      entriesByWeekday.putIfAbsent(wkday, () => []).add(item);
+    }
+
+    final Set<api.CalendarEntry> embeddedSet = {};
+    final Map<api.CalendarEntry, List<api.CalendarEntry>> parentEmbeddedMap = {};
+    final Map<api.CalendarEntry, int> effectiveEndEpochMap = {};
+
+    for (int d = 1; d <= 7; d++) {
+      final dayList = entriesByWeekday[d] ?? [];
+      if (dayList.isEmpty) continue;
+
+      // Sort candidate parents by duration descending to give preference to longer blocks (e.g. 8-hour blocks)
+      final candidates = List<api.CalendarEntry>.from(dayList)
+        ..sort((a, b) => (b.endEpoch - b.startEpoch).compareTo(a.endEpoch - a.startEpoch));
+
+      for (var p in candidates) {
+        if (embeddedSet.contains(p)) continue;
+        final pDur = p.endEpoch - p.startEpoch;
+        int maxEnd = p.endEpoch;
+
+        for (var c in dayList) {
+          if (identical(p, c) || embeddedSet.contains(c)) continue;
+          final cDur = c.endEpoch - c.startEpoch;
+
+          // Check overlap: c starts before p ends and ends after p starts
+          final overlaps = (c.startEpoch < p.endEpoch && c.endEpoch > p.startEpoch);
+          if (overlaps) {
+            // p embeds c if p is longer or equal duration
+            if (pDur > cDur || (pDur == cDur && p.startEpoch <= c.startEpoch)) {
+              parentEmbeddedMap.putIfAbsent(p, () => []).add(c);
+              embeddedSet.add(c);
+              if (c.endEpoch > maxEnd) {
+                maxEnd = c.endEpoch;
+              }
+            }
+          }
+        }
+
+        if (parentEmbeddedMap.containsKey(p)) {
+          parentEmbeddedMap[p]!.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
+        }
+        effectiveEndEpochMap[p] = maxEnd;
+      }
+    }
+
     int idx = 1;
     int prev = 0;
     api.CalendarEntry? prevEntry;
     final currWeekday = DateTime.now().weekday;
     final now = DateTime.now();
     final Map<int, api.CalendarEntry> prevClassPerWkday = {};
+    final Map<int, int> prevEffectiveEndPerWkday = {};
     final Set<String> shownToSlotsKey = {};
 
     for(var item in calendarEntries){
       final wkday = DateTime.fromMillisecondsSinceEpoch(item.startEpoch).weekday;
+
+      if(thisweekCalendar && currWeekday == wkday && !item.isExam){
+        _classesNotificationList.add(item);
+      }
+
+      // If this item is embedded inside another card, skip top-level rendering
+      if (embeddedSet.contains(item)) {
+        continue;
+      }
+
       if(prev != wkday){
         idx = 1;
         prev = wkday;
@@ -829,14 +902,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
       prevEntry = item;
 
-      if(thisweekCalendar && currWeekday == wkday && !item.isExam){
-        _classesNotificationList.add(item);
-      }
-
       // Szünet detektálása az azonos napon lévő egymást követő órák között
       final prevClass = prevClassPerWkday[wkday];
-      if (prevClass != null && !prevClass.isExam && !item.isExam) {
-        final breakStart = prevClass.endEpoch;
+      final prevEnd = prevEffectiveEndPerWkday[wkday];
+      if (prevClass != null && prevEnd != null && !prevClass.isExam && !item.isExam) {
+        final breakStart = prevEnd;
         final breakEnd = item.startEpoch;
         final breakMs = breakEnd - breakStart;
         if (breakMs >= 5 * 60 * 1000 && breakMs < 24 * 3600 * 1000) { // legalább 5 perces és maximum 24 órás szünet
@@ -885,15 +955,27 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         }
       }
 
-      prevClassPerWkday[wkday] = item;
+      final prevEndForOverlap = prevEffectiveEndPerWkday[wkday];
+      final bool isOverlapping = (parentEmbeddedMap[item]?.isNotEmpty ?? false) ||
+          (prevEndForOverlap != null && (item.startEpoch < prevEndForOverlap));
 
-      final isCurrent = !item.isExam && now.millisecondsSinceEpoch >= item.startEpoch && now.millisecondsSinceEpoch <= item.endEpoch && wkday == currWeekday && currentWeekOffset == 1;
+      prevClassPerWkday[wkday] = item;
+      prevEffectiveEndPerWkday[wkday] = effectiveEndEpochMap[item] ?? item.endEpoch;
+
+      final itemEffectiveEnd = effectiveEndEpochMap[item] ?? item.endEpoch;
+      final isCurrent = !item.isExam &&
+          now.millisecondsSinceEpoch >= item.startEpoch &&
+          now.millisecondsSinceEpoch <= itemEffectiveEnd &&
+          wkday == currWeekday &&
+          currentWeekOffset == 1;
+
+      final embeddedForThisItem = parentEmbeddedMap[item];
 
       Widget classWidget;
       if (storage.DataCache.getShowToOfficeSchedule()) {
         final toSlots = ToOfficeService.getSlotsForDay(wkday);
         final classStartDate = DateTime.fromMillisecondsSinceEpoch(item.startEpoch);
-        final classEndDate = DateTime.fromMillisecondsSinceEpoch(item.endEpoch);
+        final classEndDate = DateTime.fromMillisecondsSinceEpoch(itemEffectiveEnd);
         final cStartMin = classStartDate.hour * 60 + classStartDate.minute;
         final cEndMin = classEndDate.hour * 60 + classEndDate.minute;
 
@@ -923,6 +1005,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
                       position: idx,
                       isCurrent: isCurrent,
                       fullWidthMargin: false,
+                      isOverlapping: isOverlapping,
+                      embeddedEntries: embeddedForThisItem,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -939,6 +1023,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
             entry: item,
             position: idx,
             isCurrent: isCurrent,
+            isOverlapping: isOverlapping,
+            embeddedEntries: embeddedForThisItem,
           );
         }
       } else {
@@ -946,6 +1032,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           entry: item,
           position: idx,
           isCurrent: isCurrent,
+          isOverlapping: isOverlapping,
+          embeddedEntries: embeddedForThisItem,
         );
       }
 
@@ -1049,32 +1137,17 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
     }
 
-    bool dayHasClasses(int dayIdx) {
-      if (dayIdx < 0 || dayIdx >= dayLists.length) return false;
-      return dayLists[dayIdx].any((w) => w is t_table.TimetableElementWidget);
-    }
-
-    int firstDayWithClasses() {
-      for (int i = 0; i < dayLists.length; i++) {
-        if (dayHasClasses(i)) return i;
-      }
-      return 0; // Alapértelmezett: Hétfő
-    }
-
     int targetIndex = calendarTabController.index;
-
-    if (currentWeekOffset == 1) {
-      int todayIndex = currWeekday - 1;
-      if (todayIndex < 0 || todayIndex > 6) todayIndex = 0;
-      targetIndex = todayIndex;
-    } else {
-      // Másik hétre váltáskor: ha az adott napon nincs óra, ugorjunk a hét első tanórás napjára (pl. Hétfőre)
-      if (!dayHasClasses(targetIndex)) {
-        targetIndex = firstDayWithClasses();
-      }
+    if (_pendingDayTabIndex != null) {
+      targetIndex = _pendingDayTabIndex!;
+      _pendingDayTabIndex = null;
+    }
+    if (targetIndex < 0) targetIndex = 0;
+    if (targetIndex >= calendarTabs.length && calendarTabs.isNotEmpty) {
+      targetIndex = calendarTabs.length - 1;
     }
 
-    if (targetIndex >= 0 && targetIndex < calendarTabController.length) {
+    if (calendarTabs.isNotEmpty && targetIndex < calendarTabController.length) {
       calendarTabController.index = targetIndex;
     }
   }
@@ -1087,7 +1160,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     calendarTabViews = <Widget>[].toList();
     getCalendarTabViews(context, isLoading);
     if(replaceController) {
-      calendarTabController = TabController(length: calendarTabs.length, vsync: this);
+      int initialIdx = _pendingDayTabIndex ?? 0;
+      _pendingDayTabIndex = null;
+      if (initialIdx < 0 || (calendarTabs.isNotEmpty && initialIdx >= calendarTabs.length)) initialIdx = 0;
+      calendarTabController = TabController(
+        length: calendarTabs.length,
+        vsync: this,
+        initialIndex: initialIdx,
+      );
+      calendarTabController.addListener(() {
+        if (!calendarTabController.indexIsChanging && mounted) {
+          setState(() {});
+        }
+      });
     }
     setState(() {
       isLoadingCalendar = isLoading;
@@ -1650,15 +1735,26 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           if(element.isRead){
             return;
           }
+          item.isRead = true;
           final indx = mailList.indexOf(element);
           mailList.insert(indx, MailElementWidget(subject: element.subject, details: element.details, sender: element.sender, sendTime: element.sendTime, isRead: true, mailID: element.mailID, callback: (_){}));
           mailList.remove(element);
-          unreadMailCount--;
+          final remainingUnread = mailEntries.where((m) => !m.isRead).length;
+          unreadMailCount = remainingUnread;
           storage.saveInt('CachedMailsUnread', unreadMailCount);
+          storage.DataCache.setUnreadMailCount(unreadMailCount);
           Future.delayed(Duration.zero, ()async{
-            await api.MailRequest.setMailRead(MailPopupDisplayTexts.mailID);
+            await api.MailRequest.setMailRead(element.mailID);
             if(currentMailPage == 1){
               storage.DataCache.setHasCachedMail(0);
+            }
+            if (mounted) {
+              setState(() {
+                final localUnread = mailEntries.where((m) => !m.isRead).length;
+                unreadMailCount = localUnread;
+                storage.saveInt('CachedMailsUnread', unreadMailCount);
+                storage.DataCache.setUnreadMailCount(unreadMailCount);
+              });
             }
           });
         });
@@ -1690,10 +1786,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         for (var item in unreadItems) {
           await api.MailRequest.setMailRead(item.ID);
         }
-        final count = await api.MailRequest.getUnreadMessageCount();
+        await api.MailRequest.getUnreadMessageCount();
         if (mounted) {
           setState(() {
-            unreadMailCount = count;
+            unreadMailCount = 0;
+            storage.saveInt('CachedMailsUnread', 0);
+            storage.DataCache.setUnreadMailCount(0);
           });
         }
       } catch (e) {
@@ -1711,6 +1809,36 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     currentWeekOffset++;
     AppHaptics.lightImpact();
     await onCalendarRefresh(true);
+  }
+
+  Future<void> jumpToCurrentWeekAndToday() async {
+    AppHaptics.lightImpact();
+    currentWeekOffset = 1;
+    final currWkday = DateTime.now().weekday;
+    int todayIndex = currWkday - 1;
+    if (todayIndex < 0 || todayIndex > 6) todayIndex = 0;
+    _pendingDayTabIndex = todayIndex;
+    await onCalendarRefresh(false);
+    if (mounted && calendarTabController.length > todayIndex) {
+      calendarTabController.animateTo(todayIndex);
+    }
+  }
+
+  Future<void> stepCalendarToWeek({required bool next, required int targetDayIndex}) async {
+    if (!canDoCalendarPaging) return;
+    canDoCalendarPaging = false;
+    AppHaptics.mediumImpact();
+    if (next) {
+      currentWeekOffset++;
+    } else {
+      currentWeekOffset--;
+    }
+    _pendingDayTabIndex = targetDayIndex;
+    await onCalendarRefresh(true);
+    if (mounted && calendarTabController.length > targetDayIndex) {
+      calendarTabController.index = targetDayIndex;
+    }
+    canDoCalendarPaging = true;
   }
 
   bool _isCalendarIdentical(List<api.CalendarEntry> a, List<api.CalendarEntry> b) {
@@ -2076,6 +2204,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         final calEntry = await storage.getString('CachedMails_$i');
         mailEntries.add(api.MailEntry("ERROR", "ERROR", "ERROR", 0, false,"").fillWithExisting(calEntry!));
       }
+      final localUnread = mailEntries.where((m) => !m.isRead).length;
+      if (mailEntries.isNotEmpty) {
+        unreadMailCount = localUnread;
+        storage.DataCache.setUnreadMailCount(unreadMailCount);
+      }
       return;
     }
 
@@ -2083,6 +2216,39 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     if(request == null || request.isEmpty){
       return;
     }
+
+    // Új olvasatlan üzenetek figyelése és helyi értesítés küldése
+    if (storage.DataCache.getNeedMessageNotifications() ?? true) {
+      final lastKnownTopId = await storage.getString('LastKnownTopMailId');
+      if (lastKnownTopId != null && lastKnownTopId.isNotEmpty) {
+        final newUnreadMails = <api.MailEntry>[];
+        for (final mail in request) {
+          if (mail.ID == lastKnownTopId) break;
+          if (!mail.isRead) {
+            newUnreadMails.add(mail);
+          }
+        }
+        if (newUnreadMails.isNotEmpty) {
+          if (newUnreadMails.length == 1) {
+            final m = newUnreadMails.first;
+            AppNotifications.showNotification(
+              "Új Neptun üzenet",
+              "${m.senderName}: ${m.subject}",
+            );
+          } else {
+            final m = newUnreadMails.first;
+            AppNotifications.showNotification(
+              "Új Neptun üzenetek (${newUnreadMails.length})",
+              "${m.senderName}: ${m.subject} és még ${newUnreadMails.length - 1} új üzenet",
+            );
+          }
+        }
+      }
+      if (request.isNotEmpty) {
+        await storage.saveString('LastKnownTopMailId', request.first.ID);
+      }
+    }
+
     mailEntries = request;
 
     if(force){
@@ -2090,12 +2256,14 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     
     final nums = await api.MailRequest.getUnreadMessagesAndAllMessages();
-    unreadMailCount = nums[0];
-    totalMailCount = nums[1];
+    final localUnread = mailEntries.where((m) => !m.isRead).length;
+    unreadMailCount = (mailEntries.isNotEmpty && localUnread == 0) ? 0 : (localUnread > 0 ? localUnread : nums[0]);
+    totalMailCount = nums[1] > 0 ? nums[1] : mailEntries.length;
 
     storage.saveInt('CachedMailsLength', mailEntries.length);
-    storage.saveInt('CachedMailsUnread', nums[0]);
-    storage.saveInt('CachedMailsTotal', nums[1]);
+    storage.saveInt('CachedMailsUnread', unreadMailCount);
+    storage.saveInt('CachedMailsTotal', totalMailCount);
+    storage.DataCache.setUnreadMailCount(unreadMailCount);
     //cache calendar
     for (int i = 0; i < mailEntries.length; i++) {
       storage.saveString('CachedMails_$i', mailEntries[i].toString());
@@ -2106,6 +2274,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   Timer? _calendarTimer;
+  Timer? _mailCheckTimer;
 
   bool _calendarDebounce = false;
   bool isLoadingCalendar = true;
@@ -2124,6 +2293,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
     _calendarTimer?.cancel();
+    _mailCheckTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _calendarDebounce = true;
     keepHomeButtonHidden = false;
     setState(() {
@@ -2272,12 +2443,26 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      Future.microtask(() async {
+        if (mounted && (storage.DataCache.getNeedMessageNotifications() ?? true)) {
+          await fetchMails();
+          setupMails();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     if (_instance == this) {
       _instance = null;
     }
     _connectivitySubscription?.cancel();
     _calendarTimer?.cancel();
+    _mailCheckTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
     calendarEntries.clear();
     mondayCalendar.clear();
@@ -2378,18 +2563,72 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 }
 
-class CalendarPageWidget extends StatelessWidget{
+class CalendarPageWidget extends StatefulWidget {
   final HomePageState homePage;
   final String greetText;
   final List<Widget> calendarTabs;
   final List<Widget> calendarTabViews;
-  const CalendarPageWidget({super.key, required this.homePage, required this.greetText, required this.calendarTabs, required this.calendarTabViews});
+  const CalendarPageWidget({
+    super.key,
+    required this.homePage,
+    required this.greetText,
+    required this.calendarTabs,
+    required this.calendarTabViews,
+  });
 
   @override
-  Widget build(BuildContext context){
-    final dayIndex = homePage.calendarTabController.index;
-    final dayText = api.Generic.dayToText(dayIndex + 1);
-    final calendarHintText = '$dayText • ${homePage.weeksSinceStart}. hét';
+  State<CalendarPageWidget> createState() => _CalendarPageWidgetState();
+}
+
+class _CalendarPageWidgetState extends State<CalendarPageWidget> {
+  double _accumulatedOverscroll = 0.0;
+  bool _isSwitchingWeek = false;
+
+  void _handleHorizontalScroll(ScrollNotification notification) {
+    if (!widget.homePage.canDoCalendarPaging || _isSwitchingWeek) return;
+    if (notification.metrics.axis != Axis.horizontal) return;
+
+    if (notification is OverscrollNotification) {
+      _accumulatedOverscroll += notification.overscroll;
+    } else if (notification is ScrollUpdateNotification) {
+      if (notification.metrics.pixels <= notification.metrics.minScrollExtent && (notification.scrollDelta ?? 0) < 0) {
+        _accumulatedOverscroll += notification.scrollDelta!;
+      } else if (notification.metrics.pixels >= notification.metrics.maxScrollExtent && (notification.scrollDelta ?? 0) > 0) {
+        _accumulatedOverscroll += notification.scrollDelta!;
+      }
+    } else if (notification is ScrollEndNotification || notification is UserScrollNotification) {
+      _accumulatedOverscroll = 0.0;
+    }
+
+    if (_accumulatedOverscroll > 45) {
+      _isSwitchingWeek = true;
+      _accumulatedOverscroll = 0.0;
+      widget.homePage.stepCalendarToWeek(next: true, targetDayIndex: 0).whenComplete(() {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _isSwitchingWeek = false;
+        });
+      });
+    } else if (_accumulatedOverscroll < -45) {
+      _isSwitchingWeek = true;
+      _accumulatedOverscroll = 0.0;
+      final lastDayIdx = widget.calendarTabs.isNotEmpty ? widget.calendarTabs.length - 1 : 6;
+      widget.homePage.stepCalendarToWeek(next: false, targetDayIndex: lastDayIdx).whenComplete(() {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) _isSwitchingWeek = false;
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final homePage = widget.homePage;
+
+    final now = DateTime.now();
+    final mondayThisWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    final int deltaWeeks = homePage.currentWeekOffset - 1;
+    final startOfTargetWeek = mondayThisWeek.add(Duration(days: deltaWeeks * 7));
+    final endOfTargetWeek = startOfTargetWeek.add(const Duration(days: 6));
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -2397,12 +2636,22 @@ class CalendarPageWidget extends StatelessWidget{
         topnav.TopNavigatorWidget(
           homePage: homePage,
           displayString: AppStrings.getLanguagePack().view_header_Calendar,
-          smallHintText: calendarHintText,
+          smallHintText: '',
           loggedInUsername: storage.DataCache.getUsername() ?? '',
           loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", ''),
         ),
+        t_table.WeekoffseterElementWidget(
+          week: homePage.weeksSinceStart,
+          from: startOfTargetWeek,
+          to: endOfTargetWeek,
+          onBackPressed: homePage.stepCalendarBack,
+          onForwardPressed: homePage.stepCalendarForward,
+          canDoPaging: homePage.canDoCalendarPaging,
+          homePage: homePage,
+          isLoading: homePage.isLoadingCalendar,
+        ),
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
             color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
@@ -2411,51 +2660,37 @@ class CalendarPageWidget extends StatelessWidget{
               color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
             ),
           ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
-                onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarBack : null,
-                visualDensity: VisualDensity.compact,
-                splashRadius: 18,
+          child: TabBar(
+            tabs: widget.calendarTabs,
+            isScrollable: true,
+            tabAlignment: TabAlignment.center,
+            dividerColor: Colors.transparent,
+            controller: homePage.calendarTabController,
+            indicator: UnderlineTabIndicator(
+              borderSide: BorderSide(
+                width: 2.5,
+                color: AppColors.getTheme().onPrimaryContainer,
               ),
-              Expanded(
-                child: TabBar(
-                  tabs: calendarTabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.center,
-                  dividerColor: Colors.transparent,
-                  controller: homePage.calendarTabController,
-                  indicator: UnderlineTabIndicator(
-                    borderSide: BorderSide(
-                      width: 2.5,
-                      color: AppColors.getTheme().onPrimaryContainer,
-                    ),
-                    insets: const EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelColor: AppColors.getTheme().onPrimaryContainer,
-                  unselectedLabelColor: AppColors.getTheme().textColor.withValues(alpha: 0.5),
-                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                color: homePage.canDoCalendarPaging ? AppColors.getTheme().textColor : AppColors.getTheme().textColor.withValues(alpha: 0.25),
-                onPressed: homePage.canDoCalendarPaging ? homePage.stepCalendarForward : null,
-                visualDensity: VisualDensity.compact,
-                splashRadius: 18,
-              ),
-            ],
+              insets: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            indicatorSize: TabBarIndicatorSize.label,
+            labelColor: AppColors.getTheme().onPrimaryContainer,
+            unselectedLabelColor: AppColors.getTheme().textColor.withValues(alpha: 0.5),
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
           ),
         ),
         Expanded(
-          child: TabBarView(
-            controller: homePage.calendarTabController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: calendarTabViews,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification notification) {
+              _handleHorizontalScroll(notification);
+              return false;
+            },
+            child: TabBarView(
+              controller: homePage.calendarTabController,
+              physics: const BouncingScrollPhysics(),
+              children: widget.calendarTabViews,
+            ),
           ),
         ),
       ],

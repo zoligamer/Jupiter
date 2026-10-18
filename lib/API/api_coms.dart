@@ -140,6 +140,15 @@ import '../storage.dart';
       return null;
     }
 
+    static final Map<String, String> _cookieJar = {};
+
+    static void _initCookieJar() {
+      final sticky = storage.DataCache.getStickyServerId();
+      if (sticky != null && sticky.isNotEmpty) {
+        _cookieJar['SERVERID'] = sticky;
+      }
+    }
+
     static void _extractAndSaveCookiesAndTokens(http.Response response, String username) {
       final setCookie = response.headers['set-cookie'];
       if (setCookie == null || setCookie.isEmpty) return;
@@ -151,6 +160,24 @@ import '../storage.dart';
         final cookieValue = deviceCookieMatch.group(1);
         if (cookieValue != null && cookieValue.isNotEmpty) {
           storage.DataCache.setDeviceCookie(username, cookieValue);
+          final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+          _cookieJar['devicecookie-$b64'] = cookieValue;
+        }
+      }
+
+      // Preserve all cookies (e.g. SERVERID, session cookies, etc.) into the persistent CookieJar
+      final cookieHeaderRegex = RegExp(r'([a-zA-Z0-9_\-\.]+)=([^;,\s]+)');
+      for (final match in cookieHeaderRegex.allMatches(setCookie)) {
+        final key = match.group(1);
+        final val = match.group(2);
+        if (key != null && val != null) {
+          final lk = key.toLowerCase();
+          if (lk != 'expires' && lk != 'path' && lk != 'domain' && lk != 'samesite' && lk != 'max-age' && lk != 'secure' && lk != 'httponly') {
+            _cookieJar[key] = val;
+            if (key.toUpperCase() == 'SERVERID') {
+              storage.DataCache.setStickyServerId(val);
+            }
+          }
         }
       }
 
@@ -164,9 +191,28 @@ import '../storage.dart';
           storage.DataCache.setRefreshToken(tokenValue);
           if (cookieName != null && cookieName.isNotEmpty && !cookieName.startsWith('devicecookie')) {
             storage.DataCache.setSessionCookieName(cookieName);
+            _cookieJar[cookieName] = tokenValue;
           }
         }
       }
+    }
+
+    static String _buildCookieHeader(String? username) {
+      _initCookieJar();
+      if (username != null && username.isNotEmpty) {
+        final savedCookieVal = storage.DataCache.getDeviceCookieSync();
+        if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+          final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+          _cookieJar['devicecookie-$b64'] = savedCookieVal;
+        }
+      }
+      final refreshToken = storage.DataCache.getRefreshToken();
+      final sessionCookieName = storage.DataCache.getSessionCookieName() ?? (refreshToken != null ? _extractSessionIdFromJwt(refreshToken) : null);
+      if (sessionCookieName != null && sessionCookieName.isNotEmpty && refreshToken != null && refreshToken.isNotEmpty) {
+        _cookieJar[sessionCookieName] = refreshToken;
+      }
+      if (_cookieJar.isEmpty) return '';
+      return _cookieJar.entries.map((e) => '${e.key}=${e.value}').join('; ');
     }
 
     static bool _isRefreshingToken = false;
@@ -187,32 +233,13 @@ import '../storage.dart';
         final accessToken = storage.DataCache.getAccessToken() ?? '';
         final username = storage.DataCache.getUsername();
 
-        List<String> cookieParts = [];
-        if (username != null && username.isNotEmpty) {
-          final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
-          if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
-            final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
-            cookieParts.add('devicecookie-$b64=$savedCookieVal');
-          }
-        }
-
-        String? sessionCookieName = storage.DataCache.getSessionCookieName();
-        if (sessionCookieName == null || sessionCookieName.isEmpty) {
-          sessionCookieName = _extractSessionIdFromJwt(refreshToken);
-        }
-        if (sessionCookieName != null && sessionCookieName.isNotEmpty) {
-          cookieParts.add('$sessionCookieName=$refreshToken');
-        } else {
-          cookieParts.add('refreshToken=$refreshToken');
-        }
-
-        final cookieHeader = cookieParts.isNotEmpty ? cookieParts.join('; ') : null;
+        final cookieHeader = _buildCookieHeader(username);
 
         final response = await postRequestRaw(
           refreshUrl,
           "{}",
           bearerToken: accessToken.isNotEmpty ? accessToken : refreshToken,
-          cookie: cookieHeader,
+          cookie: cookieHeader.isNotEmpty ? cookieHeader : null,
         );
 
         if (response.statusCode == 200) {
@@ -232,17 +259,39 @@ import '../storage.dart';
       return false;
     }
 
+    static Future<String> getSafeAccessToken() async {
+      String token = storage.DataCache.getAccessToken() ?? '';
+      if (token.isEmpty && storage.DataCache.getIsModernApi()) {
+        final success = await tryTokenRefresh();
+        if (success) {
+          token = storage.DataCache.getAccessToken() ?? '';
+        }
+      }
+      return token;
+    }
+
     static Future<String> getRequest(Uri url, {required String bearerToken, bool isRetry = false}) async {
       HttpOverrides.global = NeptunCerts.getCerts();
+      if (bearerToken.isEmpty && storage.DataCache.getIsModernApi()) {
+        bearerToken = await getSafeAccessToken();
+      }
       final client = http.Client();
       final request = http.Request('GET', url);
       request.headers['Authorization'] = 'Bearer $bearerToken';
       request.headers['Content-Type'] = 'application/json';
+      final username = storage.DataCache.getUsername();
+      final cookieHeader = _buildCookieHeader(username);
+      if (cookieHeader.isNotEmpty) {
+        request.headers['Cookie'] = cookieHeader;
+      }
 
       try {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
+        if (username != null && username.isNotEmpty) {
+          _extractAndSaveCookiesAndTokens(response, username);
+        }
 
         // Ha a token lejárt:
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
@@ -297,12 +346,20 @@ import '../storage.dart';
       }
       request.headers['Content-Type'] = 'application/json';
       request.headers['Accept'] = 'application/json, text/plain, */*';
+      final username = storage.DataCache.getUsername();
+      final cookieHeader = _buildCookieHeader(username);
+      if (cookieHeader.isNotEmpty) {
+        request.headers['Cookie'] = cookieHeader;
+      }
       request.body = requestBody;
 
       try {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
+        if (username != null && username.isNotEmpty) {
+          _extractAndSaveCookiesAndTokens(response, username);
+        }
 
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
           if (!_isRefreshingToken) {
@@ -428,33 +485,33 @@ import '../storage.dart';
           final token = await storage.DataCache.getAccessToken();
           String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
           
-          // 1. Try RegisteredCourses/GetTerms
+          // 1. Elsődlegesen: TakenSubjects/Terms (ez tartalmazza a valós felvett tantárgyi féléveket)
           try {
-            final rTermsUrl = Uri.parse("$baseUrl/api/RegisteredCourses/GetTerms");
-            final rTermsResponse = await _APIRequest.getRequest(rTermsUrl, bearerToken: token!);
-            final rTermsDecoded = conv.json.decode(rTermsResponse);
-            if (rTermsDecoded['data'] != null && rTermsDecoded['data'] is List) {
-              for (var item in rTermsDecoded['data']) {
+            final termsUrl = Uri.parse("$baseUrl/api/TakenSubjects/Terms");
+            final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token ?? "");
+            final termsDecoded = conv.json.decode(termsResponse);
+            if (termsDecoded['data'] != null && termsDecoded['data'] is List) {
+              for (var item in termsDecoded['data']) {
                 final val = item['value']?.toString() ?? '';
                 final text = item['text']?.toString() ?? item['termName']?.toString() ?? val;
-                if (val.isNotEmpty) {
+                if (val.isNotEmpty && !text.toLowerCase().contains('0. félév')) {
                   terms.add(Term(val, text));
                 }
               }
             }
           } catch (_) {}
 
-          // 2. Try TakenSubjects/Terms
+          // 2. Ha üres, RegisteredCourses/GetTerms
           if (terms.isEmpty) {
             try {
-              final termsUrl = Uri.parse("$baseUrl/api/TakenSubjects/Terms");
-              final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token!);
-              final termsDecoded = conv.json.decode(termsResponse);
-              if (termsDecoded['data'] != null && termsDecoded['data'] is List) {
-                for (var item in termsDecoded['data']) {
+              final rTermsUrl = Uri.parse("$baseUrl/api/RegisteredCourses/GetTerms");
+              final rTermsResponse = await _APIRequest.getRequest(rTermsUrl, bearerToken: token ?? "");
+              final rTermsDecoded = conv.json.decode(rTermsResponse);
+              if (rTermsDecoded['data'] != null && rTermsDecoded['data'] is List) {
+                for (var item in rTermsDecoded['data']) {
                   final val = item['value']?.toString() ?? '';
                   final text = item['text']?.toString() ?? item['termName']?.toString() ?? val;
-                  if (val.isNotEmpty) {
+                  if (val.isNotEmpty && !text.toLowerCase().contains('0. félév')) {
                     terms.add(Term(val, text));
                   }
                 }
@@ -462,17 +519,17 @@ import '../storage.dart';
             } catch (_) {}
           }
 
-          // 3. Try Periods/GetTerms
+          // 3. Ha még mindig üres, Periods/GetTerms
           if (terms.isEmpty) {
             try {
               final pTermsUrl = Uri.parse("$baseUrl/api/Periods/GetTerms");
-              final pTermsResponse = await _APIRequest.getRequest(pTermsUrl, bearerToken: token!);
+              final pTermsResponse = await _APIRequest.getRequest(pTermsUrl, bearerToken: token ?? "");
               final pTermsDecoded = conv.json.decode(pTermsResponse);
               if (pTermsDecoded['data'] != null && pTermsDecoded['data'] is List) {
                 for (var item in pTermsDecoded['data']) {
                   final val = item['value']?.toString() ?? '';
                   final text = item['text']?.toString() ?? item['termName']?.toString() ?? val;
-                  if (val.isNotEmpty) {
+                  if (val.isNotEmpty && !text.toLowerCase().contains('0. félév')) {
                     terms.add(Term(val, text));
                   }
                 }
@@ -560,7 +617,7 @@ import '../storage.dart';
 
     static Future<List<dynamic>?> _fetchFromGitHubAndCache() async {
       try {
-        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/universityNameUrlPairs.json');
+        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/universityNameUrlPairs.json');
         final response = await http.get(url).timeout(const Duration(seconds: 4));
         if (response.statusCode == 200) {
           final Map<String, dynamic> jsonMap = conv.json.decode(response.body);
@@ -651,7 +708,6 @@ import '../storage.dart';
             final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
             if (is2fa) {
               await storage.DataCache.setInstituteUrl(baseUrl);
-              await storage.DataCache.setAccessToken(response["data"]["twoFactorLoginToken"]);
               return 2; // 2FA required
             }
 
@@ -677,7 +733,6 @@ import '../storage.dart';
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
           await storage.DataCache.setInstituteUrl(baseUrl);
-          await storage.DataCache.setAccessToken(response["data"]["twoFactorLoginToken"]);
           return 2; // 2FA required
         }
 
@@ -707,15 +762,9 @@ import '../storage.dart';
           "LCID":1038
         });
 
-        // Load device cookie if exists
-        final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
-        String? cookieHeader;
-        if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
-          final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
-          cookieHeader = 'devicecookie-$b64=$savedCookieVal';
-        }
-
-        final responseRaw = await _APIRequest.postRequestRaw(url, body, cookie: cookieHeader);
+        // Load device cookie and sticky session cookies if they exist
+        final cookieHeader = _APIRequest._buildCookieHeader(username);
+        final responseRaw = await _APIRequest.postRequestRaw(url, body, cookie: cookieHeader.isNotEmpty ? cookieHeader : null);
         final response = conv.jsonDecode(responseRaw.body);
 
         // Extract and save cookies/tokens
@@ -1126,9 +1175,15 @@ class CalendarRequest {
 
         if (needsReAuth) {
           debug.log("Naptár: Lejárt token/ID érzékelve. Újra-azonosítás indul...");
-          final username = storage.DataCache.getUsername()!;
-          final password = storage.DataCache.getPassword()!;
-          await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+          bool refreshSuccess = false;
+          if (storage.DataCache.getIsModernApi()) {
+            refreshSuccess = await _APIRequest.tryTokenRefresh();
+          }
+          if (!refreshSuccess) {
+            final username = storage.DataCache.getUsername()!;
+            final password = storage.DataCache.getPassword()!;
+            await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+          }
 
           final newTrainingIds = await getStudentTrainingIds(forceRefresh: true);
           final newToken = await storage.DataCache.getAccessToken();
@@ -1271,7 +1326,7 @@ class CalendarRequest {
       String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
       final url = Uri.parse("$baseUrl/api/Calendar/GetCourseDetails?classInstanceId=$classInstanceId&webexMeetingId=null");
-      final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+      final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
       final decoded = conv.json.decode(responseRaw);
 
       if (decoded['data'] != null) {
@@ -1468,35 +1523,47 @@ class MarkbookRequest{
         }
 
         if (effectiveTermGuid.isEmpty && terms.isNotEmpty) {
-          effectiveTermGuid = terms.last.id;
+          effectiveTermGuid = terms.first.id;
         }
 
         // 2. Felvett tárgyak és kurzusok lekérése
         dynamic rawData;
 
-        // A) Próbálkozás a TakenSubjects végponttal
-        String subjectsUrlStr = "$baseUrl/api/TakenSubjects?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.subjectName=asc";
+        // A) Próbálkozás a TakenSubjects végponttal a meghatározott félévre
         if (effectiveTermGuid.isNotEmpty) {
-          subjectsUrlStr = "$baseUrl/api/TakenSubjects?request.termId=$effectiveTermGuid&sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.subjectName=asc";
-        }
-        try {
-          final subjectsUrl = Uri.parse(subjectsUrlStr);
-          final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: token!);
-          final subjectsDecoded = conv.json.decode(subjectsResponse);
-          if (subjectsDecoded['data'] != null && subjectsDecoded['data'] is List && (subjectsDecoded['data'] as List).isNotEmpty) {
-            rawData = subjectsDecoded['data'];
-          }
-        } catch (_) {}
-
-        // B) Ha a TakenSubjects üres, próbálkozás a RegisteredCourses végponttal (Felvett kurzusok)
-        if (rawData == null || (rawData is List && rawData.isEmpty)) {
-          String regUrlStr = "$baseUrl/api/RegisteredCourses/GetRegisteredCourses?sortAndPage.subjectName=asc";
-          if (effectiveTermGuid.isNotEmpty) {
-            regUrlStr = "$baseUrl/api/RegisteredCourses/GetRegisteredCourses?request.termId=$effectiveTermGuid&sortAndPage.subjectName=asc";
-          }
+          final subjectsUrlStr = "$baseUrl/api/TakenSubjects?request.termId=$effectiveTermGuid&sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.subjectName=asc";
           try {
-            final regUrl = Uri.parse(regUrlStr);
-            final regResponse = await _APIRequest.getRequest(regUrl, bearerToken: token!);
+            final subjectsUrl = Uri.parse(subjectsUrlStr);
+            final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: token ?? "");
+            final subjectsDecoded = conv.json.decode(subjectsResponse);
+            if (subjectsDecoded['data'] != null && subjectsDecoded['data'] is List && (subjectsDecoded['data'] as List).isNotEmpty) {
+              rawData = subjectsDecoded['data'];
+            }
+          } catch (_) {}
+        }
+
+        // B) Ha a TakenSubjects üres vagy nincs találat, végigpróbáljuk az összes többi félévet
+        if (rawData == null || (rawData is List && rawData.isEmpty)) {
+          for (var t in terms) {
+            if (t.id == effectiveTermGuid) continue;
+            try {
+              final altUrl = Uri.parse("$baseUrl/api/TakenSubjects?request.termId=${t.id}&sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.subjectName=asc");
+              final altRes = await _APIRequest.getRequest(altUrl, bearerToken: token ?? "");
+              final altDecoded = conv.json.decode(altRes);
+              if (altDecoded['data'] != null && altDecoded['data'] is List && (altDecoded['data'] as List).isNotEmpty) {
+                rawData = altDecoded['data'];
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+
+        // C) Próbálkozás a RegisteredCourses végponttal (Felvett kurzusok)
+        if (rawData == null || (rawData is List && rawData.isEmpty)) {
+          final termParams = effectiveTermGuid.isNotEmpty ? "?request.termId=$effectiveTermGuid&sortAndPage.subjectName=asc" : "?sortAndPage.subjectName=asc";
+          try {
+            final regUrl = Uri.parse("$baseUrl/api/RegisteredCourses/GetRegisteredCourses$termParams");
+            final regResponse = await _APIRequest.getRequest(regUrl, bearerToken: token ?? "");
             final regDecoded = conv.json.decode(regResponse);
             if (regDecoded['data'] != null && regDecoded['data'] is List && (regDecoded['data'] as List).isNotEmpty) {
               rawData = regDecoded['data'];
@@ -1504,24 +1571,32 @@ class MarkbookRequest{
           } catch (_) {}
         }
 
-        // C) Tartalék: TakenSubjects félév-szűrés nélkül
+        // D) Próbálkozás az Advancement/GetStudentTakenSubjectsByTerm végponttal (Semmelweis és modern Neptun előrehaladási modul)
         if (rawData == null || (rawData is List && rawData.isEmpty)) {
-          try {
-            final fallbackUrl = Uri.parse("$baseUrl/api/TakenSubjects?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.subjectName=asc");
-            final fallbackRes = await _APIRequest.getRequest(fallbackUrl, bearerToken: token!);
-            final fbDecoded = conv.json.decode(fallbackRes);
-            if (fbDecoded['data'] != null && fbDecoded['data'] is List && (fbDecoded['data'] as List).isNotEmpty) {
-              rawData = fbDecoded['data'];
-            }
-          } catch (_) {}
+          final termGuidsToTry = [
+            if (effectiveTermGuid.isNotEmpty) effectiveTermGuid,
+            ...terms.map((t) => t.id).where((id) => id != effectiveTermGuid),
+          ];
+          for (final tId in termGuidsToTry) {
+            try {
+              final advUrl = Uri.parse("$baseUrl/api/Advancement/GetStudentTakenSubjectsByTerm?termId=$tId");
+              final advRes = await _APIRequest.getRequest(advUrl, bearerToken: token ?? "");
+              final advDecoded = conv.json.decode(advRes);
+              if (advDecoded['data'] != null && advDecoded['data'] is List && (advDecoded['data'] as List).isNotEmpty) {
+                rawData = advDecoded['data'];
+                break;
+              }
+            } catch (_) {}
+          }
         }
 
-        // D) Tartalék: RegisteredCourses félév-szűrés nélkül
+        // E) Próbálkozás a TakenSubjects/GetTakenSubjects végponttal
         if (rawData == null || (rawData is List && rawData.isEmpty)) {
           try {
-            final fallbackUrl = Uri.parse("$baseUrl/api/RegisteredCourses/GetRegisteredCourses?sortAndPage.subjectName=asc");
-            final fallbackRes = await _APIRequest.getRequest(fallbackUrl, bearerToken: token!);
-            final fbDecoded = conv.json.decode(fallbackRes);
+            final termParam = effectiveTermGuid.isNotEmpty ? "?request.termId=$effectiveTermGuid" : "";
+            final fbUrl = Uri.parse("$baseUrl/api/TakenSubjects/GetTakenSubjects$termParam");
+            final fbRes = await _APIRequest.getRequest(fbUrl, bearerToken: token ?? "");
+            final fbDecoded = conv.json.decode(fbRes);
             if (fbDecoded['data'] != null && fbDecoded['data'] is List && (fbDecoded['data'] as List).isNotEmpty) {
               rawData = fbDecoded['data'];
             }
@@ -1708,7 +1783,7 @@ class CashinRequest{
         final token = await storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Scholarship/GetScholarshipPayments?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.termId=desc");
-        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
         final decoded = conv.json.decode(responseRaw);
         if (decoded['data'] != null && decoded['data'] is List) {
           return List<Map<String, dynamic>>.from(decoded['data']);
@@ -1740,7 +1815,7 @@ class CashinRequest{
         final txUrl = Uri.parse("$baseUrl/api/Transactions/GetStudentPreviousTransactions?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.transferDate=desc");
 
         final results = await Future.wait([
-          _APIRequest.getRequest(txUrl, bearerToken: token!),
+          _APIRequest.getRequest(txUrl, bearerToken: token ?? ""),
           getScholarshipPayments(),
         ]);
 
@@ -1882,7 +1957,7 @@ class CashinRequest{
         final token = await storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/FinancialDataDashboard/GetCollectiveInvoices");
-        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
         final decoded = conv.json.decode(responseRaw);
         if (decoded['data'] != null && decoded['data'] is List && (decoded['data'] as List).isNotEmpty) {
           final first = decoded['data'][0];
@@ -1948,12 +2023,12 @@ class PeriodsRequest{
           periodsUrlStr = "$baseUrl/api/Periods/GetPeriods?request.termId=$effectiveTermGuid&sortAndPage.firstRow=0&sortAndPage.lastRow=50&sortAndPage.fromDate=asc";
         }
         final periodsUrl = Uri.parse(periodsUrlStr);
-        final periodsResponse = await _APIRequest.getRequest(periodsUrl, bearerToken: token!);
+        final periodsResponse = await _APIRequest.getRequest(periodsUrl, bearerToken: token ?? "");
         var periodsDecoded = conv.json.decode(periodsResponse);
 
         if ((periodsDecoded['data'] == null || (periodsDecoded['data'] is List && (periodsDecoded['data'] as List).isEmpty)) && effectiveTermGuid.isNotEmpty) {
           final fallbackUrl = Uri.parse("$baseUrl/api/Periods/GetPeriods?sortAndPage.firstRow=0&sortAndPage.lastRow=50&sortAndPage.fromDate=asc");
-          final fallbackRes = await _APIRequest.getRequest(fallbackUrl, bearerToken: token);
+          final fallbackRes = await _APIRequest.getRequest(fallbackUrl, bearerToken: token ?? "");
           final fbDecoded = conv.json.decode(fallbackRes);
           if (fbDecoded['data'] != null && fbDecoded['data'] is List && (fbDecoded['data'] as List).isNotEmpty) {
             periodsDecoded = fbDecoded;
@@ -2034,7 +2109,7 @@ class MailRequest{
         final token = await storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Message/GetUnreadedMessagesCount");
-        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
         final decoded = conv.json.decode(responseRaw);
         if (decoded['data'] != null && decoded['data']['count'] != null) {
           int count = (decoded['data']['count'] as num).toInt();
@@ -2089,7 +2164,7 @@ class MailRequest{
         int lastRow = firstRow + 20;
 
         final url = Uri.parse("$baseUrl/api/Message/GetReceivedMessages?firstRow=$firstRow&lastRow=$lastRow&filterType=0");
-        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
         final decoded = conv.json.decode(responseRaw);
 
         List<MailEntry> modernMails = [];
@@ -2151,29 +2226,32 @@ class MailRequest{
       try {
         final token = await storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
-        String? targetPostId = postId;
+        final targetPostIds = <String>[];
+        if (postId != null && postId.isNotEmpty) {
+          targetPostIds.add(postId);
+        }
 
-        if (targetPostId == null || targetPostId.isEmpty) {
-          final postsUrl = Uri.parse("$baseUrl/api/Messages/$id/Posts?messageId=$id");
-          String postsRaw = await _APIRequest.getRequest(postsUrl, bearerToken: token!);
-          final postsDecoded = conv.json.decode(postsRaw);
-          if (postsDecoded['data'] != null && postsDecoded['data']['posts'] != null) {
-            final postsList = postsDecoded['data']['posts'] as List<dynamic>;
-            for (var p in postsList) {
-              if (p['isRead'] == false && p['postId'] != null) {
-                targetPostId = p['postId'].toString();
-                break;
+        final postsUrl = Uri.parse("$baseUrl/api/Messages/$id/Posts?messageId=$id");
+        String postsRaw = await _APIRequest.getRequest(postsUrl, bearerToken: token ?? "");
+        final postsDecoded = conv.json.decode(postsRaw);
+        if (postsDecoded['data'] != null && postsDecoded['data']['posts'] != null) {
+          final postsList = postsDecoded['data']['posts'] as List<dynamic>;
+          for (var p in postsList) {
+            final pid = p['postId']?.toString();
+            if (pid != null && (p['isRead'] == false || targetPostIds.isEmpty)) {
+              if (!targetPostIds.contains(pid)) {
+                targetPostIds.add(pid);
               }
             }
-            if (targetPostId == null && postsList.isNotEmpty && postsList[0]['postId'] != null) {
-              targetPostId = postsList[0]['postId'].toString();
-            }
+          }
+          if (targetPostIds.isEmpty && postsList.isNotEmpty && postsList[0]['postId'] != null) {
+            targetPostIds.add(postsList[0]['postId'].toString());
           }
         }
 
-        if (targetPostId != null && targetPostId.isNotEmpty) {
+        if (targetPostIds.isNotEmpty) {
           final processedUrl = Uri.parse("$baseUrl/api/Messages/$id/Posts/Processed");
-          final body = conv.jsonEncode({"postIds": [targetPostId]});
+          final body = conv.jsonEncode({"postIds": targetPostIds});
           await _APIRequest.postRequestWithRetry(processedUrl, body);
           await getUnreadMessageCount();
           return true;
@@ -2183,6 +2261,21 @@ class MailRequest{
       }
     }
     return false;
+  }
+
+  static Future<void> bypassRequiredToReadMessages() async {
+    if (!storage.DataCache.getIsModernApi()) return;
+    try {
+      final token = await storage.DataCache.getAccessToken();
+      if (token == null || token.isEmpty) return;
+      final baseUrl = PetitionsRequest.getModernApiBase();
+      final url = Uri.parse('$baseUrl/api/Message/SkipRequiredToReadMessages');
+      await _APIRequest.postRequestRaw(
+        url,
+        '{}',
+        bearerToken: token,
+      );
+    } catch (_) {}
   }
 
   static Future<String> getMailContent(String messageId, String oldDetails) async {
@@ -2196,23 +2289,33 @@ class MailRequest{
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Messages/$messageId/Posts?messageId=$messageId");
 
-        String responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
+        String responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
 
         // retry if 500 status
         if (responseRaw.contains("Hiba történt") || responseRaw.contains('"statusCode":500')) {
           await Future.delayed(const Duration(milliseconds: 200)); // Vár egy picit
-          responseRaw = await _APIRequest.getRequest(url, bearerToken: token); // Újra beküldi
+          responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? ""); // Újra beküldi
         }
         // ---------------------------------------------------
 
         final decoded = conv.json.decode(responseRaw);
 
         if (decoded['data'] != null && decoded['data']['posts'] != null && decoded['data']['posts'].isNotEmpty) {
-          final firstPost = decoded['data']['posts'][0];
-          final postId = firstPost['postId']?.toString();
-          if (postId != null && firstPost['isRead'] != true) {
-            // Automatically mark processed on server!
-            setMailRead(messageId, postId: postId);
+          final postsList = decoded['data']['posts'] as List<dynamic>;
+          final firstPost = postsList[0];
+
+          // Collect all unread postIds in thread to mark read on server
+          final unreadIds = <String>[];
+          for (var p in postsList) {
+            final pid = p['postId']?.toString();
+            if (pid != null && p['isRead'] != true) {
+              unreadIds.add(pid);
+            }
+          }
+          if (unreadIds.isNotEmpty) {
+            final processedUrl = Uri.parse("$baseUrl/api/Messages/$messageId/Posts/Processed");
+            final body = conv.jsonEncode({"postIds": unreadIds});
+            unawaited(_APIRequest.postRequestWithRetry(processedUrl, body));
           }
           String rawHtml = firstPost['htmlText'] ?? "";
           String cleanText = rawHtml
@@ -2852,7 +2955,7 @@ class CashinEntry{
       return (daylightSavingsTimeFrom.microsecondsSinceEpoch < time.microsecondsSinceEpoch && time.microsecondsSinceEpoch < daylightSavingsTimeTo.microsecondsSinceEpoch);
     }
     static Future<AppUpdateHelper?> getAppUpdateHelper() async{
-      final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/appMinimumAllowedVersion.json');
+      final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/appMinimumAllowedVersion.json');
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
@@ -2931,7 +3034,7 @@ class CashinEntry{
         return _langMapCache;
       }
       try {
-        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/Languages/supportedLanguages.json');
+        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/Languages/supportedLanguages.json');
         final response = await http.get(url);
 
         if (response.statusCode != 200) {
@@ -2977,7 +3080,7 @@ class CashinEntry{
         return _themeMapCache;
       }
       try {
-        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Neptun-Mobile-fork/refs/heads/main/Themes/supportedThemes.json');
+        final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/Themes/supportedThemes.json');
         final response = await http.get(url);
 
         if (response.statusCode != 200) {
@@ -3227,11 +3330,16 @@ class CashinEntry{
 
   class PetitionsRequest {
     static String getModernApiBase() {
-      String url = storage.DataCache.getInstituteUrl() ?? '';
-      url = url.replaceAll(RegExp(r'/MobileService\.svc.*$', caseSensitive: false), '');
-      url = url.replaceAll(RegExp(r'/hallgato/?$', caseSensitive: false), '');
-      url = url.replaceAll(RegExp(r'/ujhallgato/?$', caseSensitive: false), '');
-      return '$url/ujhallgato';
+      String raw = storage.DataCache.getInstituteUrl() ?? '';
+      raw = raw.replaceAll(RegExp(r'/login(\.aspx)?$', caseSensitive: false), '');
+      raw = raw.replaceAll(RegExp(r'/MobileService\.svc.*$', caseSensitive: false), '');
+      if (raw.endsWith('/')) raw = raw.substring(0, raw.length - 1);
+
+      // Ha már szerepel benne a /hallgato vagy /ujhallgato (pl. Semmelweis: /hallgato, Óbuda: /ujhallgato), megtartjuk
+      if (raw.toLowerCase().contains('/hallgato') || raw.toLowerCase().contains('/ujhallgato')) {
+        return raw;
+      }
+      return '$raw/ujhallgato';
     }
 
     static Future<PetitionCounts?> getPetitionCounts() async {

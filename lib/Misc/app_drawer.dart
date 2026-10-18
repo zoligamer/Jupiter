@@ -15,6 +15,7 @@ import '../Pages/settings_page.dart';
 import '../Pages/petitions_page.dart';
 import '../Pages/profile_hub_page.dart';
 import '../Pages/document_storage_page.dart';
+import '../Pages/subject_registration_page.dart';
 import '../Misc/auto_updater.dart';
 import 'to_office_service.dart';
 import 'dart:convert' as conv;
@@ -38,6 +39,7 @@ class _AppDrawerState extends State<AppDrawer> {
   bool _isLoadingBalance = true;
   int _unreadCount = 0;
   String? _userAvatarBase64;
+  ImageProvider? _cachedAvatarImageProvider;
   String? _fallbackColorHex;
 
   @override
@@ -49,6 +51,10 @@ class _AppDrawerState extends State<AppDrawer> {
     _unreadCount = storage.DataCache.getUnreadMailCount();
     _isLoadingBalance = _accountBalance == null;
     _userAvatarBase64 = storage.DataCache.getCachedUserAvatarBase64();
+    final avatarBytes = storage.DataCache.getCachedAvatarBytes();
+    if (avatarBytes != null && avatarBytes.isNotEmpty) {
+      _cachedAvatarImageProvider = MemoryImage(avatarBytes);
+    }
     _fallbackColorHex = storage.DataCache.getCachedFallbackColor();
     _loadTerms();
     _loadFinancialAndMessages();
@@ -56,11 +62,15 @@ class _AppDrawerState extends State<AppDrawer> {
   }
 
   Future<void> _loadUserAvatarIfNeeded() async {
-    if (_userAvatarBase64 == null) {
+    if (_cachedAvatarImageProvider == null) {
       final img = await UserProfileRequest.getUserAvatar();
       if (mounted && img != null && img.isNotEmpty) {
+        final avatarBytes = storage.DataCache.getCachedAvatarBytes();
         setState(() {
           _userAvatarBase64 = img;
+          if (avatarBytes != null && avatarBytes.isNotEmpty) {
+            _cachedAvatarImageProvider = MemoryImage(avatarBytes);
+          }
         });
       }
     }
@@ -227,22 +237,19 @@ class _AppDrawerState extends State<AppDrawer> {
   }
 
   Widget _buildDrawerAvatar() {
-    if (_userAvatarBase64 != null && _userAvatarBase64!.isNotEmpty) {
-      try {
-        final bytes = conv.base64Decode(_userAvatarBase64!);
-        return Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.getTheme().primary, width: 2),
-            image: DecorationImage(
-              image: MemoryImage(bytes),
-              fit: BoxFit.cover,
-            ),
+    if (_cachedAvatarImageProvider != null) {
+      return Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.getTheme().primary, width: 2),
+          image: DecorationImage(
+            image: _cachedAvatarImageProvider!,
+            fit: BoxFit.cover,
           ),
-        );
-      } catch (_) {}
+        ),
+      );
     }
 
     return CircleAvatar(
@@ -644,6 +651,22 @@ class _AppDrawerState extends State<AppDrawer> {
                       },
                     ),
                     ListTile(
+                      leading: Icon(Icons.auto_awesome_motion_rounded, color: const Color(0xFF7158E2)),
+                      title: Text(
+                        'Tárgyfelvétel (Ghost Órarend)',
+                        style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Icon(Icons.chevron_right_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.3)),
+                      onTap: () {
+                        AppHaptics.lightImpact();
+                        Navigator.pop(context); // closes drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SubjectRegistrationPage()),
+                        );
+                      },
+                    ),
+                    ListTile(
                       leading: Icon(Icons.settings_rounded, color: AppColors.getTheme().textColor),
                       title: Text(AppStrings.getLanguagePack().topmenu_buttons_Settings, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
                       onTap: () {
@@ -734,7 +757,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         AppHaptics.lightImpact();
                         Navigator.pop(context);
                         if(Platform.isAndroid){
-                          launchUrl(Uri.parse('https://github.com/zoligamer/Neptun-Mobile-fork/issues/new/choose'));
+                          launchUrl(Uri.parse('https://github.com/zoligamer/Jupiter/issues/new/choose'));
                         }
                       },
                     ),
