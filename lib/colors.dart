@@ -363,9 +363,57 @@ class AppColors {
         onRoomHighlightColor: const Color(0xFF021F13),
         basedOnDark: true));
 
+    _appColors.add(AppPalette('Neptun Dark',
+        primary: const Color(0xFF00D285),
+        onPrimary: const Color(0xFF061812),
+        onPrimaryContainer: const Color(0xFF00F5A0),
+        secondary: const Color(0xFF162E51),
+        onSecondary: const Color(0xFFE2EAF4),
+        onSecondaryContainer: const Color(0xFF2F70F2),
+        grade1: const Color(0xFFFF5252),
+        grade2: const Color(0xFFEF9A9A),
+        grade3: const Color(0xFFFFF59D),
+        grade4: const Color(0xFFC5E1A5),
+        grade5: const Color(0xFFA5D6A7),
+        navbarStatusBarColor: const Color(0xFF070E18),
+        navbarNavibarColor: const Color(0xFF070E18),
+        rootBackground: const Color(0xFF0A1320),
+        textColor: const Color(0xFFFFFFFF),
+        buttonEnabled: const Color(0xFF183864),
+        buttonDisabled: const Color(0xFF0E2038),
+        errorRed: const Color(0xFFFF5C6A),
+        currentClassGreen: const Color(0xFF00E59B),
+        roomHighlightColor: const Color(0xFF2F70F2),
+        onRoomHighlightColor: const Color(0xFFFFFFFF),
+        basedOnDark: true));
+
+    _appColors.add(AppPalette('Neptun Light',
+        primary: const Color(0xFF0F47D0),
+        onPrimary: const Color(0xFFFFFFFF),
+        onPrimaryContainer: const Color(0xFF0A2E8A),
+        secondary: const Color(0xFFE1E8F5),
+        onSecondary: const Color(0xFF162D50),
+        onSecondaryContainer: const Color(0xFF0F47D0),
+        grade1: const Color(0xFFBD2E2E),
+        grade2: const Color(0xFF955151),
+        grade3: const Color(0xFF9E9754),
+        grade4: const Color(0xFF72885A),
+        grade5: const Color(0xFF567B58),
+        navbarStatusBarColor: const Color(0xFFEEF2F8),
+        navbarNavibarColor: const Color(0xFFE6ECF5),
+        rootBackground: const Color(0xFFF4F7FC),
+        textColor: const Color(0xFF162D50),
+        buttonEnabled: const Color(0xFF0F47D0),
+        buttonDisabled: const Color(0xFFC6D4EA),
+        errorRed: const Color(0xFFDC2626),
+        currentClassGreen: const Color(0xFF00A86B),
+        roomHighlightColor: const Color(0xFF00BFA5),
+        onRoomHighlightColor: const Color(0xFF00382E),
+        basedOnDark: false));
+
     final target = DataCache.getPreferredAppTheme()!;
     for (var item in getAllThemes()) {
-      if (item.paletteName == target) {
+      if (item.paletteName == target || (target == 'Neptun' && item.paletteName == (_isDark ? 'Neptun Dark' : 'Neptun Light'))) {
         _themeBatchSelectedIdx = getAllThemes().indexOf(item);
         break;
       }
@@ -425,7 +473,7 @@ class AppColors {
 
   static int appThemeToIdx(String name) {
     for (var item in getAllThemes()) {
-      if (item.paletteName == name) {
+      if (item.paletteName == name || (name == 'Neptun' && item.paletteName == (_isDark ? 'Neptun Dark' : 'Neptun Light'))) {
         return getAllThemes().indexOf(item);
       }
     }
@@ -437,7 +485,7 @@ class AppColors {
     final userPreference = DataCache.getPreferredAppTheme();
     var idx = -1;
     for (var item in batch) {
-      if (item.paletteName == userPreference) {
+      if (item.paletteName == userPreference || (userPreference == 'Neptun' && item.paletteName == (_isDark ? 'Neptun Dark' : 'Neptun Light'))) {
         idx = batch.indexOf(item);
         break;
       }
@@ -455,7 +503,7 @@ class AppColors {
     final userPreference = prefered;
     var idx = -1;
     for (var item in batch) {
-      if (item.paletteName == userPreference) {
+      if (item.paletteName == userPreference || (userPreference == 'Neptun' && item.paletteName == (_isDark ? 'Neptun Dark' : 'Neptun Light'))) {
         idx = batch.indexOf(item);
         break;
       }

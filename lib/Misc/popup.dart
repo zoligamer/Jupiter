@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -54,7 +53,7 @@ class PopupWidgetHandler{
   bool hasListener = false;
   VoidCallback? _closeBlurCallback;
 
-  static void doPopup(BuildContext context, {VoidCallback? blur = null, VoidCallback? closeBlur = null}){
+  static void doPopup(BuildContext context, {VoidCallback? blur, VoidCallback? closeBlur}){
     if(_instance!._inUse || PopupWidgetHandler._hasPopupActive){
       return;
     }
@@ -95,7 +94,7 @@ class PopupWidgetHandler{
     });
   }
 
-  static closePopup(BuildContext context){
+  static void closePopup(BuildContext context){
     if(_instance == null || !_instance!._inUse){
       PopupWidgetHandler._hasPopupActive = false;
       return;
@@ -133,7 +132,7 @@ class PopupWidgetHandler{
 }
 
 class PopupWidgetState extends StatefulWidget{
-  PopupWidgetState({super.key, required this.topPadding, required this.mode, required this.pinfo});
+  const PopupWidgetState({super.key, required this.topPadding, required this.mode, required this.pinfo});
 
   final EdgeInsets topPadding;
   final int mode;
@@ -149,8 +148,8 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
   late Animation<double> poppuAnimation;
   late String _languageCurrSelect;
   late String _themesCurrSelect;
-  GlobalKey _languageDropdownGlobalKey = GlobalKey();
-  GlobalKey _themesDropdownGlobalKey = GlobalKey();
+  final GlobalKey _languageDropdownGlobalKey = GlobalKey();
+  final GlobalKey _themesDropdownGlobalKey = GlobalKey();
 
   double _currentFontScale = 1.0; // ITT VAN A HELYES HELYEN
 
@@ -176,13 +175,13 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
     PopupWidgetHandler._instance!.widgetAnimController = popupController;
     popupController.forward(from: 0);
 
-    final l_idx = DataCache.getUserSelectedLanguage()!;
-    if(l_idx <= -1){
+    final lIdx = DataCache.getUserSelectedLanguage()!;
+    if(lIdx <= -1){
       final langCodeIdx = AppStrings.getAllLangCodes().indexOf(Platform.localeName.split('_')[0].toLowerCase());
       _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[langCodeIdx];
     }
     else{
-      _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[l_idx];
+      _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[lIdx];
     }
 
     _themesCurrSelect = AppColors.getTheme().paletteName;
@@ -2088,37 +2087,55 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             PopupWidgetHandler.closePopup(context);
           },
           child: Stack(
-            alignment: Alignment.bottomCenter,
+            alignment: Alignment.center,
             children: [
-              Container(
-                  alignment: Alignment.center,
-                  color: Colors.transparent,
-                  padding: widget.topPadding,
-                  margin: EdgeInsets.only(
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.only(
                     bottom: mounted
-                        ? (MediaQuery.of(context).viewInsets.bottom +
-                            math.max(MediaQuery.of(context).padding.bottom,
-                                MediaQuery.of(context).viewPadding.bottom))
-                        : 0,
+                        ? (MediaQuery.of(context).viewInsets.bottom + 8)
+                        : 8,
                   ),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    controller: PopupWidgetHandler._instance!.scrollController,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
-                      margin: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: AppColors.getTheme().rootBackground,
-                        borderRadius: const BorderRadius.all(Radius.circular(20)),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: getWidgets(PopupWidgetHandler._instance!.mode),
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () {}, // Prevent taps inside dialog from closing it
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.82,
+                          maxWidth: 520,
+                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.getTheme().rootBackground,
+                          borderRadius: const BorderRadius.all(Radius.circular(22)),
+                          border: Border.all(
+                            color: AppColors.getTheme().textColor.withValues(alpha: 0.12),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 25,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          controller: PopupWidgetHandler._instance!.scrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 14),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: getWidgets(PopupWidgetHandler._instance!.mode),
+                          ),
+                        ),
                       ),
                     ),
-                  )
+                  ),
+                ),
               ),
               Visibility(
                 visible: _shouldShowSnackbar,

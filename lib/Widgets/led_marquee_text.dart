@@ -16,7 +16,7 @@ class LedMarqueeText extends StatefulWidget {
     this.onLongPress,
     this.onTap,
     this.velocity = const Duration(seconds: 4),
-    this.pauseDuration = const Duration(milliseconds: 1400),
+    this.pauseDuration = const Duration(milliseconds: 1000),
   });
 
   @override
@@ -33,6 +33,10 @@ class _LedMarqueeTextState extends State<LedMarqueeText> {
     super.initState();
     _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndStartScroll());
+    // Backup check in case layout settles after first frame
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (mounted) _checkAndStartScroll();
+    });
   }
 
   @override
@@ -40,6 +44,9 @@ class _LedMarqueeTextState extends State<LedMarqueeText> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndStartScroll());
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _checkAndStartScroll();
+      });
     }
   }
 

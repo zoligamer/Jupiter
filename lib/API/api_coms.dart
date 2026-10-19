@@ -70,21 +70,19 @@ import '../storage.dart';
       }
       request.body = requestBody;
 
-      var response;
+      String response;
       try{
         response = await client.send(request).then((response) {
           // Read and return the response
           return response.stream.bytesToString();
         });
 
-        if (response != null) {
-          String responseString = response.toString().trim();
-          if (responseString.startsWith('<!DOCTYPE html') || responseString.startsWith('<html')){
-            client.close();
-            return '{"ErrorMessage": "Hibás URL vagy a Neptun szervere weboldalt küldött válaszként"}';
-          }
+        String responseString = response.toString().trim();
+        if (responseString.startsWith('<!DOCTYPE html') || responseString.startsWith('<html')){
+          client.close();
+          return '{"ErrorMessage": "Hibás URL vagy a Neptun szervere weboldalt küldött válaszként"}';
         }
-      }
+            }
       catch(error){
         client.close();
         return '{"ErrorMessage": "Hálózati hiba: $error"}';
@@ -93,7 +91,7 @@ import '../storage.dart';
       // Close the client when done
       client.close();
   
-      return response ?? '{}';
+      return response;
     }
 
     static Future<http.Response> postRequestRaw(Uri url, String requestBody,{String? bearerToken, String? cookie}) async {
@@ -325,7 +323,7 @@ import '../storage.dart';
           // ----------------------------------------
 
           // Mindenki megkapja az új tokent, és újra próbálkozik
-          final newToken = await storage.DataCache.getAccessToken();
+          final newToken = storage.DataCache.getAccessToken();
           return await getRequest(url, bearerToken: newToken!, isRetry: true);
         }
 
@@ -482,7 +480,7 @@ import '../storage.dart';
       List<Term> terms = [];
       if (storage.DataCache.getIsModernApi()) {
         try {
-          final token = await storage.DataCache.getAccessToken();
+          final token = storage.DataCache.getAccessToken();
           String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
           
           // 1. Elsődlegesen: TakenSubjects/Terms (ez tartalmazza a valós felvett tantárgyi féléveket)
@@ -781,7 +779,7 @@ import '../storage.dart';
     }
     static Future<bool> _tryOldLogin(String baseUrl, String username, String password) async {
       try {
-        final oldApiUrl = Uri.parse("$baseUrl/MobileService.svc" + URLs.TRAININGS_URL);
+        final oldApiUrl = Uri.parse("$baseUrl/MobileService.svc${URLs.TRAININGS_URL}");
         final request = await _APIRequest.postRequest(
             oldApiUrl,
             _APIRequest.getGenericPostData(username, password)
@@ -806,7 +804,7 @@ import '../storage.dart';
 
       if (isModern) {
         try {
-          final token = await storage.DataCache.getAccessToken() ?? '';
+          final token = storage.DataCache.getAccessToken() ?? '';
           if (token.isEmpty) return null;
 
           // 1. Elsődleges: GetGeneralTrainingData a Burp log alapján
@@ -938,9 +936,7 @@ import '../storage.dart';
             }
           }
         }
-        if(period == null){
-          period = periods.first;
-        }
+        period ??= periods.first;
       }
   
       final date = DateTime.fromMillisecondsSinceEpoch(period.startEpoch);
@@ -968,7 +964,7 @@ class CalendarRequest {
     }
 
     try {
-      final token = await storage.DataCache.getAccessToken();
+      final token = storage.DataCache.getAccessToken();
       if (token == null || token.isEmpty) return [];
       String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
@@ -1134,7 +1130,7 @@ class CalendarRequest {
         bool dispPeriods = storage.DataCache.getDisplayPeriods() ?? true;
 
         List<String> trainingIds = await getStudentTrainingIds(forceRefresh: false);
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
 
         if (token != null && token.isNotEmpty) {
           final baseUri = Uri.parse(baseUrl);
@@ -1186,7 +1182,7 @@ class CalendarRequest {
           }
 
           final newTrainingIds = await getStudentTrainingIds(forceRefresh: true);
-          final newToken = await storage.DataCache.getAccessToken();
+          final newToken = storage.DataCache.getAccessToken();
 
           if (newToken != null && newToken.isNotEmpty) {
             final baseUri = Uri.parse(baseUrl);
@@ -1322,7 +1318,7 @@ class CalendarRequest {
     }
 
     try {
-      final token = await storage.DataCache.getAccessToken();
+      final token = storage.DataCache.getAccessToken();
       String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
       final url = Uri.parse("$baseUrl/api/Calendar/GetCourseDetails?classInstanceId=$classInstanceId&webexMeetingId=null");
@@ -1367,7 +1363,7 @@ class CalendarRequest {
     String baseUrl = '';
 
     if (hasNetwork) {
-      token = await storage.DataCache.getAccessToken();
+      token = storage.DataCache.getAccessToken();
       baseUrl = storage.DataCache.getInstituteUrl() ?? '';
     }
 
@@ -1503,7 +1499,7 @@ class MarkbookRequest{
     // --- MODERN API ÁG (Közvetlen és gyors feldolgozás) ---
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         // 1. Resolve term GUID
@@ -1780,7 +1776,7 @@ class CashinRequest{
   static Future<List<Map<String, dynamic>>> getScholarshipPayments() async {
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Scholarship/GetScholarshipPayments?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.termId=desc");
         final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
@@ -1809,7 +1805,7 @@ class CashinRequest{
 
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         final txUrl = Uri.parse("$baseUrl/api/Transactions/GetStudentPreviousTransactions?sortAndPage.firstRow=0&sortAndPage.lastRow=100&sortAndPage.transferDate=desc");
@@ -1954,7 +1950,7 @@ class CashinRequest{
     }
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/FinancialDataDashboard/GetCollectiveInvoices");
         final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
@@ -1993,7 +1989,7 @@ class PeriodsRequest{
     // --- MODERN API ÁG ---
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         List<Term> terms = await TermsRequest.getTerms();
@@ -2106,7 +2102,7 @@ class MailRequest{
     }
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Message/GetUnreadedMessagesCount");
         final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
@@ -2156,7 +2152,7 @@ class MailRequest{
 
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         int actualPage = page > 0 ? page - 1 : 0;
@@ -2207,7 +2203,7 @@ class MailRequest{
     final result = decoded['MessagesList'] as List<dynamic>;
 
     for(var item in result){
-      mails.add(MailEntry(item['Subject'], removeBloatFromMail(item['Detail']), item['Name'], int.parse(item['SendDate'].toString().replaceAll('\/Date(', '').replaceAll(')\/', '')), !item['IsNew'], item['PersonMessageId'].toString()));
+      mails.add(MailEntry(item['Subject'], removeBloatFromMail(item['Detail']), item['Name'], int.parse(item['SendDate'].toString().replaceAll('/Date(', '').replaceAll(')/', '')), !item['IsNew'], item['PersonMessageId'].toString()));
     }
     return mails;
   }
@@ -2224,7 +2220,7 @@ class MailRequest{
     }
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final targetPostIds = <String>[];
         if (postId != null && postId.isNotEmpty) {
@@ -2266,7 +2262,7 @@ class MailRequest{
   static Future<void> bypassRequiredToReadMessages() async {
     if (!storage.DataCache.getIsModernApi()) return;
     try {
-      final token = await storage.DataCache.getAccessToken();
+      final token = storage.DataCache.getAccessToken();
       if (token == null || token.isEmpty) return;
       final baseUrl = PetitionsRequest.getModernApiBase();
       final url = Uri.parse('$baseUrl/api/Message/SkipRequiredToReadMessages');
@@ -2285,7 +2281,7 @@ class MailRequest{
 
     if (storage.DataCache.getIsModernApi()) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = storage.DataCache.getAccessToken();
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
         final url = Uri.parse("$baseUrl/api/Messages/$messageId/Posts?messageId=$messageId");
 
@@ -2398,7 +2394,7 @@ class MailRequest{
       URL = url;
     }
   
-    getUrl() => Uri.parse(URL);
+    Uri getUrl() => Uri.parse(URL);
   }
 
   class StudentTrainingInfo {
@@ -2506,8 +2502,9 @@ class CalendarEntry {
     location = data[2];
     title = data[3];
 
-    if (data[4] == 'true') eventType = 1;
-    else if (data[4] == 'false') eventType = 0;
+    if (data[4] == 'true') {
+      eventType = 1;
+    } else if (data[4] == 'false') eventType = 0;
     else eventType = int.parse(data[4]);
 
     teacher = data[5];
@@ -2699,6 +2696,9 @@ class CashinEntry{
   }
   
   class Generic {
+    static Future<String> getSafeAccessToken() => _APIRequest.getSafeAccessToken();
+    static Future<bool> tryTokenRefresh() => _APIRequest.tryTokenRefresh();
+
     static String reactionForAvg(double avg) {
       if (avg >= 5.0) {
         return "💀";
@@ -4234,7 +4234,25 @@ class CashinEntry{
     HttpClient createHttpClient(SecurityContext? context) {
       return super.createHttpClient(context)
         ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-          return true;
+          final lowerHost = host.toLowerCase();
+          final instUrl = storage.DataCache.getInstituteUrl() ?? '';
+          final instHost = Uri.tryParse(instUrl)?.host.toLowerCase() ?? '';
+
+          // 1. A hallgató által kiválasztott egyetemi szerver hosztja
+          if (instHost.isNotEmpty && (lowerHost == instHost || lowerHost.endsWith('.$instHost'))) {
+            return true;
+          }
+
+          // 2. Hivatalos egyetemi Neptun és SDA kiszolgáló domainek ellenőrzése
+          if (lowerHost.contains('neptun') ||
+              lowerHost.endsWith('.sdakft.hu') ||
+              lowerHost.endsWith('.duf.hu') ||
+              lowerHost.endsWith('.uni-mate.hu')) {
+            return true;
+          }
+
+          // Minden egyéb ismeretlen vagy idegen hoszt esetén az érvénytelen tanúsítvány elutasításra kerül (MitM védelem)
+          return false;
         };
     }
   }

@@ -72,7 +72,6 @@ class DataCache{
     _accessToken = '';
     _refreshToken = '';
     _sessionCookieName = '';
-    _hasNetwork = false;
     _hasLogin = false;
     _hasCachedCalendar = false;
     _hasCachedMarkbook = false;
@@ -182,8 +181,12 @@ class DataCache{
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
   late bool? _persistentSetting_showMessageNotifications = true;
-  late bool? _persistentSetting_showToOfficeSchedule = false;
+  late bool? _persistentSetting_enableToOfficeToggler = true;
+  late bool? _persistentSetting_showToOfficeSchedule = true;
   late bool? _persistentSetting_showPeriodsInCalendar = true;
+  int _backgroundSyncIntervalMinutes = 15;
+  bool _backgroundSyncWifiOnly = false;
+  bool _backgroundSyncEnabled = true;
   late int? _persistentSetting_weekOffset = 0;
   late bool? _persistentSetting_needBetterHaptics = true;
   late int? _persistentSetting_userSelectedLanguage = -1;
@@ -338,8 +341,11 @@ class DataCache{
       _persistentSetting_showMessageNotifications = true;
     }
 
+    tmp = await getInt('SETTING_EnableToOfficeToggler');
+    _persistentSetting_enableToOfficeToggler = tmp != null ? tmp != 0 : true;
+
     tmp = await getInt('SETTING_ShowToOfficeSchedule');
-    _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : false;
+    _persistentSetting_showToOfficeSchedule = tmp != null ? tmp != 0 : true;
 
     tmp = await getInt('SETTING_ShowPeriodsInCalendar');
     _persistentSetting_showPeriodsInCalendar = tmp != null ? tmp != 0 : true;
@@ -375,11 +381,12 @@ class DataCache{
       _cachedAvatarBytes = null;
     }
     _cachedFallbackColor = await getString('USER_FallbackAvatarColor');
-    _cachedPersonalDataRaw = await getString('USER_PersonalDataRaw');
-    _cachedPersonalContactsRaw = await getString('USER_PersonalContactsRaw');
-    _cachedPersonalDocumentsRaw = await getString('USER_PersonalDocumentsRaw');
-    _cachedStudentCardRaw = await getString('USER_StudentCardRaw');
-    _cachedBankAccountRaw = await getString('USER_BankAccountRaw');
+    // SEC-03: Érzékeny személyes és banki adatok titkosított betöltése Keystore-ból
+    _cachedPersonalDataRaw = await _secureStorage.read(key: 'sec_USER_PersonalDataRaw') ?? await getString('USER_PersonalDataRaw');
+    _cachedPersonalContactsRaw = await _secureStorage.read(key: 'sec_USER_PersonalContactsRaw') ?? await getString('USER_PersonalContactsRaw');
+    _cachedPersonalDocumentsRaw = await _secureStorage.read(key: 'sec_USER_PersonalDocumentsRaw') ?? await getString('USER_PersonalDocumentsRaw');
+    _cachedStudentCardRaw = await _secureStorage.read(key: 'sec_USER_StudentCardRaw') ?? await getString('USER_StudentCardRaw');
+    _cachedBankAccountRaw = await _secureStorage.read(key: 'sec_USER_BankAccountRaw') ?? await getString('USER_BankAccountRaw');
     _cachedProfileSettingsRaw = await getString('USER_ProfileSettingsRaw');
     _cachedStorageDashboardRaw = await getString('STORAGE_DashboardRaw');
     _cachedStorageForStudentDocsRaw = await getStringList('STORAGE_ForStudentDocs') ?? [];
@@ -411,6 +418,13 @@ class DataCache{
     _accountBalanceCurrency = await getString('ACCOUNT_BalanceCurrency') ?? 'HUF';
     final unread = await getInt('CachedMailsUnread');
     _unreadMailCount = unread ?? 0;
+
+    final syncInt = await getInt('SETTING_BackgroundSyncInterval');
+    _backgroundSyncIntervalMinutes = syncInt ?? 15;
+    final syncWifi = await getInt('SETTING_BackgroundSyncWifiOnly');
+    _backgroundSyncWifiOnly = syncWifi == 1;
+    final syncEn = await getInt('SETTING_BackgroundSyncEnabled');
+    _backgroundSyncEnabled = syncEn != 0;
   }
 
   static Future<void> loadThemeOnly()async{
@@ -518,6 +532,11 @@ class DataCache{
     _instance._accessToken = null;
     _instance._refreshToken = null;
     _instance._sessionCookieName = null;
+    _instance._cachedPersonalDataRaw = null;
+    _instance._cachedPersonalContactsRaw = null;
+    _instance._cachedPersonalDocumentsRaw = null;
+    _instance._cachedStudentCardRaw = null;
+    _instance._cachedBankAccountRaw = null;
     await _secureStorage.deleteAll();
   }
 
@@ -535,6 +554,16 @@ class DataCache{
   }
 
   static bool getHasNetwork(){return _instance._hasNetwork;}
+
+  static Future<bool> checkAndRefreshNetwork() async {
+    try {
+      final connResults = await Connectivity().checkConnectivity();
+      _instance._hasNetwork = connResults.any((r) => r != ConnectivityResult.none);
+    } catch (_) {
+      _instance._hasNetwork = true;
+    }
+    return _instance._hasNetwork;
+  }
 
   static bool? getHasLogin(){return _instance._hasLogin;}
   static Future<void> setHasLogin(int? value) async {
@@ -643,7 +672,53 @@ class DataCache{
     await saveInt('SETTING_IsNeedMessageNotifications', value ?? 1);
   }
 
-  static bool getShowToOfficeSchedule() => _instance._persistentSetting_showToOfficeSchedule ?? false;
+  static int getBackgroundSyncInterval() => _instance._backgroundSyncIntervalMinutes;
+  static Future<void> setBackgroundSyncInterval(int minutes) async {
+    _instance._backgroundSyncIntervalMinutes = minutes;
+    await saveInt('SETTING_BackgroundSyncInterval', minutes);
+  }
+
+  static bool getBackgroundSyncWifiOnly() => _instance._backgroundSyncWifiOnly;
+  static Future<void> setBackgroundSyncWifiOnly(bool value) async {
+    _instance._backgroundSyncWifiOnly = value;
+    await saveInt('SETTING_BackgroundSyncWifiOnly', value ? 1 : 0);
+  }
+
+  static bool getBackgroundSyncEnabled() => _instance._backgroundSyncEnabled;
+  static Future<void> setBackgroundSyncEnabled(bool value) async {
+    _instance._backgroundSyncEnabled = value;
+    await saveInt('SETTING_BackgroundSyncEnabled', value ? 1 : 0);
+  }
+
+  static Future<void> clearLocalCachePreservingLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keysToClear = [
+      'CachedMarkbook', 'CachedCalendar', 'CachedPayments', 'CachedPeriods', 'CachedMails',
+      'HasCachedMarkbook', 'HasCachedCalendar', 'HasCachedPayments', 'HasCachedPeriods', 'HasCachedMail',
+      'CachedTermsList', 'CachedMailsUnread',
+    ];
+    for (final k in keysToClear) {
+      await prefs.remove(k);
+    }
+    _instance._hasCachedCalendar = false;
+    _instance._hasCachedMarkbook = false;
+    _instance._hasCachedPayments = false;
+    _instance._hasCachedPeriods = false;
+    _instance._hasCachedMail = false;
+    _instance._cachedTermsList = [];
+    _instance._unreadMailCount = 0;
+  }
+
+  static bool getEnableToOfficeToggler() => _instance._persistentSetting_enableToOfficeToggler ?? true;
+  static Future<void> setEnableToOfficeToggler(bool value) async {
+    _instance._persistentSetting_enableToOfficeToggler = value;
+    await saveInt('SETTING_EnableToOfficeToggler', value ? 1 : 0);
+  }
+
+  static bool getShowToOfficeSchedule() {
+    if (!getEnableToOfficeToggler()) return false;
+    return _instance._persistentSetting_showToOfficeSchedule ?? true;
+  }
   static Future<void> setShowToOfficeSchedule(bool value) async {
     _instance._persistentSetting_showToOfficeSchedule = value;
     await saveInt('SETTING_ShowToOfficeSchedule', value ? 1 : 0);
@@ -845,55 +920,60 @@ class DataCache{
   static String? getCachedPersonalDataRaw() => _instance._cachedPersonalDataRaw;
   static Future<void> setCachedPersonalDataRaw(String? value) async {
     _instance._cachedPersonalDataRaw = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('USER_PersonalDataRaw'); // SEC-03: Nem tárolunk titkosítatlan személyes adatot
     if (value == null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('USER_PersonalDataRaw');
+      await _secureStorage.delete(key: 'sec_USER_PersonalDataRaw');
     } else {
-      await saveString('USER_PersonalDataRaw', value);
+      await _secureStorage.write(key: 'sec_USER_PersonalDataRaw', value: value);
     }
   }
 
   static String? getCachedPersonalContactsRaw() => _instance._cachedPersonalContactsRaw;
   static Future<void> setCachedPersonalContactsRaw(String? value) async {
     _instance._cachedPersonalContactsRaw = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('USER_PersonalContactsRaw');
     if (value == null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('USER_PersonalContactsRaw');
+      await _secureStorage.delete(key: 'sec_USER_PersonalContactsRaw');
     } else {
-      await saveString('USER_PersonalContactsRaw', value);
+      await _secureStorage.write(key: 'sec_USER_PersonalContactsRaw', value: value);
     }
   }
 
   static String? getCachedPersonalDocumentsRaw() => _instance._cachedPersonalDocumentsRaw;
   static Future<void> setCachedPersonalDocumentsRaw(String? value) async {
     _instance._cachedPersonalDocumentsRaw = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('USER_PersonalDocumentsRaw');
     if (value == null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('USER_PersonalDocumentsRaw');
+      await _secureStorage.delete(key: 'sec_USER_PersonalDocumentsRaw');
     } else {
-      await saveString('USER_PersonalDocumentsRaw', value);
+      await _secureStorage.write(key: 'sec_USER_PersonalDocumentsRaw', value: value);
     }
   }
 
   static String? getCachedStudentCardRaw() => _instance._cachedStudentCardRaw;
   static Future<void> setCachedStudentCardRaw(String? value) async {
     _instance._cachedStudentCardRaw = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('USER_StudentCardRaw');
     if (value == null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('USER_StudentCardRaw');
+      await _secureStorage.delete(key: 'sec_USER_StudentCardRaw');
     } else {
-      await saveString('USER_StudentCardRaw', value);
+      await _secureStorage.write(key: 'sec_USER_StudentCardRaw', value: value);
     }
   }
 
   static String? getCachedBankAccountRaw() => _instance._cachedBankAccountRaw;
   static Future<void> setCachedBankAccountRaw(String? value) async {
     _instance._cachedBankAccountRaw = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('USER_BankAccountRaw'); // SEC-03: Bankszámlaszám azonnali törlése sima prefs-ből
     if (value == null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('USER_BankAccountRaw');
+      await _secureStorage.delete(key: 'sec_USER_BankAccountRaw');
     } else {
-      await saveString('USER_BankAccountRaw', value);
+      await _secureStorage.write(key: 'sec_USER_BankAccountRaw', value: value);
     }
   }
 

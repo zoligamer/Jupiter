@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:jupiter/storage.dart';
@@ -30,7 +30,7 @@ class LocalFileActions{
   static Future<String> cloneFileToTemp(String path, String filename)async{
     final file = File(path);
     final fileBytes = await file.readAsBytes();
-    final clone = File((await _getTempDirectory()) + '/' + filename);
+    final clone = File('${await _getTempDirectory()}/$filename');
     if(await clone.exists()){
       await clone.delete(recursive: false);
     }

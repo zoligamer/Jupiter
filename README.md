@@ -67,6 +67,16 @@ Hozzáadásukkal rengeteget segítesz a projekt fejlődésében!
 <summary><b>✨ Legfrissebb verziók</b></summary>
 
 
+### 🪐 v2.1.1 (Tárgyfelvétel TEST, Beállítások & Kiberbiztonság)
+* 🔮 **Tárgyfelvétel (TEST) & Kurzuskategorizálás:** Átnevezett, indítási tájékoztató felugróval ellátott interaktív szimulációs felület. Dinamikus félévválasztó a hallgató képzése szerint (a merev 7 félév helyett), intelligens tantárgy-kategorizálás (Ajánlott félév, Csúszásban lévő / Bukott kurzusok, Előrehozott tárgyak), részletes adatlap hosszú érintésre (`onLongPress`), és zavartalan naptár nézet elhalványuló menüsávval.
+* ⚙️ **Beállítások Újratervezése:** 5 tiszta kategóriára tagolt modern felület (Megjelenés, Értesítések, Naptár & Idővonal, Rendszer & 5 perces Háttérmonitor, Biztonság). Minden kapcsoló valós funkcióval működik (azonnali T.O. gomb- és idősáv-elrejtés, élő betűméret-frissülés, külön üzenetértesítések), az elavult v3 JSON kapcsoló pedig teljesen eltávolításra került.
+* ⚡ **0ms Párhuzamosított Indítás:** Azonnali órarend-renderelés után a tárgyak, pénzügyek, időszakok és üzenetek szinkronizálása párhuzamosan (`Future.wait`) fut a háttérben – nincs több indítási várakozás vagy elakadó töltőkarika.
+* 🛡️ **Kiberbiztonsági Megerősítés (Hardening):**
+  * **SEC-01 (Host Tanúsítvány Védelem):** Kizárólag a hivatalos egyetemi végpontokat (`*.neptun.*`, `*.sdakft.hu`, `*.duf.hu`, `*.uni-mate.hu`) és az intézményi szervert fogadja el a tanúsítványkezelő, meggátolva az idegen hálózati MitM proxy-támadásokat.
+  * **SEC-02 (Mentés Védelem):** `android:allowBackup="false"` az AndroidManifestben, kizárva a fizikai ADB biztonsági mentéses adatszivárgást.
+  * **SEC-03 (AES-256 Hardveres Titkosítás):** Személyes adatok, okmányok, diákigazolvány és bankszámlaszám tárolása hardveres `FlutterSecureStorage` (Android Keystore) titkosítással; meglévő adatok automatikus migrálása és titkosítatlan XML-ek megsemmisítése.
+  * **Profil védelem:** Nem támogatott jelszómódosítás funkció lelakatolása informatív felugróval.
+* 📐 **UI Határvédelem & Kódtisztítás:** Az üzenet és egyéb párbeszédpanelek nem lógnak rá az alsó és felső menüsávokra; 56+ figyelmeztetés automatikusan javítva, 0 analízis és 0 fordítási hiba.
 
 
 ### 🪐 v2.1.0 (Ghost & Collision Update)

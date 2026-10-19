@@ -10,12 +10,12 @@ class AppStrings{
   static bool _hasInit = false;
   static late final String _defaultLocale;
 
-  static List<String> _supportedLanguages = ['hu', 'en'];
-  static List<String> _supportedLanguagesFlags = ['🇭🇺', '🇺🇸/🇬🇧'];
+  static final List<String> _supportedLanguages = ['hu', 'en'];
+  static final List<String> _supportedLanguagesFlags = ['🇭🇺', '🇺🇸/🇬🇧'];
   static final Map<String, LanguagePack> _languages = {};
 
-  static List<String> _downloadedSupportedLanguages = [];
-  static List<String> _downloadedSupportedLanguagesFlags = [];
+  static final List<String> _downloadedSupportedLanguages = [];
+  static final List<String> _downloadedSupportedLanguagesFlags = [];
   static final Map<String, LanguagePack> _downloadedLanguages = {};
 
   static void initialize(){
@@ -580,9 +580,9 @@ class AppStrings{
   }
 
   static String getStringWithParams(String base, List<dynamic> params){
-    String result = "" + base;
+    String result = base;
     for(int i = 0; i < params.length; i++){
-      result = result.replaceAll('%$i', '${params[i].toString()}');
+      result = result.replaceAll('%$i', params[i].toString());
     }
     return result;
   }

@@ -592,7 +592,7 @@ class _PetitionFillPageState extends State<PetitionFillPage> {
 
           if (field.type == PetitionFieldType.dropdown)
             DropdownButtonFormField<String>(
-              value: (_formData[field.name] != null && field.options.any((o) => o.value == _formData[field.name]))
+              initialValue: (_formData[field.name] != null && field.options.any((o) => o.value == _formData[field.name]))
                   ? _formData[field.name]
                   : (field.options.isNotEmpty ? field.options.first.value : null),
               decoration: InputDecoration(

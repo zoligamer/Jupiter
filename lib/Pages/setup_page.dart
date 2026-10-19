@@ -1969,6 +1969,18 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
                                   AppHaptics.lightImpact();
                                   IcsImportHelper.onCalendarUploadAction(_onICSImported); //toast ha szar ics
                                 },
+                                style: ButtonStyle(
+                                  foregroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor),
+                                  backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
+                                  surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
+                                  shadowColor: WidgetStateProperty.all(Colors.transparent),
+                                  overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
+                                  padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 35, vertical: 20)),
+                                  side: WidgetStateProperty.all(BorderSide(
+                                    color: AppColors.getTheme().primary,
+                                    width: 1
+                                  ))
+                                ),
                                 child: Container(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.max,
@@ -1984,18 +1996,6 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
                                       )
                                     ]
                                   ),
-                                ),
-                                style: ButtonStyle(
-                                  foregroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor),
-                                  backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-                                  surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
-                                  shadowColor: WidgetStateProperty.all(Colors.transparent),
-                                  overlayColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .05)),
-                                  padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 35, vertical: 20)),
-                                  side: WidgetStateProperty.all(BorderSide(
-                                    color: AppColors.getTheme().primary,
-                                    width: 1
-                                  ))
                                 ),
                               )
                             ],

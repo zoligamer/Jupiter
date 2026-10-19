@@ -197,9 +197,9 @@ class ToOfficeOverlayWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () => showDetailsDialog(context, slot),
       child: Container(
-        width: 82,
+        width: 72,
         margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: AppColors.isDarktheme()
               ? const Color(0xFF23160C)

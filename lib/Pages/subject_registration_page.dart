@@ -1,48 +1,52 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../colors.dart';
 import '../haptics.dart';
-import '../Widgets/led_marquee_text.dart';
 
 class CourseInstance {
   final String id;
   final String code;
-  final String type; // Elmélet, Labor, Gyakorlat, Testnevelés
-  final int day; // 0: Mon, 1: Tue, 2: Wed, 3: Thu, 4: Fri
-  final TimeOfDay start;
-  final TimeOfDay end;
+  final String type; // Elmélet, Labor, Gyakorlat, Testnevelés, Szakdolgozat
+  final int day; // 0: Mon, 1: Tue, 2: Wed, 3: Thu, 4: Fri, -1: Időpont nélküli (e-learning, szakdolgozat)
+  final TimeOfDay? start;
+  final TimeOfDay? end;
   final String room;
   final String tutor;
   final String slots;
   final bool isMandatory;
   final bool isAlternate;
   final String groupKey;
+  final String language;
 
   const CourseInstance({
     required this.id,
     required this.code,
     required this.type,
     required this.day,
-    required this.start,
-    required this.end,
+    this.start,
+    this.end,
     required this.room,
     required this.tutor,
     required this.slots,
     this.isMandatory = true,
     this.isAlternate = false,
     required this.groupKey,
+    this.language = 'Magyar',
   });
 
-  int get startMinutes => start.hour * 60 + start.minute;
-  int get endMinutes => end.hour * 60 + end.minute;
+  bool get hasTimetable => day >= 0 && start != null && end != null;
+  int get startMinutes => start != null ? start!.hour * 60 + start!.minute : 0;
+  int get endMinutes => end != null ? end!.hour * 60 + end!.minute : 0;
   int get durationMinutes => endMinutes - startMinutes;
 
   String formatTimeRange() {
-    final sh = start.hour.toString().padLeft(2, '0');
-    final sm = start.minute.toString().padLeft(2, '0');
-    final eh = end.hour.toString().padLeft(2, '0');
-    final em = end.minute.toString().padLeft(2, '0');
+    if (!hasTimetable) return 'Időpont nélküli / Konzulensi';
+    final sh = start!.hour.toString().padLeft(2, '0');
+    final sm = start!.minute.toString().padLeft(2, '0');
+    final eh = end!.hour.toString().padLeft(2, '0');
+    final em = end!.minute.toString().padLeft(2, '0');
     return '$sh:$sm - $eh:$em';
   }
 }
@@ -52,7 +56,15 @@ class SubjectData {
   final String code;
   final String name;
   final int credits;
+  final int semester; // Ajánlott tantervi félév (1..7)
+  final String requirementType; // Évközi jegy, Vizsga, Kollokvium
+  final String subjectType; // Kötelező törzsanyag, Szabadon választható
   final bool isRequired;
+  final bool isRegistered; // Zöld pipa a képen
+  final bool isCompleted;
+  final bool hasFailedBefore; // Bukott vagy letiltott tárgy -> Csúszás jelölés
+  final List<String> prerequisites; // Előkövetelmények
+  final bool arePrerequisitesMet;
   final List<CourseInstance> courses;
 
   const SubjectData({
@@ -60,30 +72,16 @@ class SubjectData {
     required this.code,
     required this.name,
     required this.credits,
+    required this.semester,
+    required this.requirementType,
+    required this.subjectType,
     required this.isRequired,
+    this.isRegistered = false,
+    this.isCompleted = false,
+    this.hasFailedBefore = false,
+    this.prerequisites = const [],
+    this.arePrerequisitesMet = true,
     required this.courses,
-  });
-}
-
-class PeSubcourse {
-  final String id;
-  final String name;
-  final int day;
-  final String dayName;
-  final String timeRange;
-  final String room;
-  final String tutor;
-  final String slots;
-
-  const PeSubcourse({
-    required this.id,
-    required this.name,
-    required this.day,
-    required this.dayName,
-    required this.timeRange,
-    required this.room,
-    required this.tutor,
-    required this.slots,
   });
 }
 
@@ -94,6 +92,19 @@ class _CourseLayoutItem {
   int totalColumns = 1;
 
   _CourseLayoutItem(this.course, this.subject);
+}
+
+enum SubjectClassification {
+  suggested, // StudentCurrentTerm == SuggestedTerm
+  delayed,   // StudentCurrentTerm > SuggestedTerm || hasFailedBefore
+  future,    // StudentCurrentTerm < SuggestedTerm
+}
+
+enum SubjectFilterCategory {
+  all,
+  suggested,
+  delayed,
+  future,
 }
 
 class SubjectRegistrationPage extends StatefulWidget {
@@ -108,93 +119,143 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
   static const int _endHour = 22;
   static const double _hourHeight = 56.0;
 
+  // Aktuális félév a hallgatónál
+  static const int _studentCurrentSemester = 3;
+
+  // Nézetváltók
+  bool _isListView = true; // true: Neptun akkordeon lista, false: Heti órarendi rács
   bool _isWeekView = true;
+  bool _isExclusiveFullscreen = false; // 1. B opció: gombra kapcsolható teljes képernyő
+
   int _selectedDayIndex = 0; // 0 = Hétfő
+  int? _filterSemester = 3; // null = Összes félév, egyébként 1..maxCurriculumSemester
+  SubjectFilterCategory _filterCategory = SubjectFilterCategory.all;
+  String _searchQuery = '';
+  String _selectedSubjectType = 'Mintatantervi'; // Mintatantervi, Szabadon választható, Összes
+
   final Set<String> _selectedCourseIds = {'c-101', 'c-201', 'c-301', 'c-302'};
-  PeSubcourse? _selectedPe;
+  final Set<String> _expandedSubjectIds = {'sub-szakd'}; // alapértelmezetten nyitott tárgyak
 
   late final List<SubjectData> _subjects;
-  late final List<PeSubcourse> _peSubcourses;
 
   final ScrollController _verticalScrollController = ScrollController();
   final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _headerHorizontalController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _initSampleData();
+    _horizontalScrollController.addListener(_syncHeaderHorizontalScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showInteractiveSimulationDisclaimer();
+      }
+    });
+  }
+
+  void _syncHeaderHorizontalScroll() {
+    if (_headerHorizontalController.hasClients &&
+        _headerHorizontalController.offset != _horizontalScrollController.offset) {
+      _headerHorizontalController.jumpTo(_horizontalScrollController.offset);
+    }
   }
 
   @override
   void dispose() {
+    if (_isExclusiveFullscreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    _horizontalScrollController.removeListener(_syncHeaderHorizontalScroll);
     _verticalScrollController.dispose();
     _horizontalScrollController.dispose();
+    _headerHorizontalController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleExclusiveFullscreen() {
+    AppHaptics.mediumImpact();
+    setState(() {
+      _isExclusiveFullscreen = !_isExclusiveFullscreen;
+    });
+    if (_isExclusiveFullscreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      Fluttertoast.showToast(
+        msg: "⛶ Exkluzív teljes képernyő aktív (érintsd meg a széleket a sávokhoz)",
+        toastLength: Toast.LENGTH_SHORT,
+      );
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
   }
 
   void _initSampleData() {
     _subjects = [
-      SubjectData(
-        id: "sub-1",
-        code: "BBPREA",
-        name: "Programozás",
+      // 1. Féléves tárgy — CSÚSZÁS PÉLDA (Nem teljesítve, korábban bukott)
+      const SubjectData(
+        id: "sub-elektro",
+        code: "BBXED11BNF",
+        name: "Elektrotechnika, digitális technika",
         credits: 5,
+        semester: 1,
+        requirementType: "Évközi jegy",
+        subjectType: "Kötelező törzsanyag",
         isRequired: true,
-        courses: const [
+        isRegistered: false,
+        isCompleted: false,
+        hasFailedBefore: true, // Korábban nem sikerült -> Csúszás kiemelés!
+        prerequisites: [],
+        arePrerequisitesMet: true,
+        courses: [
           CourseInstance(
-            id: "c-101",
-            code: "BBPREA2",
+            id: "c-ed-1",
+            code: "BBXED11A",
             type: "Elmélet",
-            day: 1, // Kedd
+            day: 0, // Hétfő
             start: TimeOfDay(hour: 8, minute: 0),
-            end: TimeOfDay(hour: 8, minute: 45),
-            room: "FR.2.207",
-            tutor: "Dér Attila Tibor",
-            slots: "28/38",
+            end: TimeOfDay(hour: 9, minute: 40),
+            room: "FR.1.101",
+            tutor: "Dr. Kovács Béla",
+            slots: "42/60",
             isMandatory: true,
-            isAlternate: false,
-            groupKey: "prog-elm",
+            groupKey: "ed-elm",
           ),
           CourseInstance(
-            id: "c-102",
-            code: "BBPRL2",
-            type: "Labor 1",
-            day: 1, // Kedd
-            start: TimeOfDay(hour: 14, minute: 25),
-            end: TimeOfDay(hour: 17, minute: 0),
-            room: "FR.2.208",
-            tutor: "Dér Attila Tibor",
+            id: "c-ed-2",
+            code: "BBXED11L",
+            type: "Labor",
+            day: 2, // Szerda
+            start: TimeOfDay(hour: 10, minute: 0),
+            end: TimeOfDay(hour: 11, minute: 40),
+            room: "FR.L.08",
+            tutor: "Dr. Kovács Béla",
             slots: "18/20",
             isMandatory: true,
-            isAlternate: true,
-            groupKey: "prog-lab",
-          ),
-          CourseInstance(
-            id: "c-103",
-            code: "BBPRL2-B",
-            type: "Labor 2 (Alternatív)",
-            day: 2, // Szerda
-            start: TimeOfDay(hour: 14, minute: 25),
-            end: TimeOfDay(hour: 17, minute: 0),
-            room: "FR.2.209",
-            tutor: "Kovács László",
-            slots: "14/20",
-            isMandatory: true,
-            isAlternate: true,
-            groupKey: "prog-lab",
+            groupKey: "ed-lab",
           ),
         ],
       ),
-      SubjectData(
-        id: "sub-2",
-        code: "BBDVEA",
-        name: "Dokumentumvédelem és admin. biztonság",
-        credits: 4,
+
+      // 3. Féléves tárgyak (Aktuális félév — Pont mint a képen)
+      const SubjectData(
+        id: "sub-infobizt",
+        code: "BBXCZ13BNF",
+        name: "Információbiztonsági kockázatok kezelése",
+        credits: 5,
+        semester: 3,
+        requirementType: "Évközi jegy",
+        subjectType: "Kötelező törzsanyag",
         isRequired: true,
-        courses: const [
+        isRegistered: true, // Zöld pipa mint a képen
+        isCompleted: false,
+        prerequisites: ["Informatika I."],
+        arePrerequisitesMet: true,
+        courses: [
           CourseInstance(
             id: "c-201",
-            code: "BBDVEA",
+            code: "BBCZEA",
             type: "Elmélet",
             day: 0, // Hétfő
             start: TimeOfDay(hour: 11, minute: 40),
@@ -208,7 +269,7 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
           ),
           CourseInstance(
             id: "c-202",
-            code: "BBDVL1",
+            code: "BBCZL1",
             type: "Labor",
             day: 0, // Hétfő
             start: TimeOfDay(hour: 13, minute: 30),
@@ -222,161 +283,620 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
           ),
         ],
       ),
-      SubjectData(
-        id: "sub-3",
-        code: "BBVNEA",
-        name: "Vezetékes és vezetéknélküli hálózatok",
+
+      const SubjectData(
+        id: "sub-matek2",
+        code: "BTXMAK3BNF",
+        name: "Matematika II.",
         credits: 5,
+        semester: 2,
+        requirementType: "Vizsga",
+        subjectType: "Kötelező törzsanyag",
         isRequired: true,
-        courses: const [
+        isRegistered: true, // Zöld pipa mint a képen
+        isCompleted: false,
+        prerequisites: ["Matematika I."],
+        arePrerequisitesMet: true,
+        courses: [
           CourseInstance(
             id: "c-301",
-            code: "BBVNEA",
+            code: "BT_K_MAEA",
             type: "Elmélet",
-            day: 3, // Csütörtök
+            day: 1, // Kedd
             start: TimeOfDay(hour: 8, minute: 0),
-            end: TimeOfDay(hour: 8, minute: 45),
+            end: TimeOfDay(hour: 9, minute: 40),
             room: "FR.2.102",
-            tutor: "Molnár Tamás",
+            tutor: "Dr. Tóth Ágnes",
             slots: "40/50",
             isMandatory: true,
             isAlternate: false,
-            groupKey: "hal-elm",
+            groupKey: "mat-elm",
           ),
           CourseInstance(
             id: "c-302",
-            code: "BBVNGY2",
+            code: "BT_K_MAGY",
             type: "Gyakorlat",
-            day: 3, // Csütörtök
-            start: TimeOfDay(hour: 8, minute: 55),
-            end: TimeOfDay(hour: 9, minute: 40),
+            day: 1, // Kedd
+            start: TimeOfDay(hour: 13, minute: 30),
+            end: TimeOfDay(hour: 15, minute: 10),
             room: "FR.2.102",
-            tutor: "Molnár Tamás",
+            tutor: "Dr. Tóth Ágnes",
             slots: "22/25",
             isMandatory: true,
             isAlternate: false,
-            groupKey: "hal-gyak",
-          ),
-          CourseInstance(
-            id: "c-303",
-            code: "BBVNL2",
-            type: "Labor",
-            day: 3, // Csütörtök
-            start: TimeOfDay(hour: 9, minute: 50),
-            end: TimeOfDay(hour: 11, minute: 30),
-            room: "FR.L.12",
-            tutor: "Molnár Tamás",
-            slots: "17/20",
-            isMandatory: true,
-            isAlternate: false,
-            groupKey: "hal-lab",
+            groupKey: "mat-gyak",
           ),
         ],
       ),
-      SubjectData(
-        id: "sub-4",
-        code: "BBINEA",
-        name: "Informatika II. (laborgyak)",
-        credits: 4,
-        isRequired: false,
-        courses: const [
-          CourseInstance(
-            id: "c-401",
-            code: "BBINEA",
-            type: "Elmélet",
-            day: 2, // Szerda
-            start: TimeOfDay(hour: 8, minute: 0),
-            end: TimeOfDay(hour: 9, minute: 40),
-            room: "FR.1.205",
-            tutor: "Nagy Zoltán",
-            slots: "35/40",
-            isMandatory: false,
-            isAlternate: false,
-            groupKey: "inf-elm",
-          ),
-          CourseInstance(
-            id: "c-402",
-            code: "BBINL1",
-            type: "Labor",
-            day: 1, // Kedd
-            start: TimeOfDay(hour: 8, minute: 55),
-            end: TimeOfDay(hour: 12, minute: 25),
-            room: "FR.L.02",
-            tutor: "Nagy Zoltán",
-            slots: "20/22",
-            isMandatory: false,
-            isAlternate: false,
-            groupKey: "inf-lab",
-          ),
-        ],
-      ),
-      SubjectData(
-        id: "sub-5",
-        code: "BBVDEA",
-        name: "Adatvédelem, adatbiztonság",
-        credits: 3,
-        isRequired: false,
-        courses: const [
-          CourseInstance(
-            id: "c-501",
-            code: "BBVDEA",
-            type: "Elmélet (Ütközés minta)",
-            day: 3, // Csütörtök
-            start: TimeOfDay(hour: 8, minute: 55),
-            end: TimeOfDay(hour: 10, minute: 30),
-            room: "FR.2.204",
-            tutor: "Varga Béla",
-            slots: "25/30",
-            isMandatory: false,
-            isAlternate: false,
-            groupKey: "adat-elm",
-          ),
-        ],
-      ),
-    ];
 
-    _peSubcourses = const [
-      PeSubcourse(
-        id: "pe-1",
-        name: "Futsal",
-        day: 3,
-        dayName: "Csütörtök",
-        timeRange: "13:30 - 15:10",
-        room: "Sportcsarnok",
-        tutor: "Horváth Ferenc",
-        slots: "18/25",
+      // 7. Féléves tárgy: Szakdolgozat (Pontosan mint a media_1792434251711_9aed7e52.png képen!)
+      const SubjectData(
+        id: "sub-szakd",
+        code: "BBDSD17BNF",
+        name: "Szakdolgozat",
+        credits: 15,
+        semester: 7,
+        requirementType: "Évközi jegy",
+        subjectType: "Kötelező törzsanyag",
+        isRequired: true,
+        isRegistered: false,
+        isCompleted: false,
+        prerequisites: ["Szakdolgozat I.", "120 teljesített kredit"],
+        arePrerequisitesMet: false, // Hiányzó előkövetelmény példa!
+        courses: [
+          CourseInstance(
+            id: "c-szd-elm",
+            code: "BBSDEA",
+            type: "Elmélet",
+            day: -1, // Időpont nélküli mint a képen!
+            room: "Konzulensi",
+            tutor: "Dr. Rajnai Zoltán",
+            slots: "17 fő / 30 limit",
+            isMandatory: true,
+            groupKey: "szd-elm",
+          ),
+          CourseInstance(
+            id: "c-szd-t1",
+            code: "Dr. Farkas Tibor",
+            type: "Szakdolgozat konzulens",
+            day: -1,
+            room: "Témavezetői",
+            tutor: "Dr. Farkas Tibor",
+            slots: "1 fő / 10 limit",
+            isMandatory: true,
+            isAlternate: true,
+            groupKey: "szd-konz",
+          ),
+          CourseInstance(
+            id: "c-szd-t2",
+            code: "Dr. Kiss Gábor",
+            type: "Szakdolgozat konzulens",
+            day: -1,
+            room: "Témavezetői",
+            tutor: "Dr. Kiss Gábor",
+            slots: "8 fő / 10 limit",
+            isMandatory: true,
+            isAlternate: true,
+            groupKey: "szd-konz",
+          ),
+          CourseInstance(
+            id: "c-szd-t3",
+            code: "Dr. Kollár Csaba",
+            type: "Szakdolgozat konzulens",
+            day: -1,
+            room: "Témavezetői",
+            tutor: "Dr. Kollár Csaba",
+            slots: "5 fő / 10 limit",
+            isMandatory: true,
+            isAlternate: true,
+            groupKey: "szd-konz",
+          ),
+          CourseInstance(
+            id: "c-szd-t4",
+            code: "Dr. Michelberger Pál",
+            type: "Szakdolgozat konzulens",
+            day: -1,
+            room: "Témavezetői",
+            tutor: "Dr. Michelberger Pál",
+            slots: "1 fő / 10 limit",
+            isMandatory: true,
+            isAlternate: true,
+            groupKey: "szd-konz",
+          ),
+          CourseInstance(
+            id: "c-szd-t5",
+            code: "Dr. Rajnai Zoltán",
+            type: "Szakdolgozat konzulens",
+            day: -1,
+            room: "Témavezetői",
+            tutor: "Dr. Rajnai Zoltán",
+            slots: "2 fő / 10 limit",
+            isMandatory: true,
+            isAlternate: true,
+            groupKey: "szd-konz",
+          ),
+        ],
       ),
-      PeSubcourse(
-        id: "pe-2",
-        name: "Úszás",
-        day: 1,
-        dayName: "Kedd",
-        timeRange: "17:15 - 18:45",
-        room: "Uszoda",
-        tutor: "Kelemen Anna",
-        slots: "22/25",
-      ),
-      PeSubcourse(
-        id: "pe-3",
-        name: "Konditerem / Fitnesz",
-        day: 2,
-        dayName: "Szerda",
-        timeRange: "10:00 - 11:30",
-        room: "Fitness Terem",
-        tutor: "Tóth Gábor",
-        slots: "15/20",
-      ),
-      PeSubcourse(
-        id: "pe-4",
-        name: "Kosárlabda",
-        day: 4,
-        dayName: "Péntek",
-        timeRange: "14:00 - 15:30",
-        room: "Kistornaterem",
-        tutor: "Horváth Ferenc",
-        slots: "12/20",
+
+      // Szabadon választható tárgyak (4. félév)
+      const SubjectData(
+        id: "sub-jarmu1",
+        code: "BMVJPR1BNF",
+        name: "Járműépítési projekt I.",
+        credits: 5,
+        semester: 4,
+        requirementType: "Évközi jegy",
+        subjectType: "Szabadon választható",
+        isRequired: false,
+        courses: [
+          CourseInstance(
+            id: "c-jarmu-1",
+            code: "BMVJPR1",
+            type: "Projektgyakorlat",
+            day: 4, // Péntek
+            start: TimeOfDay(hour: 10, minute: 0),
+            end: TimeOfDay(hour: 13, minute: 20),
+            room: "Járműlab",
+            tutor: "Dr. Németh István",
+            slots: "12/20",
+            groupKey: "jarmu-lab",
+          ),
+        ],
       ),
     ];
+  }
+
+  // Hallgatói besorolás a megadott Python logika alapján:
+  // StudentCurrentTerm == SuggestedTerm -> Ajánlott
+  // StudentCurrentTerm > SuggestedTerm || hasFailedBefore -> Csúszás / Bukott
+  // StudentCurrentTerm < SuggestedTerm -> Előrehozott / Hardcore
+  SubjectClassification _classifySubject(SubjectData s) {
+    if (s.hasFailedBefore || (s.semester < _studentCurrentSemester && !s.isCompleted)) {
+      return SubjectClassification.delayed;
+    }
+    if (s.semester == _studentCurrentSemester) {
+      return SubjectClassification.suggested;
+    }
+    return SubjectClassification.future;
+  }
+
+  // Dinamikus mintatantervi félév szám a képzésből / tantárgyakból kinyerve (nem fix 7 félév!)
+  int get _maxCurriculumSemester {
+    int maxSem = 7;
+    for (final s in _subjects) {
+      if (s.semester > maxSem) maxSem = s.semester;
+    }
+    return maxSem;
+  }
+
+  // Csúszás / elmaradt kötelező tárgyak szűrése
+  List<SubjectData> _getDelayedMandatorySubjects() {
+    return _subjects.where((s) => _classifySubject(s) == SubjectClassification.delayed).toList();
+  }
+
+  // Szűrt tantárgylista (Kategória + Félév + Keresés)
+  List<SubjectData> _getFilteredSubjects() {
+    return _subjects.where((s) {
+      final classification = _classifySubject(s);
+      if (_filterCategory == SubjectFilterCategory.suggested && classification != SubjectClassification.suggested) {
+        return false;
+      }
+      if (_filterCategory == SubjectFilterCategory.delayed && classification != SubjectClassification.delayed) {
+        return false;
+      }
+      if (_filterCategory == SubjectFilterCategory.future && classification != SubjectClassification.future) {
+        return false;
+      }
+      if (_filterSemester != null && s.semester != _filterSemester) {
+        return false;
+      }
+      if (_selectedSubjectType != 'Összes' && s.subjectType != _selectedSubjectType) {
+        return false;
+      }
+      if (_searchQuery.trim().isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchName = s.name.toLowerCase().contains(q);
+        final matchCode = s.code.toLowerCase().contains(q);
+        if (!matchName && !matchCode) return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  // Interaktív próba figyelmeztető felugró ablak belépéskor
+  void _showInteractiveSimulationDisclaimer() {
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: theme.rootBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.15), width: 1.2),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F47D0).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.science_rounded, color: Color(0xFF0F47D0), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Tárgyfelvétel Tervező',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : theme.textColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F47D0),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Text('TEST', style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Interaktív próba & szimuláció',
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: isDark ? 0.06 : 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: theme.textColor.withValues(alpha: 0.08)),
+                ),
+                child: Text(
+                  'Ez a felület jelenleg egy interaktív próba és tesztkörnyezet! Szabadon kattintgathatsz, válogathatsz kurzusokat, és tesztelheted az órarendi rácsot és az ütközésvizsgálatot.',
+                  style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 12.5, height: 1.35),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined, size: 18, color: theme.currentClassGreen),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Biztonságos mód: semmilyen művelet nem küld éles módosítást a valódi Neptun szerverre.',
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.75), fontSize: 11.5),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.touch_app_outlined, size: 18, color: const Color(0xFF0F47D0)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tipp: Bármelyik kurzust hosszan nyomva tartva (Long-press) megnyílik a részletes adatlapja!',
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.75), fontSize: 11.5),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F47D0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Értem, kipróbálom', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Részletes adatlap segéd sor
+  Widget _buildDetailRow(IconData icon, String label, String value, AppPalette theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: theme.textColor.withValues(alpha: 0.6)),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: theme.textColor.withValues(alpha: 0.65),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: isDark ? Colors.white : theme.textColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Hosszan nyomásra (Long-press) megjelenő kurzus részletek modal
+  void _showCourseDetailsDialog(CourseInstance course, SubjectData subject) {
+    AppHaptics.mediumImpact();
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
+    final isSelected = _selectedCourseIds.contains(course.id);
+    final classification = _classifySubject(subject);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: theme.rootBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.15), width: 1.2),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F47D0).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.school_rounded, color: Color(0xFF0F47D0), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.code,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : theme.textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      subject.name,
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.65), fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (classification == SubjectClassification.delayed) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: theme.errorRed.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.errorRed.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: theme.errorRed, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            subject.hasFailedBefore
+                                ? '🚨 BUKOTT TÁRGY: Újrafelvétel szükséges!'
+                                : '🚨 CSÚSZÁS: ${subject.semester}. félévi elmaradt kötelező tárgy!',
+                            style: TextStyle(color: theme.errorRed, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (classification == SubjectClassification.future) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.purple.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.bolt_rounded, color: Colors.purple, size: 16),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '⚡ ELŐREHOZOTT: Felsőbb féléves tárgy felvétele',
+                            style: TextStyle(color: Colors.purple, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                _buildDetailRow(Icons.category_rounded, 'Típus', course.type, theme, isDark),
+                _buildDetailRow(Icons.person_outline_rounded, 'Oktató', course.tutor, theme, isDark),
+                _buildDetailRow(Icons.location_on_outlined, 'Terem / Hely', course.room, theme, isDark),
+                _buildDetailRow(Icons.access_time_rounded, 'Időpont', course.formatTimeRange(), theme, isDark),
+                _buildDetailRow(Icons.groups_outlined, 'Létszám', course.slots, theme, isDark),
+                _buildDetailRow(Icons.translate_rounded, 'Nyelv', course.language, theme, isDark),
+                _buildDetailRow(Icons.hub_outlined, 'Csoport', course.groupKey, theme, isDark),
+                _buildDetailRow(Icons.star_outline_rounded, 'Kredit', '${subject.credits} kredit', theme, isDark),
+                _buildDetailRow(Icons.calendar_today_outlined, 'Ajánlott félév', '${subject.semester}. félév', theme, isDark),
+                _buildDetailRow(Icons.fact_check_outlined, 'Követelmény', subject.requirementType, theme, isDark),
+                if (subject.prerequisites.isNotEmpty)
+                  _buildDetailRow(Icons.layers_outlined, 'Előkövetelmény', subject.prerequisites.join(', '), theme, isDark),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Bezárás', style: TextStyle(color: theme.textColor.withValues(alpha: 0.7))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isSelected ? theme.errorRed : const Color(0xFF0F47D0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _toggleCourse(course, subject);
+              },
+              child: Text(
+                isSelected ? 'Kivétel a tervezőből' : 'Hozzáadás a tervezőhöz',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Tárgy részletes adatlap modal
+  void _showSubjectDetailsDialog(SubjectData subject) {
+    AppHaptics.mediumImpact();
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
+    final classification = _classifySubject(subject);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: theme.rootBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.15), width: 1.2),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.article_outlined, color: theme.primary, size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject.name,
+                      style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      subject.code,
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (classification == SubjectClassification.delayed) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: theme.errorRed.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: theme.errorRed.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: theme.errorRed, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            subject.hasFailedBefore
+                                ? '🚨 BUKOTT TÁRGY: Újrafelvétel szükséges!'
+                                : '🚨 CSÚSZÁS: ${subject.semester}. félévi elmaradt kötelező tárgy!',
+                            style: TextStyle(color: theme.errorRed, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                _buildDetailRow(Icons.calendar_month_rounded, 'Ajánlott félév', '${subject.semester}. félév', theme, isDark),
+                _buildDetailRow(Icons.star_outline_rounded, 'Kredit érték', '${subject.credits} kredit', theme, isDark),
+                _buildDetailRow(Icons.assignment_outlined, 'Tantervi típus', subject.subjectType, theme, isDark),
+                _buildDetailRow(Icons.grade_outlined, 'Követelmény', subject.requirementType, theme, isDark),
+                _buildDetailRow(Icons.class_outlined, 'Kurzusok száma', '${subject.courses.length} db elérhető kurzus', theme, isDark),
+                if (subject.prerequisites.isNotEmpty)
+                  _buildDetailRow(Icons.layers_rounded, 'Előkövetelmény', subject.prerequisites.join(', '), theme, isDark),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Bezárás', style: TextStyle(color: theme.primary, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Detect collisions among selected courses
@@ -386,7 +906,7 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
 
     for (final s in _subjects) {
       for (final c in s.courses) {
-        if (_selectedCourseIds.contains(c.id)) {
+        if (_selectedCourseIds.contains(c.id) && c.hasTimetable) {
           allSelected.add(c);
         }
       }
@@ -409,21 +929,13 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
     return colliding;
   }
 
-  bool _isCourseGreyedOut(CourseInstance course, SubjectData subject) {
-    if (_selectedCourseIds.contains(course.id)) return false;
-    return subject.courses.any((c) =>
-        c.groupKey == course.groupKey &&
-        c.id != course.id &&
-        _selectedCourseIds.contains(c.id));
-  }
-
   void _toggleCourse(CourseInstance course, SubjectData subject) {
     AppHaptics.lightImpact();
     setState(() {
       if (_selectedCourseIds.contains(course.id)) {
         _selectedCourseIds.remove(course.id);
       } else {
-        // Mutex: remove competing courses with same groupKey
+        // Mutex: azonos csoportú alternatív kurzus felülírása
         for (final c in subject.courses) {
           if (c.groupKey == course.groupKey && c.id != course.id) {
             _selectedCourseIds.remove(c.id);
@@ -434,257 +946,121 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
     });
   }
 
-  void _showCourseDetailsDialog(CourseInstance course, SubjectData subject) {
+  void _showPrerequisitesDialog(SubjectData subject) {
     AppHaptics.mediumImpact();
-    final isSelected = _selectedCourseIds.contains(course.id);
-
     showDialog(
       context: context,
       builder: (ctx) {
+        final theme = AppColors.getTheme();
+        final isDark = AppColors.isDarktheme();
         return AlertDialog(
-          backgroundColor: AppColors.getTheme().rootBackground,
+          backgroundColor: theme.rootBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
-            side: BorderSide(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.15),
-              width: 1.2,
-            ),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.15), width: 1.2),
           ),
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.getTheme().primary.withValues(alpha: 0.12),
+                  color: subject.arePrerequisitesMet
+                      ? theme.currentClassGreen.withValues(alpha: 0.15)
+                      : theme.errorRed.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.school_rounded, color: AppColors.getTheme().primary, size: 20),
+                child: Icon(
+                  subject.arePrerequisitesMet ? Icons.layers_rounded : Icons.warning_amber_rounded,
+                  color: subject.arePrerequisitesMet ? theme.currentClassGreen : theme.errorRed,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  subject.name,
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tárgy Előkövetelmények',
+                      style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      subject.name,
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow('Tárgykód', subject.code),
-              _buildDetailRow('Kurzuskód & Típus', '${course.code} (${course.type})'),
-              _buildDetailRow('Oktató', course.tutor),
-              _buildDetailRow('Terem', course.room, highlight: true),
-              _buildDetailRow('Időpont', course.formatTimeRange()),
-              _buildDetailRow('Férőhely & Létszám', '${course.slots} fő'),
-              _buildDetailRow(
-                'Követelmény',
-                '${subject.isRequired ? "Kötelező" : "Választható"} (${subject.credits} kredit)',
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                'Bezárás',
-                style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7)),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isSelected
-                    ? AppColors.getTheme().errorRed
-                    : AppColors.getTheme().currentClassGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Navigator.pop(ctx);
-                _toggleCourse(course, subject);
-              },
-              child: Text(
-                isSelected ? 'Leadás / Eltávolítás' : 'Kiválasztás',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, {bool highlight = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                color: highlight
-                    ? AppColors.getTheme().roomHighlightColor
-                    : AppColors.getTheme().textColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPeDialog() {
-    AppHaptics.mediumImpact();
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppColors.getTheme().rootBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-            side: BorderSide(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.15),
-              width: 1.2,
-            ),
-          ),
-          title: Row(
-            children: [
-              const Text('🏋️', style: TextStyle(fontSize: 22)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Testnevelés I. Sportágválasztás',
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+              if (subject.prerequisites.isEmpty)
+                Text(
+                  'Ennek a tantárgynak nincsen előkövetelménye.',
+                  style: TextStyle(color: theme.textColor.withValues(alpha: 0.8), fontSize: 13),
+                )
+              else ...[
+                Text(
+                  'A tantárgy felvételéhez szükséges teljesíteni:',
+                  style: TextStyle(color: theme.textColor.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600),
                 ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: _peSubcourses.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final pe = _peSubcourses[index];
-                final isSelected = _selectedPe?.id == pe.id;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () {
-                    AppHaptics.lightImpact();
-                    setState(() {
-                      _selectedPe = isSelected ? null : pe;
-                    });
-                    Navigator.pop(ctx);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
+                const SizedBox(height: 8),
+                for (final prereq in subject.prerequisites)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.getTheme().currentClassGreen.withValues(alpha: 0.12)
-                          : AppColors.getTheme().textColor.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(14),
+                      color: subject.arePrerequisitesMet
+                          ? theme.currentClassGreen.withValues(alpha: 0.08)
+                          : theme.errorRed.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected
-                            ? AppColors.getTheme().currentClassGreen
-                            : AppColors.getTheme().textColor.withValues(alpha: 0.1),
-                        width: 1.2,
+                        color: subject.arePrerequisitesMet
+                            ? theme.currentClassGreen.withValues(alpha: 0.3)
+                            : theme.errorRed.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                pe.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.getTheme().textColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${pe.dayName} ${pe.timeRange}',
-                              style: TextStyle(
-                                color: AppColors.getTheme().primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          subject.arePrerequisitesMet ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                          color: subject.arePrerequisitesMet ? theme.currentClassGreen : theme.errorRed,
+                          size: 16,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '🏟️ ${pe.room} • 👨‍🏫 ${pe.tutor}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                ),
-                              ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            prereq,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : theme.textColor,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '👥 ${pe.slots}',
-                              style: TextStyle(
-                                color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
+                          ),
+                        ),
+                        Text(
+                          subject.arePrerequisitesMet ? 'Teljesítve' : 'HIÁNYZIK',
+                          style: TextStyle(
+                            color: subject.arePrerequisitesMet ? theme.currentClassGreen : theme.errorRed,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                );
-              },
-            ),
+              ],
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                'Mégsem',
-                style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7)),
-              ),
+              child: Text('Bezárás', style: TextStyle(color: theme.primary, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -692,34 +1068,29 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
     );
   }
 
-  void _showSubmitConfirmationDialog() {
-    AppHaptics.heavyImpact();
+  void _showCommitDialog() {
+    AppHaptics.mediumImpact();
     final colliding = _getCollidingCourseIds();
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
 
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: AppColors.getTheme().rootBackground,
+          backgroundColor: theme.rootBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
-            side: BorderSide(
-              color: AppColors.getTheme().textColor.withValues(alpha: 0.15),
-              width: 1.2,
-            ),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.15), width: 1.2),
           ),
           title: Row(
             children: [
-              Icon(Icons.cloud_upload_rounded, color: AppColors.getTheme().currentClassGreen),
+              Icon(Icons.cloud_upload_rounded, color: theme.currentClassGreen),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Tárgyfelvétel megerősítése',
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -733,32 +1104,45 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.getTheme().errorRed.withValues(alpha: 0.12),
+                    color: theme.errorRed.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.getTheme().errorRed.withValues(alpha: 0.4)),
+                    border: Border.all(color: theme.errorRed.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: AppColors.getTheme().errorRed, size: 20),
+                      Icon(Icons.warning_amber_rounded, color: theme.errorRed, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '${colliding.length} db kurzus ütközik az órarendben! Ennek ellenére beküldhető, de ütközést okozhat.',
-                          style: TextStyle(
-                            color: AppColors.getTheme().errorRed,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          '${colliding.length} db kurzus ütközik az órarendben! Kérjük ellenőrizd a kiválasztott idősávokat.',
+                          style: TextStyle(color: theme.errorRed, fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
                   ),
                 ),
               Text(
-                'A kiválasztott ${_selectedCourseIds.length + (_selectedPe != null ? 1 : 0)} db kurzus azonnal elküldésre kerül a Neptun szervernek a helyfoglalásért.',
-                style: TextStyle(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.8),
-                  fontSize: 13,
+                'A kiválasztott ${_selectedCourseIds.length} db kurzus helyi tervezőben van rögzítve.',
+                style: TextStyle(color: theme.textColor.withValues(alpha: 0.8), fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.shield_outlined, size: 18, color: theme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Biztonsági szimulációs mód aktív: az éles szerver nem módosul, amíg a hivatalos API végpontok nincsenek jóváhagyva.',
+                        style: TextStyle(color: theme.textColor.withValues(alpha: 0.7), fontSize: 11),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -766,27 +1150,27 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                'Mégsem',
-                style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7)),
-              ),
+              child: Text('Mégsem', style: TextStyle(color: theme.textColor.withValues(alpha: 0.7))),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.getTheme().currentClassGreen,
+                backgroundColor: theme.currentClassGreen,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () {
                 Navigator.pop(ctx);
                 Fluttertoast.showToast(
-                  msg: "🎉 Tárgyfelvételi köteg sikeresen továbbítva a Neptunba!",
+                  msg: "🎉 Tárgyfelvételi köteg szimuláció sikeresen véglegesítve!",
                   toastLength: Toast.LENGTH_LONG,
                   gravity: ToastGravity.BOTTOM,
-                  backgroundColor: AppColors.getTheme().rootBackground,
-                  textColor: AppColors.getTheme().textColor,
+                  backgroundColor: theme.rootBackground,
+                  textColor: theme.textColor,
                 );
               },
-              child: const Text('Igen, véglegesítés', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Igen, véglegesítés',
+                style: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         );
@@ -797,470 +1181,431 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
   @override
   Widget build(BuildContext context) {
     final theme = AppColors.getTheme();
-    final dayNames = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek'];
+    final isDark = AppColors.isDarktheme();
     final collidingIds = _getCollidingCourseIds();
+    final delayedSubjects = _getDelayedMandatorySubjects();
+    final filteredSubjects = _getFilteredSubjects();
 
     int totalCredits = 0;
-    final selectedSubjectsSet = <String>{};
     for (final s in _subjects) {
       if (s.courses.any((c) => _selectedCourseIds.contains(c.id))) {
-        selectedSubjectsSet.add(s.id);
         totalCredits += s.credits;
       }
     }
-    if (_selectedPe != null) {
-      selectedSubjectsSet.add('pe-sub');
-      totalCredits += 1;
-    }
+
+    final shouldCollapseTopBar = _isExclusiveFullscreen && !_isListView;
 
     return Scaffold(
       backgroundColor: theme.rootBackground,
-      appBar: AppBar(
-        backgroundColor: theme.rootBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: theme.textColor, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7158E2),
-                    borderRadius: BorderRadius.circular(6),
+      appBar: shouldCollapseTopBar
+          ? null
+          : AppBar(
+              backgroundColor: theme.rootBackground,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new_rounded, color: theme.textColor, size: 18),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F47D0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'TEST',
+                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Tárgyfelvétel',
+                        style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  child: const Text(
-                    'GHOST',
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  Text(
+                    'Ajánlott félév: $_studentCurrentSemester. félév • Mintatanterv',
+                    style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Tárgyfelvétel Órarend',
-                  style: TextStyle(color: theme.textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                ],
+              ),
+              actions: [
+                // Teljes képernyő gomb
+                IconButton(
+                  tooltip: _isExclusiveFullscreen ? 'Kilépés a teljes képernyőből' : 'Exkluzív teljes képernyő',
+                  icon: Icon(
+                    _isExclusiveFullscreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                    color: _isExclusiveFullscreen ? theme.currentClassGreen : theme.textColor,
+                    size: 24,
+                  ),
+                  onPressed: _toggleExclusiveFullscreen,
                 ),
               ],
             ),
-            Text(
-              'Statikus 06:00–22:00 szimulációs nézet',
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 11),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // --- FELSŐ VEZÉRLŐSÁV: Normál nézetben teljes panel, teljes képernyős naptárban kompakt lebegő sáv ---
+            if (shouldCollapseTopBar)
+              _buildFullscreenFloatingPill(theme, isDark)
+            else
+              _buildTopControls(theme, isDark),
+
+            // --- TARTALOM ---
+            Expanded(
+              child: _isListView
+                  ? _buildListView(delayedSubjects, filteredSubjects, theme, isDark)
+                  : _buildGridView(collidingIds, theme, isDark),
             ),
+
+            // --- LEBEGŐ ALSÓ STAGING SÁV (KOSÁR) ---
+            _buildBottomStagingBar(totalCredits, collidingIds.length, theme, isDark),
           ],
         ),
       ),
-      body: Stack(
+    );
+  }
+
+  // --- LEBEGŐ MINIMÁL SÁV TELJES KÉPERNYŐS NAPTÁRHOZ ---
+  Widget _buildFullscreenFloatingPill(AppPalette theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      decoration: BoxDecoration(
+        color: theme.rootBackground.withValues(alpha: isDark ? 0.90 : 0.95),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.textColor.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
+          // Vissza gomb + Cím
+          Row(
             children: [
-              // --- Controls (Week vs Day mode & Day selectors) ---
+              InkWell(
+                onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: theme.textColor),
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: theme.rootBackground,
-                  border: Border(bottom: BorderSide(color: theme.textColor.withValues(alpha: 0.08))),
+                  color: const Color(0xFF0F47D0),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Row(
-                  children: [
-                    // View Toggle
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: theme.textColor.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          _buildViewToggleBtn('Heti nézet', _isWeekView, () {
-                            AppHaptics.lightImpact();
-                            setState(() => _isWeekView = true);
-                          }),
-                          _buildViewToggleBtn('Napi nézet', !_isWeekView, () {
-                            AppHaptics.lightImpact();
-                            setState(() => _isWeekView = false);
-                          }),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    // Day tabs when in Day view
-                    if (!_isWeekView)
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: List.generate(5, (index) {
-                              final isSel = _selectedDayIndex == index;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () {
-                                    AppHaptics.lightImpact();
-                                    setState(() => _selectedDayIndex = index);
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: isSel
-                                          ? theme.primary
-                                          : theme.textColor.withValues(alpha: 0.05),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      dayNames[index],
-                                      style: TextStyle(
-                                        color: isSel ? Colors.white : theme.textColor.withValues(alpha: 0.7),
-                                        fontSize: 12,
-                                        fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              _buildLegendItem(theme.errorRed, '! Kötelező'),
-                              const SizedBox(width: 8),
-                              _buildLegendItem(const Color(0xFFFFA502), '⚠️ Alternatív'),
-                              const SizedBox(width: 8),
-                              _buildLegendItem(theme.currentClassGreen, '✓ Felvéve'),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                child: const Text('TEST', style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
               ),
-
-              // --- PE Section Banner ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: _showPeDialog,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _selectedPe != null
-                          ? theme.currentClassGreen.withValues(alpha: 0.1)
-                          : const Color(0xFFFF5252).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _selectedPe != null
-                            ? theme.currentClassGreen.withValues(alpha: 0.4)
-                            : const Color(0xFFFF5252).withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: (_selectedPe != null ? theme.currentClassGreen : const Color(0xFFFF5252))
-                                .withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text('🏋️', style: TextStyle(fontSize: 18)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Testnevelés I. (Félévenként 1 kurzus kötelező)',
-                                style: TextStyle(
-                                  color: _selectedPe != null ? theme.currentClassGreen : const Color(0xFFFF6B81),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _selectedPe != null
-                                    ? 'Kiválasztva: ${_selectedPe!.name} (${_selectedPe!.dayName} ${_selectedPe!.timeRange}, ${_selectedPe!.room})'
-                                    : 'Kattints a felvehető sportágak és időpontok megtekintéséhez',
-                                style: TextStyle(
-                                  color: theme.textColor.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: (_selectedPe != null ? theme.currentClassGreen : const Color(0xFFFF5252))
-                                .withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _selectedPe != null ? 'Módosítás ❯' : 'Választás ❯',
-                            style: TextStyle(
-                              color: _selectedPe != null ? theme.currentClassGreen : const Color(0xFFFF6B81),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(width: 6),
+              Text(
+                'Tárgyfelvétel',
+                style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 13),
               ),
-
-              // --- Timetable Grid Area ---
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final dayCount = _isWeekView ? 5 : 1;
-                    const timeColWidth = 50.0;
-                    final availableWidth = constraints.maxWidth - timeColWidth;
-                    final dayColWidth = _isWeekView
-                        ? max(130.0, availableWidth / dayCount)
-                        : availableWidth;
-
-                    return SingleChildScrollView(
-                      controller: _verticalScrollController,
-                      child: SingleChildScrollView(
-                        controller: _horizontalScrollController,
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: timeColWidth + (dayColWidth * dayCount),
-                          height: (_endHour - _startHour) * _hourHeight + 36,
-                          child: Stack(
-                            children: [
-                              // 1. Grid Background & Hour lines
-                              Positioned.fill(
-                                top: 36,
-                                child: Row(
-                                  children: [
-                                    // Time sidebar
-                                    SizedBox(
-                                      width: timeColWidth,
-                                      child: Column(
-                                        children: List.generate(_endHour - _startHour, (h) {
-                                          final hour = _startHour + h;
-                                          return SizedBox(
-                                            height: _hourHeight,
-                                            child: Align(
-                                              alignment: Alignment.topCenter,
-                                              child: Text(
-                                                '${hour.toString().padLeft(2, '0')}:00',
-                                                style: TextStyle(
-                                                  color: theme.textColor.withValues(alpha: 0.45),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                    ),
-                                    // Day columns background
-                                    Expanded(
-                                      child: Row(
-                                        children: List.generate(dayCount, (index) {
-                                          return Container(
-                                            width: dayColWidth,
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                left: BorderSide(
-                                                  color: theme.textColor.withValues(alpha: 0.08),
-                                                ),
-                                              ),
-                                            ),
-                                            child: Column(
-                                              children: List.generate(_endHour - _startHour, (h) {
-                                                return Container(
-                                                  height: _hourHeight,
-                                                  decoration: BoxDecoration(
-                                                    border: Border(
-                                                      bottom: BorderSide(
-                                                        color: theme.textColor.withValues(alpha: 0.05),
-                                                        style: BorderStyle.solid,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // 2. Day Header row
-                              Positioned(
-                                top: 0,
-                                left: timeColWidth,
-                                right: 0,
-                                height: 36,
-                                child: Row(
-                                  children: List.generate(dayCount, (index) {
-                                    final dIdx = _isWeekView ? index : _selectedDayIndex;
-                                    return Container(
-                                      width: dayColWidth,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: theme.rootBackground,
-                                        border: Border(
-                                          left: BorderSide(color: theme.textColor.withValues(alpha: 0.08)),
-                                          bottom: BorderSide(color: theme.textColor.withValues(alpha: 0.08)),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        dayNames[dIdx],
-                                        style: TextStyle(
-                                          color: theme.textColor,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              ),
-
-                              // 3. Render lesson cards
-                              ..._buildLessonCards(
-                                timeColWidth: timeColWidth,
-                                dayColWidth: dayColWidth,
-                                collidingIds: collidingIds,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Padding for bottom staging bar
-              const SizedBox(height: 72),
             ],
           ),
 
-          // --- Floating Staging Cart & Submit Bar ---
-          Positioned(
-            left: 14,
-            right: 14,
-            bottom: 14,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.rootBackground,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: theme.textColor.withValues(alpha: 0.15)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+          // Félév címke + Nézetváltó + Kilépés a teljes képernyőből
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F47D0).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _filterSemester == null ? 'Összes félév' : '$_filterSemester. félév',
+                  style: const TextStyle(color: Color(0xFF0F47D0), fontSize: 11, fontWeight: FontWeight.bold),
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '${selectedSubjectsSet.length} tárgy • ${_selectedCourseIds.length + (_selectedPe != null ? 1 : 0)} kurzus',
-                              style: TextStyle(
-                                color: theme.textColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '($totalCredits kredit)',
-                              style: TextStyle(
-                                color: theme.currentClassGreen,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        if (collidingIds.isNotEmpty)
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: theme.errorRed,
-                                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(width: 6),
+              // Váltás lista nézetre
+              InkWell(
+                onTap: () {
+                  AppHaptics.lightImpact();
+                  setState(() => _isListView = true);
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.textColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.list_alt_rounded, size: 14, color: theme.textColor),
+                      const SizedBox(width: 4),
+                      Text('Lista', style: TextStyle(color: theme.textColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Kilépés a teljes képernyőből
+              InkWell(
+                onTap: _toggleExclusiveFullscreen,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: theme.currentClassGreen.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.fullscreen_exit_rounded, size: 18, color: theme.currentClassGreen),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- FELSŐ VEZÉRLŐK: NÉZETVÁLTÓ + FÉLÉVEK + KERESŐ ---
+  Widget _buildTopControls(AppPalette theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+      decoration: BoxDecoration(
+        color: theme.rootBackground,
+        border: Border(bottom: BorderSide(color: theme.textColor.withValues(alpha: 0.08))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Nézetválasztó tabok (Neptun Lista vs Heti Rács)
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: theme.textColor.withValues(alpha: isDark ? 0.08 : 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      AppHaptics.lightImpact();
+                      setState(() => _isListView = true);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isListView
+                            ? (isDark ? theme.secondary : const Color(0xFF0F47D0))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: _isListView
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 ),
-                                child: Text(
-                                  '⚡ ${collidingIds.length} ütközés',
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Átfedés van a kijelölt órák között',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: theme.errorRed, fontSize: 11),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.list_alt_rounded,
+                            size: 16,
+                            color: _isListView ? Colors.white : theme.textColor.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 6),
                           Text(
-                            'Ütközésmentes órarendi összeállítás',
+                            'Neptun Lista nézet',
                             style: TextStyle(
-                              color: theme.textColor.withValues(alpha: 0.5),
-                              fontSize: 11,
+                              color: _isListView ? Colors.white : theme.textColor.withValues(alpha: 0.7),
+                              fontSize: 12.5,
+                              fontWeight: _isListView ? FontWeight.bold : FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      AppHaptics.lightImpact();
+                      setState(() => _isListView = false);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: !_isListView
+                            ? (isDark ? theme.secondary : const Color(0xFF0F47D0))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: !_isListView
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 16,
+                            color: !_isListView ? Colors.white : theme.textColor.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Heti Órarendi rács',
+                            style: TextStyle(
+                              color: !_isListView ? Colors.white : theme.textColor.withValues(alpha: 0.7),
+                              fontSize: 12.5,
+                              fontWeight: !_isListView ? FontWeight.bold : FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // 2. Dinamikus Tantervi Félév Legördülő + Típus választó
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: theme.textColor.withValues(alpha: isDark ? 0.06 : 0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.textColor.withValues(alpha: 0.1)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _filterSemester,
+                      isExpanded: true,
+                      dropdownColor: theme.rootBackground,
+                      icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: theme.textColor.withValues(alpha: 0.7)),
+                      style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 12, fontWeight: FontWeight.w600),
+                      items: [
+                        DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('📅 Minden félév', style: TextStyle(color: isDark ? Colors.white : theme.textColor)),
+                        ),
+                        for (int s = 1; s <= _maxCurriculumSemester; s++)
+                          DropdownMenuItem<int?>(
+                            value: s,
+                            child: Text(
+                              s == _studentCurrentSemester ? '⭐ $s. félév (Aktuális)' : '$s. félév',
+                              style: TextStyle(
+                                color: s == _studentCurrentSemester
+                                    ? (isDark ? const Color(0xFF58A6FF) : const Color(0xFF0F47D0))
+                                    : (isDark ? Colors.white : theme.textColor),
+                                fontWeight: s == _studentCurrentSemester ? FontWeight.bold : FontWeight.w500,
+                              ),
                             ),
                           ),
                       ],
+                      onChanged: (val) {
+                        AppHaptics.lightImpact();
+                        setState(() => _filterSemester = val);
+                      },
                     ),
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.currentClassGreen,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: _showSubmitConfirmationDialog,
-                    icon: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
-                    label: const Text(
-                      'Véglegesítés',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(width: 8),
+              Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: isDark ? 0.06 : 0.04),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: theme.textColor.withValues(alpha: 0.1)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedSubjectType,
+                    dropdownColor: theme.rootBackground,
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: theme.textColor.withValues(alpha: 0.7)),
+                    style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 12, fontWeight: FontWeight.w600),
+                    items: const [
+                      DropdownMenuItem(value: 'Mintatantervi', child: Text('Mintatantervi')),
+                      DropdownMenuItem(value: 'Szabadon választható', child: Text('Szabadon vál.')),
+                      DropdownMenuItem(value: 'Összes', child: Text('Összes típus')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        AppHaptics.lightImpact();
+                        setState(() => _selectedSubjectType = val);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // 3. Hallgatói Tárgykategória szűrő kapszulák (Python logika szerint)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildCategoryFilterChip(
+                  SubjectFilterCategory.all,
+                  'Mind (${_subjects.length})',
+                  theme,
+                  isDark,
+                ),
+                _buildCategoryFilterChip(
+                  SubjectFilterCategory.suggested,
+                  '⭐ Ajánlott (${_subjects.where((s) => _classifySubject(s) == SubjectClassification.suggested).length})',
+                  theme,
+                  isDark,
+                ),
+                _buildCategoryFilterChip(
+                  SubjectFilterCategory.delayed,
+                  '🚨 Elmaradt / Bukott (${_subjects.where((s) => _classifySubject(s) == SubjectClassification.delayed).length})',
+                  theme,
+                  isDark,
+                  isWarning: true,
+                ),
+                _buildCategoryFilterChip(
+                  SubjectFilterCategory.future,
+                  '⚡ Előrehozható (${_subjects.where((s) => _classifySubject(s) == SubjectClassification.future).length})',
+                  theme,
+                  isDark,
+                  isFuture: true,
+                ),
+              ],
             ),
           ),
         ],
@@ -1268,259 +1613,875 @@ class _SubjectRegistrationPageState extends State<SubjectRegistrationPage> {
     );
   }
 
-  List<Widget> _buildLessonCards({
-    required double timeColWidth,
-    required double dayColWidth,
-    required Set<String> collidingIds,
+  Widget _buildCategoryFilterChip(
+    SubjectFilterCategory category,
+    String label,
+    AppPalette theme,
+    bool isDark, {
+    bool isWarning = false,
+    bool isFuture = false,
   }) {
-    final widgets = <Widget>[];
+    final isSelected = _filterCategory == category;
+    Color activeColor = const Color(0xFF0F47D0);
+    if (isWarning) activeColor = theme.errorRed;
+    if (isFuture) activeColor = Colors.purple;
 
-    // Group courses by day (0 to 4)
-    final coursesByDay = <int, List<_CourseLayoutItem>>{};
-    for (final subject in _subjects) {
-      for (final course in subject.courses) {
-        if (!_isWeekView && course.day != _selectedDayIndex) continue;
-        coursesByDay.putIfAbsent(course.day, () => []).add(_CourseLayoutItem(course, subject));
-      }
-    }
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected
+                ? Colors.white
+                : (isWarning ? theme.errorRed : (isFuture ? Colors.purple : theme.textColor.withValues(alpha: 0.8))),
+          ),
+        ),
+        selectedColor: activeColor,
+        backgroundColor: isWarning
+            ? theme.errorRed.withValues(alpha: isDark ? 0.12 : 0.06)
+            : (isFuture ? Colors.purple.withValues(alpha: isDark ? 0.12 : 0.06) : theme.textColor.withValues(alpha: isDark ? 0.06 : 0.04)),
+        side: BorderSide(
+          color: isSelected
+              ? Colors.transparent
+              : (isWarning ? theme.errorRed.withValues(alpha: 0.3) : theme.textColor.withValues(alpha: 0.1)),
+          width: 1.0,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        onSelected: (_) {
+          AppHaptics.lightImpact();
+          setState(() {
+            _filterCategory = category;
+          });
+        },
+      ),
+    );
+  }
 
-    // For each day, compute overlapping clusters and assign columns
-    for (final entry in coursesByDay.entries) {
-      final dayCourses = entry.value;
-      if (dayCourses.isEmpty) continue;
+  // --- 1. NÉZET: NEPTUN LISTA (Pontosan mint a feltöltött képeken) ---
+  Widget _buildListView(List<SubjectData> delayedSubjects, List<SubjectData> subjects, AppPalette theme, bool isDark) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+      children: [
+        // Keresőmező
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: theme.textColor.withValues(alpha: isDark ? 0.08 : 0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.textColor.withValues(alpha: 0.1)),
+          ),
+          child: TextField(
+            controller: _searchController,
+            style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Tárgykód / Tárgynév keresése...',
+              hintStyle: TextStyle(color: theme.textColor.withValues(alpha: 0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.search_rounded, size: 20, color: theme.textColor.withValues(alpha: 0.5)),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            onChanged: (val) => setState(() => _searchQuery = val),
+          ),
+        ),
 
-      // Sort by startMinutes, then longer duration first
-      dayCourses.sort((a, b) {
-        final cmp = a.course.startMinutes.compareTo(b.course.startMinutes);
-        if (cmp != 0) return cmp;
-        return (b.course.endMinutes - b.course.startMinutes).compareTo(a.course.endMinutes - a.course.startMinutes);
-      });
+        // 2. A OPCIÓ: Kiemelt "CSÚSZÁS / ELMARADT TÁRGYAK" doboz a tetején!
+        if (delayedSubjects.isNotEmpty) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.errorRed.withValues(alpha: isDark ? 0.12 : 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.errorRed.withValues(alpha: 0.4), width: 1.4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: theme.errorRed,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ELMARADT KÖTELEZŐ TÁRGYAK (CSÚSZÁS VESZÉLY!)',
+                        style: TextStyle(
+                          color: theme.errorRed,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.errorRed,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${delayedSubjects.length} db',
+                        style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Az alábbi tárgyak korábbi félévből maradtak el vagy újrafelvételt igényelnek. A mintatanterv szerint prioritást élveznek:',
+                  style: TextStyle(color: theme.textColor.withValues(alpha: 0.75), fontSize: 11.5),
+                ),
+                const SizedBox(height: 10),
+                for (final delayedSub in delayedSubjects) _buildSubjectCard(delayedSub, theme, isDark, isDelayedHighlight: true),
+              ],
+            ),
+          ),
+        ],
 
-      // Group into overlapping clusters
-      final clusters = <List<_CourseLayoutItem>>[];
-      List<_CourseLayoutItem> currentCluster = [];
-      int clusterEnd = -1;
+        // Rendszeres tantárgyak listája (Akkordeon nézet)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'TANTÁRGYAK (${subjects.length})',
+              style: TextStyle(
+                color: theme.textColor.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+            Row(
+              children: [
+                Icon(Icons.sort_rounded, size: 14, color: theme.textColor.withValues(alpha: 0.5)),
+                const SizedBox(width: 4),
+                Text(
+                  'Kredit szerint csökkenő',
+                  style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
 
-      for (final item in dayCourses) {
-        if (currentCluster.isEmpty) {
-          currentCluster.add(item);
-          clusterEnd = item.course.endMinutes;
-        } else {
-          if (item.course.startMinutes < clusterEnd) {
-            // Overlaps with current cluster
-            currentCluster.add(item);
-            if (item.course.endMinutes > clusterEnd) {
-              clusterEnd = item.course.endMinutes;
-            }
-          } else {
-            // New cluster
-            clusters.add(currentCluster);
-            currentCluster = [item];
-            clusterEnd = item.course.endMinutes;
-          }
-        }
-      }
-      if (currentCluster.isNotEmpty) {
-        clusters.add(currentCluster);
-      }
+        if (subjects.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Text(
+                'Nincs a megadott szűrésnek megfelelő tantárgy.',
+                style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 13),
+              ),
+            ),
+          )
+        else
+          for (final sub in subjects) _buildSubjectCard(sub, theme, isDark),
+      ],
+    );
+  }
 
-      // In each cluster, assign columnIndex and totalColumns using track coloring
-      for (final cluster in clusters) {
-        final trackEnds = <int>[];
-        for (final item in cluster) {
-          int assignedTrack = -1;
-          for (int t = 0; t < trackEnds.length; t++) {
-            if (trackEnds[t] <= item.course.startMinutes) {
-              assignedTrack = t;
-              trackEnds[t] = item.course.endMinutes;
-              break;
-            }
-          }
-          if (assignedTrack == -1) {
-            assignedTrack = trackEnds.length;
-            trackEnds.add(item.course.endMinutes);
-          }
-          item.columnIndex = assignedTrack;
-        }
+  // Tantárgy kártya akkordeon (Pontosan a media_1792434239894_d76f0856.png szerint)
+  Widget _buildSubjectCard(SubjectData subject, AppPalette theme, bool isDark, {bool isDelayedHighlight = false}) {
+    final isExpanded = _expandedSubjectIds.contains(subject.id);
+    final isRegistered = subject.isRegistered || subject.courses.any((c) => _selectedCourseIds.contains(c.id));
 
-        final numCols = max(1, trackEnds.length);
-        for (final item in cluster) {
-          item.totalColumns = numCols;
-        }
-      }
-    }
-
-    // Now render each layout item
-    for (final entry in coursesByDay.entries) {
-      for (final item in entry.value) {
-        final course = item.course;
-        final subject = item.subject;
-
-        final dayColIndex = _isWeekView ? course.day : 0;
-        final topOffset = 36.0 + ((course.startMinutes - (_startHour * 60)) / 60.0) * _hourHeight;
-        // Ensure cardHeight is at least 48.0 px so 45-min lessons never overflow vertically
-        final cardHeight = max(48.0, (course.durationMinutes / 60.0) * _hourHeight);
-
-        final colWidth = (dayColWidth - 4) / item.totalColumns;
-        final leftOffset = timeColWidth + (dayColIndex * dayColWidth) + (item.columnIndex * colWidth) + 2;
-        final cardWidth = max(28.0, colWidth - 4);
-
-        final isSelected = _selectedCourseIds.contains(course.id);
-        final isGreyed = _isCourseGreyedOut(course, subject);
-        final isColliding = collidingIds.contains(course.id) && isSelected;
-
-        widgets.add(
-          Positioned(
-            top: topOffset,
-            left: leftOffset,
-            width: cardWidth,
-            height: cardHeight,
-            child: GestureDetector(
-              onTap: isGreyed ? null : () => _toggleCourse(course, subject),
-              onLongPress: () => _showCourseDetailsDialog(course, subject),
-              child: Opacity(
-                opacity: isGreyed ? 0.32 : 1.0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? (isColliding
-                            ? AppColors.getTheme().errorRed.withValues(alpha: 0.22)
-                            : AppColors.getTheme().currentClassGreen.withValues(alpha: 0.18))
-                        : AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isColliding
-                          ? AppColors.getTheme().errorRed
-                          : (isSelected
-                              ? AppColors.getTheme().currentClassGreen
-                              : (course.isAlternate
-                                  ? const Color(0xFFFFA502)
-                                  : (subject.isRequired
-                                      ? AppColors.getTheme().errorRed
-                                      : AppColors.getTheme().textColor.withValues(alpha: 0.12)))),
-                      width: isSelected || isColliding ? 1.6 : 1.0,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark ? theme.secondary.withValues(alpha: 0.35) : theme.secondary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDelayedHighlight
+              ? theme.errorRed.withValues(alpha: 0.6)
+              : (isExpanded ? theme.primary : theme.textColor.withValues(alpha: 0.08)),
+          width: isDelayedHighlight ? 1.4 : (isExpanded ? 1.2 : 1.0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Fejléc sor (mindig látható)
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              AppHaptics.lightImpact();
+              setState(() {
+                if (isExpanded) {
+                  _expandedSubjectIds.remove(subject.id);
+                } else {
+                  _expandedSubjectIds.add(subject.id);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                subject.name,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : theme.textColor,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Builder(
+                              builder: (context) {
+                                final classification = _classifySubject(subject);
+                                if (isDelayedHighlight || classification == SubjectClassification.delayed) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: theme.errorRed,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        subject.hasFailedBefore ? '❌ BUKOTT!' : '🚨 CSÚSZÁS!',
+                                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w900),
+                                      ),
+                                    ),
+                                  );
+                                } else if (classification == SubjectClassification.future) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '⚡ ELŐREHOZOTT (${subject.semester}. félév)',
+                                        style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${subject.subjectType} • ${subject.credits} kredit • Ajánlott félév: ${subject.semester} • ${subject.requirementType} • ${subject.code}',
+                          style: TextStyle(
+                            color: theme.textColor.withValues(alpha: isDark ? 0.65 : 0.75),
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 8),
+
+                  // Zöld pipa ikon ha már fel van véve
+                  if (isRegistered) ...[
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00D285),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+
+                  // Lenítás nyíl
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: theme.textColor.withValues(alpha: 0.6),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Lenyitott kurzustartalom (Pontosan mint a media_1792434251711_9aed7e52.png képen!)
+          if (isExpanded) ...[
+            Divider(height: 1, color: theme.textColor.withValues(alpha: 0.08)),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Akciógombok sáv: Tárgy felvétele (kék gomb), Tárgy előkövetelmények, Részletek
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F47D0),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onPressed: () {
+                          AppHaptics.mediumImpact();
+                          Fluttertoast.showToast(msg: "Tárgy kurzusai hozzáadva a tervezőhöz");
+                        },
+                        child: const Text('Tárgy felvétele', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(color: theme.textColor.withValues(alpha: 0.2)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: Icon(Icons.layers_rounded, size: 14, color: theme.textColor),
+                        label: Text('Tárgy előkövetelmények', style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 11.5)),
+                        onPressed: () => _showPrerequisitesDialog(subject),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(color: theme.textColor.withValues(alpha: 0.2)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
+                        icon: Icon(Icons.article_outlined, size: 14, color: theme.textColor),
+                        label: Text('Tárgy részletek', style: TextStyle(color: isDark ? Colors.white : theme.textColor, fontSize: 11.5)),
+                        onPressed: () => _showSubjectDetailsDialog(subject),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Kurzusok csoportosítása
+                  _buildCourseGroupSection('Elmélet - Egy kurzus választása kötelező.', subject, 'Elmélet', theme, isDark),
+                  const SizedBox(height: 8),
+                  _buildCourseGroupSection(
+                    subject.name == 'Szakdolgozat'
+                        ? 'Szakdolgozat konzulens - Egy témavezető választása kötelező.'
+                        : 'Labor / Gyakorlat - Egy kurzus választása kötelező.',
+                    subject,
+                    subject.name == 'Szakdolgozat' ? 'Szakdolgozat konzulens' : 'Labor',
+                    theme,
+                    isDark,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseGroupSection(String headerTitle, SubjectData subject, String targetType, AppPalette theme, bool isDark) {
+    final matchedCourses = subject.courses.where((c) => c.type.contains(targetType) || targetType == 'Labor' && c.type.contains('Gyakorlat')).toList();
+    if (matchedCourses.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          headerTitle,
+          style: TextStyle(
+            color: isDark ? Colors.white : theme.textColor,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        for (final course in matchedCourses) _buildCourseRow(course, subject, theme, isDark),
+      ],
+    );
+  }
+
+  // Kurzussor Switch kapcsolóval + Long-press részletekkel
+  Widget _buildCourseRow(CourseInstance course, SubjectData subject, AppPalette theme, bool isDark) {
+    final isSelected = _selectedCourseIds.contains(course.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? theme.primary.withValues(alpha: isDark ? 0.18 : 0.08)
+            : theme.textColor.withValues(alpha: isDark ? 0.04 : 0.03),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected ? theme.primary : theme.textColor.withValues(alpha: 0.06),
+          width: isSelected ? 1.2 : 1.0,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => _toggleCourse(course, subject),
+          onLongPress: () => _showCourseDetailsDialog(course, subject),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                // Jelölőnégyzet / rádiógomb ikon
+                Icon(
+                  isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                  color: isSelected ? theme.primary : theme.textColor.withValues(alpha: 0.4),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+
+                // Kurzus adatok
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: LedMarqueeText(
-                              text: subject.name,
-                              style: TextStyle(
-                                color: AppColors.getTheme().textColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                              onTap: isGreyed ? null : () => _toggleCourse(course, subject),
-                              onLongPress: () => _showCourseDetailsDialog(course, subject),
+                          Text(
+                            course.code,
+                            style: TextStyle(
+                              color: isDark ? Colors.white : theme.textColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(width: 2),
-                          if (isColliding)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.getTheme().errorRed,
-                                borderRadius: BorderRadius.circular(4),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: theme.textColor.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              course.formatTimeRange(),
+                              style: TextStyle(
+                                color: theme.textColor.withValues(alpha: 0.7),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
                               ),
-                              child: Text(
-                                cardWidth > 75 ? '⚡ Ütközés' : '⚡',
-                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                              ),
-                            )
-                          else if (isSelected)
-                            Icon(Icons.check_circle_rounded, color: AppColors.getTheme().currentClassGreen, size: 13)
-                          else if (course.isAlternate)
-                            Icon(Icons.warning_amber_rounded, color: const Color(0xFFFFA502), size: 13)
-                          else if (subject.isRequired)
-                            Text('!', style: TextStyle(color: AppColors.getTheme().errorRed, fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                          ),
                         ],
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              course.type,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                                fontSize: 9,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Flexible(
-                            child: Text(
-                              course.room,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.end,
-                              style: TextStyle(
-                                color: AppColors.getTheme().roomHighlightColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 9,
-                              ),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        '${course.type} • ${course.tutor} • ${course.room} • ${course.slots}',
+                        style: TextStyle(
+                          color: theme.textColor.withValues(alpha: isDark ? 0.6 : 0.75),
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-              ),
+
+                // Info gomb
+                IconButton(
+                  tooltip: 'Kurzus részletek (vagy hosszan nyomva)',
+                  icon: Icon(Icons.info_outline_rounded, size: 18, color: theme.textColor.withValues(alpha: 0.5)),
+                  onPressed: () => _showCourseDetailsDialog(course, subject),
+                ),
+
+                // Jobb oldal: Tervezőhöz adás kapcsoló
+                Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: isSelected,
+                    activeThumbColor: const Color(0xFF0F47D0),
+                    onChanged: (_) => _toggleCourse(course, subject),
+                  ),
+                ),
+              ],
             ),
-          ),
-        );
-      }
-    }
-
-    return widgets;
-  }
-
-  Widget _buildViewToggleBtn(String label, bool active, VoidCallback onTap) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? AppColors.getTheme().primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : AppColors.getTheme().textColor.withValues(alpha: 0.6),
-            fontSize: 11,
-            fontWeight: active ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLegendItem(Color color, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  // --- 2. NÉZET: HETI ÓRARENDI RÁCS ---
+  Widget _buildGridView(Set<String> collidingIds, AppPalette theme, bool isDark) {
+    final dayNames = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek'];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = _isWeekView ? max(constraints.maxWidth - 48, 520.0) : constraints.maxWidth - 48;
+
+        return Column(
+          children: [
+            // 1. RÖGZÍTETT (STICKY) FEJLÉC SÁV: Nézetváltó sarok + Napok (Hétfő-Péntek)
+            Container(
+              decoration: BoxDecoration(
+                color: theme.rootBackground,
+                border: Border(bottom: BorderSide(color: theme.textColor.withValues(alpha: 0.12))),
+              ),
+              child: Row(
+                children: [
+                  // Bal felső sarokgomb: Heti / Napi nézet gyorsváltó
+                  InkWell(
+                    onTap: () {
+                      AppHaptics.lightImpact();
+                      setState(() => _isWeekView = !_isWeekView);
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 36,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border(right: BorderSide(color: theme.textColor.withValues(alpha: 0.08))),
+                      ),
+                      child: Tooltip(
+                        message: _isWeekView ? 'Váltás napi nézetre' : 'Váltás heti nézetre',
+                        child: Icon(
+                          _isWeekView ? Icons.calendar_view_week_rounded : Icons.calendar_view_day_rounded,
+                          size: 16,
+                          color: const Color(0xFF0F47D0),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Görgethető napfejléc sáv (szinkronban a ráccsal!)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _headerHorizontalController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(), // a rács görgeti automatikusan
+                      child: SizedBox(
+                        width: contentWidth,
+                        child: Row(
+                          children: [
+                            for (int day = 0; day < 5; day++)
+                              if (_isWeekView || day == _selectedDayIndex)
+                                Expanded(
+                                  child: Container(
+                                    height: 36,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: theme.textColor.withValues(alpha: isDark ? 0.06 : 0.035),
+                                      border: Border(left: BorderSide(color: theme.textColor.withValues(alpha: 0.08))),
+                                    ),
+                                    child: Text(
+                                      dayNames[day],
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white : theme.textColor,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Napi nézet esetén vízszintes napválasztó kapszulák
+            if (!_isWeekView)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                color: theme.rootBackground,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (int i = 0; i < 5; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: ChoiceChip(
+                          label: Text(dayNames[i], style: const TextStyle(fontSize: 11)),
+                          selected: _selectedDayIndex == i,
+                          onSelected: (_) {
+                            AppHaptics.lightImpact();
+                            setState(() => _selectedDayIndex = i);
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+            // 2. FÜGGŐLEGESEN GÖRGETHETŐ IDŐSÁV ÉS KURZUSOK
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _verticalScrollController,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Bal oldali időoszlop (06:00 - 22:00)
+                    SizedBox(
+                      width: 48,
+                      child: Column(
+                        children: [
+                          for (int hour = _startHour; hour <= _endHour; hour++)
+                            SizedBox(
+                              height: _hourHeight,
+                              child: Text(
+                                '${hour.toString().padLeft(2, '0')}:00',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: theme.textColor.withValues(alpha: 0.45),
+                                  fontSize: 10.5,
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // Kurzuskártyák oszlopai
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: contentWidth,
+                          child: Row(
+                            children: [
+                              for (int day = 0; day < 5; day++)
+                                if (_isWeekView || day == _selectedDayIndex)
+                                  Expanded(child: _buildDayColumn(day, dayNames[day], collidingIds, theme, isDark)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDayColumn(int day, String dayName, Set<String> collidingIds, AppPalette theme, bool isDark) {
+    // Csak a fix időponttal rendelkező kurzusokat helyezzük el a rácsra
+    final dayCourses = <_CourseLayoutItem>[];
+    for (final s in _subjects) {
+      for (final c in s.courses) {
+        if (c.day == day && c.hasTimetable) {
+          dayCourses.add(_CourseLayoutItem(c, s));
+        }
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: theme.textColor.withValues(alpha: 0.08))),
+      ),
+      child: SizedBox(
+            height: (_endHour - _startHour + 1) * _hourHeight,
+            child: Stack(
+              children: [
+                // Óravonalak
+                for (int hour = _startHour; hour <= _endHour; hour++)
+                  Positioned(
+                    top: (hour - _startHour) * _hourHeight,
+                    left: 0,
+                    right: 0,
+                    child: Divider(height: 1, color: theme.textColor.withValues(alpha: 0.06)),
+                  ),
+
+                // Kurzus kártyák
+                for (final item in dayCourses) _buildCourseGridBlock(item, collidingIds, theme, isDark),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Widget _buildCourseGridBlock(_CourseLayoutItem item, Set<String> collidingIds, AppPalette theme, bool isDark) {
+    final c = item.course;
+    final isSelected = _selectedCourseIds.contains(c.id);
+    final isColliding = collidingIds.contains(c.id);
+
+    final startMin = c.startMinutes - (_startHour * 60);
+    final top = (startMin / 60.0) * _hourHeight;
+    final height = max(48.0, (c.durationMinutes / 60.0) * _hourHeight);
+
+    Color blockBg;
+    Color blockBorder;
+    if (isColliding && isSelected) {
+      blockBg = theme.errorRed.withValues(alpha: isDark ? 0.35 : 0.20);
+      blockBorder = theme.errorRed;
+    } else if (isSelected) {
+      blockBg = const Color(0xFF0F47D0).withValues(alpha: isDark ? 0.40 : 0.25);
+      blockBorder = const Color(0xFF0F47D0);
+    } else {
+      blockBg = theme.textColor.withValues(alpha: isDark ? 0.06 : 0.04);
+      blockBorder = theme.textColor.withValues(alpha: 0.12);
+    }
+
+    return Positioned(
+      top: top,
+      left: 2,
+      right: 2,
+      height: height,
+      child: GestureDetector(
+        onTap: () => _toggleCourse(c, item.subject),
+        onLongPress: () => _showCourseDetailsDialog(c, item.subject),
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: blockBg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: blockBorder, width: isSelected ? 1.4 : 0.8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.subject.name,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : theme.textColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isColliding && isSelected)
+                    const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 12),
+                ],
+              ),
+              Text(
+                '${c.type} • ${c.room}',
+                style: TextStyle(
+                  color: theme.textColor.withValues(alpha: 0.7),
+                  fontSize: 8.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6), fontSize: 10),
-        ),
-      ],
+      ),
+    );
+  }
+
+  // --- LEBEGŐ ALSÓ STAGING SÁV (KOSÁR) ---
+  Widget _buildBottomStagingBar(int totalCredits, int collisions, AppPalette theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.rootBackground,
+        border: Border(top: BorderSide(color: theme.textColor.withValues(alpha: 0.1))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Statisztikák
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    '$totalCredits',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : theme.textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  Text(
+                    ' / 30 kredit felvéve',
+                    style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    '${_selectedCourseIds.length} kurzus',
+                    style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 11),
+                  ),
+                  if (collisions > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '• ⚡ $collisions ütközés',
+                      style: TextStyle(color: theme.errorRed, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ] else ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '• ✓ 0 ütközés',
+                      style: TextStyle(color: theme.currentClassGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+
+          // Véglegesítés gomb
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F47D0),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            ),
+            icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+            label: const Text(
+              'Véglegesítés',
+              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            onPressed: _showCommitDialog,
+          ),
+        ],
+      ),
     );
   }
 }

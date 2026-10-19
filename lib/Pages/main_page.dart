@@ -23,6 +23,7 @@ import '../haptics.dart';
 import '../storage.dart' as storage;
 import '../TimetableElements/timetable_element_widget.dart' as t_table;
 import '../MarkbookElements/markbook_element_widget.dart' as mbook;
+import '../MarkbookElements/progress_summary_header.dart';
 import '../PeriodsElements/periods_element_widget.dart' as priods;
 import '../Navigator/bottomnavigator.dart' as bottomnav;
 import '../Navigator/topnavigator.dart' as topnav;
@@ -33,6 +34,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
+import '../Misc/background_service.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -141,7 +143,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
   static TextEditingController getUserWeekOffsetTextController(){
     return _instance!.settingsUserWeekOffset;
   }
-  static Timer? settingsUserWeekOffsetPeriodicLooper = null;
+  static Timer? settingsUserWeekOffsetPeriodicLooper;
 
   bool canDoCalendarPaging = false;
   int weeksSinceStart = 1;
@@ -199,9 +201,14 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       final hasConn = results.any((r) => r != ConnectivityResult.none);
-      if (hasConn && mounted) {
-        // Csendes háttérbeli frissítés kapcsolat visszatérésekor
-        Future.microtask(() => onCalendarRefresh(false));
+      if (mounted) {
+        setState(() {
+          isCalendarOffline = !hasConn;
+        });
+        if (hasConn) {
+          // Csendes háttérbeli frissítés kapcsolat visszatérésekor
+          Future.microtask(() => onCalendarRefresh(false));
+        }
       }
     });
 
@@ -325,7 +332,17 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     });
 
     AppNotifications.initialize();
+    BackgroundService.registerPeriodicCheck();
     WidgetsBinding.instance.addObserver(this);
+
+    // Óra-reaktivitás: 30 másodpercenként újraszámolja a zajló órát és frissíti a visszaszámlálókat
+    _calendarTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        _setupCalendar(false);
+        setState(() {});
+      }
+    });
+
     _mailCheckTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
       if (mounted && (storage.DataCache.getNeedMessageNotifications() ?? true)) {
         await fetchMails();
@@ -353,33 +370,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       await AppNotifications.cancelScheduledNotifs();
     }).whenComplete((){
       Future.microtask(() async {
-        await fetchCalendar();
-        if(storage.DataCache.getNeedExamNotifications() ?? false){
-          if(storage.DataCache.getHasNetwork()){
-            await _skimForExams();
-          }
-        }
-        setupCalendar(true);
-      });
-
-      Future.microtask(() async {
-        await fetchMarkbook();
-        setupMarkbook();
-      });
-
-      Future.microtask(() async {
-        await fetchPayments();
-        setupPayments();
-      });
-
-      Future.microtask(() async {
-        await fetchPeriods();
-        setupPeriods();
-      });
-
-      Future.microtask(() async {
-        await fetchMails();
-        setupMails();
+        await _performStartupPrefetch();
       });
     });
 
@@ -399,6 +390,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           canDoCalendarPaging = true;
           setupCalendarController(false, false);
         });
+      } else if (!hasCached && mounted) {
+        // Friss bejelentkezés vagy üres gyorsítótár esetén azonnal elindítjuk a naptár lekérését
+        onCalendarRefresh(false);
       }
     });
 
@@ -422,6 +416,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
   void userUnavailableAccountLogout(){
     Future.delayed(Duration.zero, ()async{
+      await BackgroundService.cancelPeriodicCheck();
       ToOfficeService.reset();
       await storage.DataCache.dataWipe();
       await AppNotifications.cancelScheduledNotifs();
@@ -477,6 +472,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
   static void onSemesterChanged(){
     _instance?._onSemesterChanged();
+  }
+
+  static void refreshCalendarView(){
+    _instance?.setState(() {
+      _instance?.setupCalendar(false);
+    });
   }
 
   void _onSemesterChanged(){
@@ -1007,9 +1008,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
                       fullWidthMargin: false,
                       isOverlapping: isOverlapping,
                       embeddedEntries: embeddedForThisItem,
+                      hasToOfficeOverlay: true,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   ToOfficeOverlayWidget(
                     slot: matchedSlot,
                     isCurrent: isSlotCurrent,
@@ -2018,12 +2020,20 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           });
         }
       } else {
-        // A szerver üreset adott vissza (pl. alt-tab utáni session drop vagy hálózati hiba):
-        // Nem írjuk felül a tartós naptárat, megőrizzük a meglévő órákat!
-        isCalendarOffline = true;
+        // A szerver válaszolt, de nincs óra erre a hétre (vagy üres lista):
+        final hasNetworkNow = storage.DataCache.getHasNetwork();
+        if (hasNetworkNow && request.isNotEmpty && request != "ERROR" && !request.contains('"statusCode": 401')) {
+          isCalendarOffline = false;
+        } else {
+          isCalendarOffline = true;
+        }
         if (calendarEntries.isEmpty) {
           final restored = await _loadPermanentCalendarEntries(currentWeekOffset);
           if (restored && mounted) {
+            setupCalendar(currentWeekOffset == 1);
+          } else if (mounted) {
+            // Ha a szerver üres listát adott (pl. szünet) ÉS nincs cache sem,
+            // akkor is fel kell építeni a naptárat (szabadnap), hogy a betöltés eltűnjön
             setupCalendar(currentWeekOffset == 1);
           }
         } else if (mounted) {
@@ -2037,6 +2047,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
         final restored = await _loadPermanentCalendarEntries(currentWeekOffset);
         if (restored && mounted) {
           setupCalendar(currentWeekOffset == 1);
+        } else if (mounted) {
+          setupCalendar(currentWeekOffset == 1);
         }
       } else if (mounted) {
         setState(() {});
@@ -2044,7 +2056,73 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
   }
 
-  Future<void> fetchMarkbook() async{
+  Future<void> _performStartupPrefetch() async {
+    // 0. Biztosítjuk a valós idejű hálózati állapotot
+    await storage.DataCache.checkAndRefreshNetwork();
+
+    // 1. Azonnali helyi megjelenítés cache-ből (0ms késleltetés a felületen)
+    await fetchMarkbook(forceOnline: false);
+    setupMarkbook();
+    await fetchPayments(forceOnline: false);
+    setupPayments();
+    await fetchPeriods(forceOnline: false);
+    setupPeriods();
+    await fetchMails(force: false);
+    setupMails();
+
+    // 2. Ha van internet, szekvenciális szerver-szinkronizáció token védelemmel
+    if (storage.DataCache.getHasNetwork()) {
+      try {
+        await api.Generic.getSafeAccessToken();
+
+        // Naptár és vizsgák (ha még üres)
+        if (calendarEntries.isEmpty) {
+          await fetchCalendar(allowCache: false, silentRefreshIfOnline: true);
+          setupCalendar(true);
+        }
+        if (storage.DataCache.getNeedExamNotifications() ?? false) {
+          await _skimForExams();
+        }
+
+        // Párhuzamosított háttérlekérdezések miután az órarend már megjelent (gyors betöltés)
+        await Future.wait([
+          fetchMails(force: true).then((_) {
+            if (mounted) setupMails();
+          }).catchError((e) => debugPrint("fetchMails háttérhiba: $e")),
+
+          fetchMarkbook(forceOnline: true).then((_) {
+            if (mounted) setupMarkbook();
+          }).catchError((e) => debugPrint("fetchMarkbook háttérhiba: $e")),
+
+          fetchPayments(forceOnline: true).then((_) {
+            if (mounted) setupPayments();
+          }).catchError((e) => debugPrint("fetchPayments háttérhiba: $e")),
+
+          fetchPeriods(forceOnline: true).then((_) {
+            if (mounted) setupPeriods();
+          }).catchError((e) => debugPrint("fetchPeriods háttérhiba: $e")),
+        ]);
+      } catch (e) {
+        debugPrint("Hiba az indításkori háttér-előreolvasás során: $e");
+      } finally {
+        if (mounted && isLoadingCalendar) {
+          setState(() {
+            isLoadingCalendar = false;
+            canDoCalendarPaging = true;
+          });
+        }
+      }
+    } else {
+      if (mounted && isLoadingCalendar) {
+        setState(() {
+          isLoadingCalendar = false;
+          canDoCalendarPaging = true;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchMarkbook({bool forceOnline = false}) async{
     markbookEntries.clear();
     bool hasCachedMarkbook= storage.DataCache.getHasCachedMarkbook() ?? false;
     final cacheTime = await storage.getString('MarkbookCacheTime');
@@ -2056,7 +2134,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
 
     // if we had a save, and the cached value is not older than a day, and term matches, we can load that up
-    if(hasCachedMarkbook && (cachedTerm == currentTerm || currentTerm.isEmpty) && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!forceOnline && hasCachedMarkbook && (cachedTerm == currentTerm || currentTerm.isEmpty) && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       final len = await storage.getInt('CachedMarkbookLength');
       if (len != null && len > 0) {
         for(int i = 0; i < len; i++){
@@ -2069,6 +2147,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           return;
         }
       }
+    }
+
+    if (!forceOnline) {
+      return;
     }
 
     //otherwise, just fetch again
@@ -2090,7 +2172,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
   }
 
-  Future<void> fetchPayments() async{
+  Future<void> fetchPayments({bool forceOnline = false}) async{
     paymentsEntries.clear();
     bool hasCachedPayments = storage.DataCache.getHasCachedPayments() ?? false;
 
@@ -2101,7 +2183,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!forceOnline && hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       final len = await storage.getInt('CachedPaymentsLength');
       if (len != null && len > 0) {
         for(int i = 0; i < len; i++){
@@ -2115,6 +2197,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           return;
         }
       }
+    }
+
+    if (!forceOnline) {
+      return;
     }
 
     //otherwise, just fetch again
@@ -2136,7 +2222,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
   }
 
-  Future<void> fetchPeriods() async{
+  Future<void> fetchPeriods({bool forceOnline = false}) async{
     periodEntries.clear();
     bool hasCachedPeriods = storage.DataCache.getHasCachedPeriods() ?? false;
 
@@ -2149,7 +2235,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
 
     // if we had a save, and the cached value is not older than a day, and term matches, we can load that up
-    if(hasCachedPeriods && (cachedTerm == currentTerm || currentTerm.isEmpty) && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!forceOnline && hasCachedPeriods && (cachedTerm == currentTerm || currentTerm.isEmpty) && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       final len = await storage.getInt('CachedPeriodsLength');
       if (len != null && len > 0) {
         for(int i = 0; i < len; i++){
@@ -2163,6 +2249,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           return;
         }
       }
+    }
+
+    if (!forceOnline) {
+      return;
     }
 
     //otherwise, just fetch again
@@ -2209,6 +2299,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
         unreadMailCount = localUnread;
         storage.DataCache.setUnreadMailCount(unreadMailCount);
       }
+      return;
+    }
+
+    if (!force) {
       return;
     }
 
@@ -2338,7 +2432,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     clearMarkbook();
     await storage.DataCache.setHasCachedMarkbook(0);
     await api.TermsRequest.getTerms(forceRefresh: true);
-    await fetchMarkbook();
+    await fetchMarkbook(forceOnline: true);
     setupMarkbook();
     _markbookDebounce = false;
   }
@@ -2358,7 +2452,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     _paymentsDebounce = true;
     clearPayments();
     await storage.DataCache.setHasCachedPayments(0);
-    await fetchPayments();
+    await fetchPayments(forceOnline: true);
     setupPayments();
     _paymentsDebounce = false;
   }
@@ -2379,7 +2473,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     clearPeriods();
     await storage.DataCache.setHasCachedPeriods(0);
     await api.TermsRequest.getTerms(forceRefresh: true);
-    await fetchPeriods();
+    await fetchPeriods(forceOnline: true);
     setupPeriods();
     _periodsDebounce = false;
   }
@@ -2399,7 +2493,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     _mailsDebounce = true;
     clearMails();
     await storage.DataCache.setHasCachedMail(0);
-    await fetchMails();
+    await fetchMails(force: true);
     setupMails();
     _mailsDebounce = false;
   }
@@ -2794,159 +2888,18 @@ class MarkbookPageWidget extends StatelessWidget{
                         children: [
                           Visibility(
                             visible: homePage.markbookList.isNotEmpty,
-                            child: Builder(
-                              builder: (context) {
-                                final theme = AppColors.getTheme();
-                                final isDark = theme.isDark;
-                                return Container(
-                                  margin: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  width: MediaQuery.of(context).size.width,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? theme.secondary.withValues(alpha: 0.35) : theme.secondary.withValues(alpha: 0.10),
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    border: Border.all(
-                                      color: theme.textColor.withValues(alpha: isDark ? 0.08 : 0.06),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  totalAvg.isNaN || totalAvg <= 0 ? '-' : totalAvg.toStringAsFixed(2),
-                                                  style: TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: theme.textColor,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  api.Generic.reactionForAvg(totalAvg),
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontFamily: 'Noto Color Emoji',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'SÚLYOZOTT ÁTLAG',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: theme.textColor.withValues(alpha: 0.55),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 1,
-                                        height: 36,
-                                        color: theme.textColor.withValues(alpha: 0.08),
-                                      ),
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  totalAvg30.isNaN || totalAvg30 <= 0 ? '-' : totalAvg30.toStringAsFixed(2),
-                                                  style: TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: theme.textColor,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  api.Generic.reactionForAvg(totalAvg30),
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontFamily: 'Noto Color Emoji',
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'ÖSZTÖNDÍJINDEX',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: theme.textColor.withValues(alpha: 0.55),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 1,
-                                        height: 36,
-                                        color: theme.textColor.withValues(alpha: 0.08),
-                                      ),
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: theme.roomHighlightColor.withValues(alpha: 0.18),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                '$totalCredits',
-                                                style: TextStyle(
-                                                  fontFamily: 'monospace',
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: theme.roomHighlightColor,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'KREDIT',
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: theme.textColor.withValues(alpha: 0.55),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
+                            child: ProgressSummaryHeader(
+                              semesterWeightedAvg: totalAvg,
+                              semesterScholarshipIndex: totalAvg30,
+                              semesterCredits: homePage.markbookEntries.fold(0, (sum, e) => sum + e.credit) > 0
+                                  ? homePage.markbookEntries.fold(0, (sum, e) => sum + e.credit)
+                                  : totalCredits,
+                              semesterCompletedCredits: totalCredits,
+                              termName: storage.DataCache.getSelectedTermName(),
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.only(top: 6, bottom: 90),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.start,
                               mainAxisSize: MainAxisSize.max,
@@ -3024,7 +2977,7 @@ class PaymentsPageWidget extends StatelessWidget{
                   physics: const AlwaysScrollableScrollPhysics(),
                   scrollDirection: Axis.vertical,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.only(top: 6, bottom: 90),
                     child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         mainAxisSize: MainAxisSize.max,
@@ -3083,7 +3036,7 @@ class PeriodsPageWidget extends StatelessWidget{
                   physics: const AlwaysScrollableScrollPhysics(),
                   scrollDirection: Axis.vertical,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.only(top: 6, bottom: 90),
                     child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
                         mainAxisSize: MainAxisSize.max,
@@ -3219,7 +3172,7 @@ class MailsPageWidget extends StatelessWidget{
                           scrollDirection: Axis.vertical,
                           controller: homePage.currentMailPageController,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.only(top: 6, bottom: 90),
                             child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.max,

@@ -579,6 +579,77 @@ class _ProfileHubPageState extends State<ProfileHubPage> with SingleTickerProvid
     );
   }
 
+  void _showSecurityLockDialog(String featureTitle) {
+    AppHaptics.mediumImpact();
+    final theme = AppColors.getTheme();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.rootBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_rounded, color: Colors.amber, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Biztonsági Védelmi Zár',
+                style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A $featureTitle még nem elérhető funkció.',
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.85), fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.textColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.textColor.withValues(alpha: 0.1)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: theme.primary, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Ez a védelem meggátolja a bejelentkezési adatok illetéktelen harmadik féltől történő módosítását.',
+                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.7), fontSize: 11.5, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Megértettem',
+              style: TextStyle(color: theme.primary, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ==========================================
   // TAB 2: PROFIL BEÁLLÍTÁSOK & BIZTONSÁG
   // ==========================================
@@ -745,7 +816,7 @@ class _ProfileHubPageState extends State<ProfileHubPage> with SingleTickerProvid
               const SizedBox(height: 10),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppColors.getTheme().primary,
+                activeThumbColor: AppColors.getTheme().primary,
                 title: Text(
                   'Bejelentkezési név mutatása',
                   style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13, fontWeight: FontWeight.w600),
@@ -763,7 +834,7 @@ class _ProfileHubPageState extends State<ProfileHubPage> with SingleTickerProvid
               Divider(color: AppColors.getTheme().textColor.withValues(alpha: 0.08), height: 1),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppColors.getTheme().primary,
+                activeThumbColor: AppColors.getTheme().primary,
                 title: Text(
                   'Becenév használata',
                   style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13, fontWeight: FontWeight.w600),
@@ -803,7 +874,7 @@ class _ProfileHubPageState extends State<ProfileHubPage> with SingleTickerProvid
 
         const SizedBox(height: 12),
 
-        // Biztonság & 2FA kártya
+        // Biztonság & 2FA kártya (Lakatolva a felhasználó kérésére az egyetemi biztonsági házirendnek megfelelően)
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -816,111 +887,154 @@ class _ProfileHubPageState extends State<ProfileHubPage> with SingleTickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Biztonság & Hitelesítés',
-                style: TextStyle(
-                  color: AppColors.getTheme().primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 0.5,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Biztonság & Hitelesítés',
+                    style: TextStyle(
+                      color: AppColors.getTheme().primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_rounded, size: 11, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Védett funkció',
+                          style: TextStyle(color: Colors.amber[800] ?? Colors.amber, fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
-              // 2FA Info
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.3),
+              // 2FA Info (Kétlépcsős azonosítás)
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => _showSecurityLockDialog("Kétlépcsős Azonosítás (2FA)"),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.3),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.getTheme().currentClassGreen.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.verified_user_rounded, size: 20, color: AppColors.getTheme().currentClassGreen),
                       ),
-                      child: Icon(Icons.lock_rounded, size: 20, color: AppColors.getTheme().currentClassGreen),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Kétlépcsős Azonosítás (2FA)',
-                            style: TextStyle(
-                              color: AppColors.getTheme().textColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Kétlépcsős Azonosítás (2FA)',
+                              style: TextStyle(
+                                color: AppColors.getTheme().textColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
-                          Text(
-                            'A Neptun rendszerben aktív és védett',
-                            style: TextStyle(
-                              color: AppColors.getTheme().currentClassGreen,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                            Text(
+                              'Neptun rendszerben aktív és ellenőrzött',
+                              style: TextStyle(
+                                color: AppColors.getTheme().currentClassGreen,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      Icon(Icons.info_outline_rounded, size: 18, color: AppColors.getTheme().textColor.withValues(alpha: 0.35)),
+                    ],
+                  ),
                 ),
               ),
 
               const SizedBox(height: 10),
 
-              // Password info
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
+              // Password info (Jelszó Módosítás - Lakatolva)
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => _showSecurityLockDialog("Jelszó Módosítás"),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.3),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.getTheme().textColor.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.key_rounded, size: 20, color: Colors.amber),
                       ),
-                      child: Icon(Icons.key_rounded, size: 20, color: AppColors.getTheme().primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Jelszó Módosítás',
-                            style: TextStyle(
-                              color: AppColors.getTheme().textColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Jelszó Módosítás',
+                                  style: TextStyle(
+                                    color: AppColors.getTheme().textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.amber),
+                              ],
                             ),
-                          ),
-                          Text(
-                            _isPasswordAllowed ? 'Jogosultság engedélyezve' : 'Központi adminisztrátor által tiltva',
-                            style: TextStyle(
-                              color: _isPasswordAllowed ? AppColors.getTheme().textColor.withValues(alpha: 0.6) : AppColors.getTheme().errorRed,
-                              fontSize: 11,
+                            Text(
+                              _isPasswordAllowed
+                                  ? '🔒 Lakatolva: Kizárólag Neptun Weben módosítható'
+                                  : 'Központi adminisztrátor által tiltva',
+                              style: TextStyle(
+                                color: _isPasswordAllowed ? (Colors.amber[800] ?? Colors.amber) : AppColors.getTheme().errorRed,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      Icon(Icons.info_outline_rounded, size: 18, color: Colors.amber.withValues(alpha: 0.6)),
+                    ],
+                  ),
                 ),
               ),
             ],

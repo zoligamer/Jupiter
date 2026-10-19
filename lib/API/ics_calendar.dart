@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:jupiter/API/api_coms.dart';
 import '../local_file_actions.dart';
 
@@ -22,7 +22,7 @@ class ICSCalendar{
   static void icsStream(Stream<List<int>> stream, {bool? firstLine}){
     _streamingIcs = true;
     final converter = ICSStreamConverter();
-    stream.transform(utf8.decoder).transform(new LineSplitter()).listen(cancelOnError: false, onError: (_){}, onDone: (){
+    stream.transform(utf8.decoder).transform(LineSplitter()).listen(cancelOnError: false, onError: (_){}, onDone: (){
       _streamingIcs = false;
     }, firstLine != null && firstLine ? converter.takeLineFirstEvent : converter.takeLine);
   }
@@ -66,7 +66,7 @@ class ICSCalendar{
 class ICSStreamConverter{
   static List<CalendarEntry> calendarEntries = [];
 
-  List<String> _buffer = ['', '', '', ''];
+  final List<String> _buffer = ['', '', '', ''];
   bool _isReading = false;
 
   static const String startKeyword = 'BEGIN:VEVENT';

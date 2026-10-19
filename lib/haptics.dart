@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:jupiter/storage.dart';
 import 'package:vibration/vibration.dart';
 
@@ -7,7 +7,7 @@ class AppHaptics{
 
   static void initialise(){
     Future.delayed(Duration.zero, ()async{
-      final value = await DataCache.getNeedsHaptics()!;
+      final value = DataCache.getNeedsHaptics()!;
       if(value){
         await setVibrationState(true);
         return;
@@ -21,7 +21,7 @@ class AppHaptics{
       return false;
     }
     final canVibrate = await Vibration.hasVibrator();
-    final settingsVibrate = await DataCache.getNeedsHaptics()!;
+    final settingsVibrate = DataCache.getNeedsHaptics()!;
     if(!canVibrate || !settingsVibrate){
       return false;
     }
@@ -34,7 +34,7 @@ class AppHaptics{
   }
 
   static Future<bool> getVibrationState()async{
-    return await DataCache.getNeedsHaptics()!;
+    return DataCache.getNeedsHaptics()!;
   }
 
   static bool getVibrationStateSync(){

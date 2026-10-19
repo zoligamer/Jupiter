@@ -18,7 +18,6 @@ import '../Pages/document_storage_page.dart';
 import '../Pages/subject_registration_page.dart';
 import '../Misc/auto_updater.dart';
 import 'to_office_service.dart';
-import 'dart:convert' as conv;
 
 class AppDrawer extends StatefulWidget {
   final String loggedInUsername;
@@ -38,7 +37,6 @@ class _AppDrawerState extends State<AppDrawer> {
   String _accountCurrency = 'HUF';
   bool _isLoadingBalance = true;
   int _unreadCount = 0;
-  String? _userAvatarBase64;
   ImageProvider? _cachedAvatarImageProvider;
   String? _fallbackColorHex;
 
@@ -50,7 +48,6 @@ class _AppDrawerState extends State<AppDrawer> {
     _accountCurrency = storage.DataCache.getAccountBalanceCurrency();
     _unreadCount = storage.DataCache.getUnreadMailCount();
     _isLoadingBalance = _accountBalance == null;
-    _userAvatarBase64 = storage.DataCache.getCachedUserAvatarBase64();
     final avatarBytes = storage.DataCache.getCachedAvatarBytes();
     if (avatarBytes != null && avatarBytes.isNotEmpty) {
       _cachedAvatarImageProvider = MemoryImage(avatarBytes);
@@ -67,7 +64,6 @@ class _AppDrawerState extends State<AppDrawer> {
       if (mounted && img != null && img.isNotEmpty) {
         final avatarBytes = storage.DataCache.getCachedAvatarBytes();
         setState(() {
-          _userAvatarBase64 = img;
           if (avatarBytes != null && avatarBytes.isNotEmpty) {
             _cachedAvatarImageProvider = MemoryImage(avatarBytes);
           }
@@ -282,7 +278,6 @@ class _AppDrawerState extends State<AppDrawer> {
                     MaterialPageRoute(builder: (context) => const ProfileHubPage()),
                   ).then((_) {
                     setState(() {
-                      _userAvatarBase64 = storage.DataCache.getCachedUserAvatarBase64();
                       _fallbackColorHex = storage.DataCache.getCachedFallbackColor();
                     });
                   });
@@ -652,9 +647,25 @@ class _AppDrawerState extends State<AppDrawer> {
                     ),
                     ListTile(
                       leading: Icon(Icons.auto_awesome_motion_rounded, color: const Color(0xFF7158E2)),
-                      title: Text(
-                        'Tárgyfelvétel (Ghost Órarend)',
-                        style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                      title: Row(
+                        children: [
+                          Text(
+                            'Tárgyfelvétel',
+                            style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F47D0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'TEST',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                       trailing: Icon(Icons.chevron_right_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.3)),
                       onTap: () {

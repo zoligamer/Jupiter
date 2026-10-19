@@ -80,43 +80,45 @@ class TopNavigatorWidget extends StatelessWidget {
                   const SizedBox(height: 14),
 
                   // Különálló kapcsoló 1: Tanulmányi Iroda
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: showTO
-                            ? Colors.orange.withValues(alpha: 0.5)
-                            : AppColors.getTheme().textColor.withValues(alpha: 0.08),
-                      ),
-                    ),
-                    child: SwitchListTile(
-                      activeColor: Colors.orange,
-                      title: Text(
-                        AppStrings.getLanguagePack().calendarFilter_TO,
-                        style: TextStyle(
-                          color: AppColors.getTheme().textColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                  if (storage.DataCache.getEnableToOfficeToggler()) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.getTheme().textColor.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: showTO
+                              ? Colors.orange.withValues(alpha: 0.5)
+                              : AppColors.getTheme().textColor.withValues(alpha: 0.08),
                         ),
                       ),
-                      subtitle: Text(
-                        AppStrings.getLanguagePack().calendarFilter_TODesc,
-                        style: TextStyle(
-                          color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                          fontSize: 12,
+                      child: SwitchListTile(
+                        activeThumbColor: Colors.orange,
+                        title: Text(
+                          AppStrings.getLanguagePack().calendarFilter_TO,
+                          style: TextStyle(
+                            color: AppColors.getTheme().textColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
+                        subtitle: Text(
+                          AppStrings.getLanguagePack().calendarFilter_TODesc,
+                          style: TextStyle(
+                            color: AppColors.getTheme().textColor.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        value: showTO,
+                        onChanged: (bool val) async {
+                          AppHaptics.lightImpact();
+                          await storage.DataCache.setShowToOfficeSchedule(val);
+                          setSheetState(() {});
+                          homePage.setupCalendar(false);
+                        },
                       ),
-                      value: showTO,
-                      onChanged: (bool val) async {
-                        AppHaptics.lightImpact();
-                        await storage.DataCache.setShowToOfficeSchedule(val);
-                        setSheetState(() {});
-                        homePage.setupCalendar(false);
-                      },
                     ),
-                  ),
+                  ],
 
                   // Különálló kapcsoló 2: Időszakok az órarendben
                   Container(
@@ -130,7 +132,7 @@ class TopNavigatorWidget extends StatelessWidget {
                       ),
                     ),
                     child: SwitchListTile(
-                      activeColor: AppColors.getTheme().primary,
+                      activeThumbColor: AppColors.getTheme().primary,
                       title: Text(
                         AppStrings.getLanguagePack().calendarFilter_Periods,
                         style: TextStyle(
@@ -300,61 +302,66 @@ class TopNavigatorWidget extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (homePage.currentView == 0) ...[
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        AppHaptics.lightImpact();
-                        final cur = storage.DataCache.getShowToOfficeSchedule();
-                        await storage.DataCache.setShowToOfficeSchedule(!cur);
-                        homePage.setupCalendar(false);
-                      },
-                      onLongPress: () => _showCalendarFilterSheet(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: storage.DataCache.getShowToOfficeSchedule()
-                              ? Colors.orange.withValues(alpha: 0.12)
-                              : AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                if (homePage.currentView == 0 && storage.DataCache.getEnableToOfficeToggler()) ...[
+                  Builder(
+                    builder: (context) {
+                      final isToActive = storage.DataCache.getShowToOfficeSchedule();
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: storage.DataCache.getShowToOfficeSchedule()
-                                ? Colors.orange.withValues(alpha: 0.5)
-                                : AppColors.getTheme().textColor.withValues(alpha: 0.1),
+                          onTap: () async {
+                            AppHaptics.lightImpact();
+                            final cur = storage.DataCache.getShowToOfficeSchedule();
+                            await storage.DataCache.setShowToOfficeSchedule(!cur);
+                            homePage.setupCalendar(false);
+                          },
+                          onLongPress: () => _showCalendarFilterSheet(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isToActive
+                                  ? Colors.orange.withValues(alpha: 0.12)
+                                  : AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isToActive
+                                    ? Colors.orange.withValues(alpha: 0.5)
+                                    : AppColors.getTheme().textColor.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: isToActive
+                                        ? Colors.orange
+                                        : AppColors.getTheme().textColor.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  isToActive
+                                      ? AppStrings.getLanguagePack().topbar_TOOn
+                                      : AppStrings.getLanguagePack().topbar_TOOff,
+                                  style: TextStyle(
+                                    color: isToActive
+                                        ? AppColors.getTheme().primary
+                                        : AppColors.getTheme().textColor.withValues(alpha: 0.6),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: storage.DataCache.getShowToOfficeSchedule()
-                                    ? Colors.orange
-                                    : AppColors.getTheme().textColor.withValues(alpha: 0.4),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              storage.DataCache.getShowToOfficeSchedule()
-                                  ? AppStrings.getLanguagePack().topbar_TOOn
-                                  : AppStrings.getLanguagePack().topbar_TOOff,
-                              style: TextStyle(
-                                color: storage.DataCache.getShowToOfficeSchedule()
-                                    ? AppColors.getTheme().primary
-                                    : AppColors.getTheme().textColor.withValues(alpha: 0.6),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 6),
                 ],

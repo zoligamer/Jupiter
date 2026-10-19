@@ -3,6 +3,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:jupiter/colors.dart';
 import 'package:jupiter/storage.dart';
 import 'package:provider/provider.dart';
+import 'Misc/background_service.dart';
 import 'Pages/startup_page.dart';
 import 'language.dart';
 
@@ -10,6 +11,7 @@ void main() {
   //DataCache.dataWipeNoKeep();
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  BackgroundService.initialize();
   DataCache.loadThemeOnly().whenComplete((){
     AppColors.initialize();
     AppStrings.initialize();
