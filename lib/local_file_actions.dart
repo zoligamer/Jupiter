@@ -39,6 +39,21 @@ class LocalFileActions{
     return clone.path;
   }
 
+  /// Deletes cached PDFs, installers and the calendar copy (logout).
+  static Future<void> clearTempFiles() async {
+    try {
+      final dir = Directory(await _getTempDirectory());
+      if (!await dir.exists()) return;
+      await for (final entity in dir.list()) {
+        if (entity is! File) continue;
+        final lower = entity.path.toLowerCase();
+        if (lower.endsWith('.pdf') || lower.endsWith('.apk') || lower.endsWith(IcsImportHelper.ICSFILENAME.toLowerCase())) {
+          try { await entity.delete(); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
   static Future<Stream<List<int>>?> openFileReadStream(String path)async{
     final file = File(path);
     if(!await file.exists()){

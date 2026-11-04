@@ -54,6 +54,9 @@ import '../storage.dart';
     static const String DOCUMENT_STORAGE_BY_STUDENT_URL = "/api/DocumentContainer/GetDocumentsUploadedByStudent";
     static const String DOCUMENT_STORAGE_TR_URL = "/api/DocumentContainer/GetTrDocuments";
     static const String DOCUMENT_STORAGE_DOWNLOAD_URL = "/api/DocumentContainer/DownloadDocumentationOrZip";
+    static const String PACK_URL_PREFIX = 'https://raw.githubusercontent.com/zoligamer/Jupiter/';
+    /// Packs feed the UI directly, so only this repository is trusted.
+    static bool isTrustedPackUrl(String url) => url.startsWith(PACK_URL_PREFIX);
   }
   
   class _APIRequest{
@@ -214,6 +217,7 @@ import '../storage.dart';
     }
 
     static bool _isRefreshingToken = false;
+    static int _reloginFailures = 0;
 
     static Future<bool> tryTokenRefresh() async {
       try {
@@ -297,22 +301,28 @@ import '../storage.dart';
           // --- ÚJ VERSENYHELYZET GÁTLÓ LOGIKA ---
           if (!_isRefreshingToken) {
             _isRefreshingToken = true; // Bezárjuk a lakatot
-            debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
+            try {
+              debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
 
             bool refreshSuccess = false;
             if (storage.DataCache.getIsModernApi()) {
               refreshSuccess = await tryTokenRefresh();
             }
 
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            if (!refreshSuccess && _reloginFailures < 3) {
+              final username = storage.DataCache.getUsername();
+              final password = storage.DataCache.getPassword();
+              final baseUrl = storage.DataCache.getInstituteUrl();
+              // Bounded: unbounded retries after a password change can lock the account.
+              if (username != null && password != null && baseUrl != null) {
+                final result = await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+                _reloginFailures = result == 0 ? _reloginFailures + 1 : 0;
+              }
             }
 
-            _isRefreshingToken = false; // Kinyitjuk a lakatot
+            } finally {
+              _isRefreshingToken = false;
+            }
           } else {
             // Ha egy másik fül már frissíti a tokent, várunk rá!
             debug.log("Egy másik fül már frissít, várakozás...");
@@ -362,17 +372,24 @@ import '../storage.dart';
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
           if (!_isRefreshingToken) {
             _isRefreshingToken = true;
-            bool refreshSuccess = false;
+            try {
+              bool refreshSuccess = false;
             if (storage.DataCache.getIsModernApi()) {
               refreshSuccess = await tryTokenRefresh();
             }
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            if (!refreshSuccess && _reloginFailures < 3) {
+              final username = storage.DataCache.getUsername();
+              final password = storage.DataCache.getPassword();
+              final baseUrl = storage.DataCache.getInstituteUrl();
+              // Bounded: unbounded retries after a password change can lock the account.
+              if (username != null && password != null && baseUrl != null) {
+                final result = await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+                _reloginFailures = result == 0 ? _reloginFailures + 1 : 0;
+              }
             }
-            _isRefreshingToken = false;
+            } finally {
+              _isRefreshingToken = false;
+            }
           } else {
             while (_isRefreshingToken) {
               await Future.delayed(const Duration(milliseconds: 100));
@@ -407,17 +424,24 @@ import '../storage.dart';
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
           if (!_isRefreshingToken) {
             _isRefreshingToken = true;
-            bool refreshSuccess = false;
+            try {
+              bool refreshSuccess = false;
             if (storage.DataCache.getIsModernApi()) {
               refreshSuccess = await tryTokenRefresh();
             }
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            if (!refreshSuccess && _reloginFailures < 3) {
+              final username = storage.DataCache.getUsername();
+              final password = storage.DataCache.getPassword();
+              final baseUrl = storage.DataCache.getInstituteUrl();
+              // Bounded: unbounded retries after a password change can lock the account.
+              if (username != null && password != null && baseUrl != null) {
+                final result = await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+                _reloginFailures = result == 0 ? _reloginFailures + 1 : 0;
+              }
             }
-            _isRefreshingToken = false;
+            } finally {
+              _isRefreshingToken = false;
+            }
           } else {
             while (_isRefreshingToken) {
               await Future.delayed(const Duration(milliseconds: 100));
@@ -665,6 +689,7 @@ import '../storage.dart';
         return 1;
       }
 
+      APISession.clear();
       String url = normalizeLoginUrl(rawUrl);
       bool containsAspx = url.toLowerCase().contains('.aspx');
 
@@ -2899,7 +2924,7 @@ class CashinEntry{
             }
             String newText = match.group(1)!;
 
-            if(!newText.contains('@') || !newText.contains('https://') || !newText.contains('http://')){
+            if(!newText.contains('@') && !newText.contains('https://') && !newText.contains('http://')){
               final htmlLink3 = RegExp(r'href="(.*?)"');
               final match = htmlLink3.firstMatch(matches[i]);
               if (match == null) {
@@ -3016,6 +3041,9 @@ class CashinEntry{
         return null;
       }
 
+      if (!URLs.isTrustedPackUrl(langUrl)) {
+        return null;
+      }
       final url = Uri.parse(langUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
@@ -3122,6 +3150,9 @@ class CashinEntry{
         return null;
       }
 
+      if (!URLs.isTrustedPackUrl(themeUrl)) {
+        return null;
+      }
       final url = Uri.parse(themeUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
@@ -4247,3 +4278,17 @@ class CashinEntry{
         };
     }
   }
+
+/// Per-user static state; cleared on logout and before a new login.
+class APISession {
+  static void clear() {
+    _APIRequest._cookieJar.clear();
+    CalendarRequest._cachedTrainingIds = null;
+  }
+
+  static void logout() {
+    clear();
+    _APIRequest._isRefreshingToken = false;
+    _APIRequest._reloginFailures = 0;
+  }
+}

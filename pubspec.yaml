@@ -61,6 +61,7 @@ dependencies:
   dio: ^5.9.2
   open_filex: ^4.7.0
   workmanager: ^0.10.10
+  crypto: ^3.0.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

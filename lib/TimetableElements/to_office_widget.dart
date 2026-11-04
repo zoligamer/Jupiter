@@ -163,7 +163,7 @@ class ToOfficeOverlayWidget extends StatelessWidget {
                 onPressed: () async {
                   AppHaptics.lightImpact();
                   final uri = Uri.parse(ToOfficeService.currentToUrl);
-                  if (await canLaunchUrl(uri)) {
+                  if (uri.scheme == 'https' && await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
                 },
