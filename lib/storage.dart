@@ -243,9 +243,11 @@ class DataCache{
       if (oldPassword != null && oldPassword.isNotEmpty) {
         _password = oldPassword;
         await _secureStorage.write(key: 'neptun_password', value: oldPassword);
-        await (await SharedPreferences.getInstance()).remove('Password');
 
       }
+    }
+    if ((_password ?? '').isNotEmpty) {
+      await (await SharedPreferences.getInstance()).remove('Password');
     }
 
     _accessToken = await _secureStorage.read(key: 'neptun_jwt_token');
@@ -255,8 +257,10 @@ class DataCache{
       if (oldToken != null && oldToken.isNotEmpty) {
         _accessToken = oldToken;
         await _secureStorage.write(key: 'neptun_jwt_token', value: oldToken);
-        await (await SharedPreferences.getInstance()).remove('AccessToken');
       }
+    }
+    if ((_accessToken ?? '').isNotEmpty) {
+      await (await SharedPreferences.getInstance()).remove('AccessToken');
     }
 
     _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
@@ -534,6 +538,8 @@ class DataCache{
     _instance._accessToken = null;
     _instance._refreshToken = null;
     _instance._sessionCookieName = null;
+    _instance._cachedDeviceCookie = null;
+    _instance._stickyServerId = null;
     _instance._cachedPersonalDataRaw = null;
     _instance._cachedPersonalContactsRaw = null;
     _instance._cachedPersonalDocumentsRaw = null;
