@@ -157,7 +157,10 @@
             <span>↓</span>
           </a>
           <div class="card-checksum-wrap">
-            <span>SHA-1: <span id="universal-sha1-val">88eb423f6b...</span></span>
+            <div class="checksum-content">
+              <span class="checksum-label">SHA-1:</span>
+              <span id="universal-sha1-val" class="checksum-hash">88eb423f6b6e3afbe6d5e7005ba7c958fd2ba6a8</span>
+            </div>
             <button id="copy-sha1-btn" class="copy-hash-btn" title="SHA-1 másolása">Másolás</button>
           </div>
         </div>
@@ -442,6 +445,12 @@
               <a href="https://zoligamer.github.io/NeptunIOS/" class="source-anchor" target="_blank" rel="noopener noreferrer">https://zoligamer.github.io/NeptunIOS/</a>
               <span class="source-note">Közvetlenül böngészőből futtatható webes kliens iOS eszközökhöz.</span>
             </li>
+
+            <li class="source-item">
+              <span class="source-role">Visszajelzés &amp; Hibabejelentés (Tally Form)</span>
+              <a href="https://tally.so/r/2jX62M" class="source-anchor" target="_blank" rel="noopener noreferrer">https://tally.so/r/2jX62M</a>
+              <span class="source-note">Közvetlen visszajelzési és hibabejelentési űrlap a fejlesztő felé.</span>
+            </li>
           </ul>
         </div>
 
@@ -504,7 +513,8 @@
             <li><a href="https://github.com/zoligamer/Jupiter" target="_blank" rel="noopener noreferrer">GitHub Kódtár</a></li>
             <li><a href="https://github.com/zoligamer/Jupiter/releases/latest" target="_blank" rel="noopener noreferrer">Legfrissebb Kiadások</a></li>
             <li><a href="https://zoligamer.github.io/NeptunIOS/" target="_blank" rel="noopener noreferrer">NeptunIOS Kliens</a></li>
-            <li><a href="https://github.com/zoligamer/Jupiter/issues" target="_blank" rel="noopener noreferrer">Hibabejelentés</a></li>
+            <li><a href="https://tally.so/r/2jX62M" target="_blank" rel="noopener noreferrer">💬 Visszajelzés / Hiba (Tally)</a></li>
+            <li><a href="https://github.com/zoligamer/Jupiter/issues" target="_blank" rel="noopener noreferrer">GitHub Hibajegyek</a></li>
           </ul>
         </div>
       </div>
@@ -515,6 +525,23 @@
       </div>
     </div>
   </footer>
+
+  <!-- Bug Report & Feedback Widget -->
+  <button 
+    id="tally-feedback-btn"
+    class="tally-feedback-btn"
+    data-tally-open="2jX62M" 
+    data-tally-layout="modal" 
+    data-tally-width="600"
+    data-tally-emoji-text="💬"
+    data-tally-emoji-animation="wave"
+    onclick="if(!window.Tally){window.open('https://tally.so/r/2jX62M','_blank');}"
+    aria-label="Visszajelzés küldése vagy hibabejelentés"
+    title="Visszajelzés / Hibabejelentés">
+    <span class="tally-btn-icon">💬</span>
+    <span class="tally-btn-label">Visszajelzés / Hiba</span>
+  </button>
+  <script async src="https://tally.so/widgets/embed.js"></script>
 
   <!-- Main JavaScript -->
   <script src="js/main.js"></script>
