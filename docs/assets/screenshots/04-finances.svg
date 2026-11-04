@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <linearGradient id="fBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="cardGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+
+  <rect width="390" height="844" fill="url(#fBg)" />
+
+  <!-- Status Bar -->
+  <text x="28" y="38" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">09:41</text>
+  <circle cx="340" cy="34" r="4" fill="#10b981" />
+  <rect x="352" y="28" width="18" height="10" rx="3" fill="none" stroke="#e2e8f0" stroke-width="1.5" />
+  <rect x="354" y="30" width="10" height="6" rx="1.5" fill="#e2e8f0" />
+
+  <!-- Top App Bar -->
+  <text x="24" y="86" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700">Pénzügyek &amp; Ösztöndíjak</text>
+
+  <!-- Big Balance Card -->
+  <g transform="translate(20, 110)">
+    <rect width="350" height="110" rx="18" fill="url(#goldGrad)" />
+    <text x="24" y="34" fill="#fffbeb" font-family="sans-serif" font-size="12" font-weight="600">GYŰJTŐSZÁMLA EGYENLEG</text>
+    <text x="24" y="74" fill="#ffffff" font-family="monospace" font-size="32" font-weight="800">42 850 Ft</text>
+    <rect x="236" y="22" width="90" height="30" rx="15" fill="#ffffff" fill-opacity="0.25" />
+    <text x="281" y="41" fill="#ffffff" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">FELTÖLTÉS</text>
+    <text x="24" y="96" fill="#fef3c7" font-family="sans-serif" font-size="11">Aktív félév: 2026/27/1 • Számlaszám másolása</text>
+  </g>
+
+  <!-- Income (Scholarship) Item -->
+  <g transform="translate(20, 238)">
+    <rect width="350" height="88" rx="16" fill="url(#cardGrad4)" stroke="#334155" stroke-width="1" />
+    <circle cx="40" cy="44" r="20" fill="#10b981" fill-opacity="0.2" />
+    <text x="40" y="49" fill="#10b981" font-family="sans-serif" font-size="18" text-anchor="middle">↓</text>
+    <text x="74" y="36" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Tanulmányi Ösztöndíj</text>
+    <text x="74" y="56" fill="#94a3b8" font-family="sans-serif" font-size="12">Jóváírás • 2026.10.10.</text>
+    <text x="74" y="74" fill="#34d399" font-family="sans-serif" font-size="11">Közvetlenül a bankszámlára</text>
+    <text x="330" y="44" fill="#34d399" font-family="monospace" font-size="16" font-weight="700" text-anchor="end">+38 500 Ft</text>
+    <rect x="272" y="54" width="58" height="20" rx="10" fill="#10b981" fill-opacity="0.15" />
+    <text x="301" y="68" fill="#34d399" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">TELJESÍTVE</text>
+  </g>
+
+  <!-- Expense (Fee) Item (Paid) -->
+  <g transform="translate(20, 340)">
+    <rect width="350" height="88" rx="16" fill="url(#cardGrad4)" stroke="#334155" stroke-width="1" />
+    <circle cx="40" cy="44" r="20" fill="#64748b" fill-opacity="0.2" />
+    <text x="40" y="49" fill="#94a3b8" font-family="sans-serif" font-size="18" text-anchor="middle">↑</text>
+    <text x="74" y="36" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Diákigazolvány érvényesítés</text>
+    <text x="74" y="56" fill="#94a3b8" font-family="sans-serif" font-size="12">Gyűjtőszámláról • 2026.09.28.</text>
+    <text x="330" y="44" fill="#f8fafc" font-family="monospace" font-size="16" font-weight="700" text-anchor="end">-1 800 Ft</text>
+    <rect x="282" y="54" width="48" height="20" rx="10" fill="#64748b" fill-opacity="0.25" />
+    <text x="306" y="68" fill="#cbd5e1" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">KIFIZETVE</text>
+  </g>
+
+  <!-- Expense Item (Upcoming Payable) -->
+  <g transform="translate(20, 442)">
+    <rect width="350" height="88" rx="16" fill="#1e1b4b" stroke="#f59e0b" stroke-width="1.5" />
+    <circle cx="40" cy="44" r="20" fill="#f59e0b" fill-opacity="0.2" />
+    <text x="40" y="49" fill="#f59e0b" font-family="sans-serif" font-size="18" text-anchor="middle">!</text>
+    <text x="74" y="36" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Pót-zárthelyi Eljárási Díj</text>
+    <text x="74" y="56" fill="#f59e0b" font-family="sans-serif" font-size="12">Határidő: 2026.11.15. (11 nap van hátra)</text>
+    <text x="330" y="44" fill="#fbbf24" font-family="monospace" font-size="16" font-weight="700" text-anchor="end">3 500 Ft</text>
+    <rect x="260" y="54" width="70" height="20" rx="10" fill="#f59e0b" fill-opacity="0.25" />
+    <text x="295" y="68" fill="#fbbf24" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">FIZETENDŐ</text>
+  </g>
+
+  <!-- Intelligent Summary Info -->
+  <g transform="translate(20, 545)">
+    <rect width="350" height="80" rx="14" fill="#0f172a" stroke="#334155" stroke-width="1" />
+    <text x="16" y="26" fill="#38bdf8" font-family="sans-serif" font-size="12" font-weight="700">💡 Intelligens Pénzügyi Szétválasztás</text>
+    <text x="16" y="46" fill="#94a3b8" font-family="sans-serif" font-size="11">A Jupiter nem mossa össze az ösztöndíjat a tandíjjal.</text>
+    <text x="16" y="62" fill="#cbd5e1" font-family="sans-serif" font-size="11">A gyűjtőszámlás belső utalások nincsenek duplán számolva!</text>
+  </g>
+
+  <!-- Bottom Jiggly Bar -->
+  <rect x="16" y="750" width="358" height="66" rx="33" fill="#0f172a" stroke="#334155" stroke-width="1" />
+  <text x="68" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">📅</text>
+  <text x="144" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">⭐</text>
+  <text x="210" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">📑</text>
+  <circle cx="268" cy="783" r="22" fill="#f97316" />
+  <text x="268" y="788" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">💳</text>
+  <text x="322" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">⚙️</text>
+</svg>

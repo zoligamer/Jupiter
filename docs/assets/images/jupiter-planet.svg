@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <defs>
+    <radialGradient id="spaceBack" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.3" />
+      <stop offset="70%" stop-color="#0f172a" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="aurora" cx="50%" cy="15%" r="35%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="body" x1="15%" y1="15%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#fed7aa" />
+      <stop offset="20%" stop-color="#fb923c" />
+      <stop offset="45%" stop-color="#ea580c" />
+      <stop offset="70%" stop-color="#9a3412" />
+      <stop offset="90%" stop-color="#431407" />
+      <stop offset="100%" stop-color="#1c1917" />
+    </linearGradient>
+    <filter id="blurAtm" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" />
+    </filter>
+  </defs>
+
+  <!-- Atmosphere halo -->
+  <circle cx="300" cy="300" r="230" fill="#f97316" opacity="0.12" filter="url(#blurAtm)" />
+  <circle cx="300" cy="300" r="215" fill="#38bdf8" opacity="0.08" filter="url(#blurAtm)" />
+
+  <!-- Planet Disk -->
+  <circle cx="300" cy="300" r="200" fill="url(#body)" />
+
+  <!-- Jovian Belts & Zones -->
+  <g opacity="0.8">
+    <path d="M 105,220 Q 300,260 495,220 Q 300,245 105,220 Z" fill="#fff7ed" opacity="0.65" />
+    <path d="M 100,245 Q 300,285 500,245 Q 300,265 100,245 Z" fill="#7c2d12" opacity="0.5" />
+    <path d="M 102,275 Q 300,315 498,275 Q 300,295 102,275 Z" fill="#ffedd5" opacity="0.75" />
+    <path d="M 108,310 Q 300,350 492,310 Q 300,330 108,310 Z" fill="#9a3412" opacity="0.55" />
+    <path d="M 118,345 Q 300,385 482,345 Q 300,365 118,345 Z" fill="#fed7aa" opacity="0.7" />
+    <path d="M 135,385 Q 300,420 465,385 Q 300,402 135,385 Z" fill="#7c2d12" opacity="0.45" />
+  </g>
+
+  <!-- Polar Aurora -->
+  <ellipse cx="300" cy="120" rx="110" ry="30" fill="url(#aurora)" />
+
+  <!-- The Great Red Spot -->
+  <g transform="translate(380, 320)">
+    <ellipse cx="0" cy="0" rx="38" ry="24" fill="#991b1b" opacity="0.9" />
+    <ellipse cx="0" cy="0" rx="28" ry="16" fill="#dc2626" opacity="0.95" />
+    <ellipse cx="-4" cy="-2" rx="18" ry="9" fill="#f87171" opacity="0.9" />
+    <ellipse cx="-2" cy="-1" rx="8" ry="4" fill="#fef2f2" opacity="0.85" />
+    <!-- Storm Swirls -->
+    <path d="M -30,0 Q 0,-15 30,-5 Q 10,12 -28,8" fill="none" stroke="#7f1d1d" stroke-width="2.5" opacity="0.7" />
+  </g>
+
+  <!-- Shadow Crescent for 3D effect -->
+  <path d="M 300,100 A 200,200 0 0,1 300,500 A 180,200 0 0,0 300,100 Z" fill="#000000" opacity="0.45" />
+</svg>

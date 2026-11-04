@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="activeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#c2410c" />
+    </linearGradient>
+  </defs>
+
+  <!-- Screen Background -->
+  <rect width="390" height="844" fill="url(#bgGrad)" />
+
+  <!-- Status Bar -->
+  <text x="28" y="38" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">09:41</text>
+  <circle cx="340" cy="34" r="4" fill="#10b981" />
+  <rect x="352" y="28" width="18" height="10" rx="3" fill="none" stroke="#e2e8f0" stroke-width="1.5" />
+  <rect x="354" y="30" width="10" height="6" rx="1.5" fill="#e2e8f0" />
+
+  <!-- Top App Bar -->
+  <text x="24" y="86" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700">Jupiter Órarend</text>
+  <rect x="290" y="68" width="76" height="26" rx="13" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1" />
+  <circle cx="302" cy="81" r="3.5" fill="#10b981" />
+  <text x="312" y="85" fill="#34d399" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600">TO NYITVA</text>
+
+  <!-- Day Selector -->
+  <g transform="translate(24, 108)">
+    <rect x="0" y="0" width="56" height="48" rx="12" fill="#1e293b" />
+    <text x="28" y="20" fill="#94a3b8" font-family="sans-serif" font-size="11" text-anchor="middle">HÉTFŐ</text>
+    <text x="28" y="38" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">04</text>
+
+    <!-- Active Day -->
+    <rect x="66" y="0" width="56" height="48" rx="12" fill="url(#activeGrad)" />
+    <text x="94" y="20" fill="#fff7ed" font-family="sans-serif" font-size="11" text-anchor="middle">KEDD</text>
+    <text x="94" y="38" fill="#ffffff" font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">05</text>
+
+    <rect x="132" y="0" width="56" height="48" rx="12" fill="#1e293b" />
+    <text x="160" y="20" fill="#94a3b8" font-family="sans-serif" font-size="11" text-anchor="middle">SZER</text>
+    <text x="160" y="38" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">06</text>
+
+    <rect x="198" y="0" width="56" height="48" rx="12" fill="#1e293b" />
+    <text x="226" y="20" fill="#94a3b8" font-family="sans-serif" font-size="11" text-anchor="middle">CSÜT</text>
+    <text x="226" y="38" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">07</text>
+
+    <rect x="264" y="0" width="56" height="48" rx="12" fill="#1e293b" />
+    <text x="292" y="20" fill="#94a3b8" font-family="sans-serif" font-size="11" text-anchor="middle">PÉN</text>
+    <text x="292" y="38" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700" text-anchor="middle">08</text>
+  </g>
+
+  <!-- Timeline Spine -->
+  <line x1="56" y1="180" x2="56" y2="720" stroke="#334155" stroke-width="2" stroke-dasharray="4 4" />
+
+  <!-- Past Class (Done) -->
+  <circle cx="56" cy="220" r="7" fill="#10b981" />
+  <circle cx="56" cy="220" r="3" fill="#ffffff" />
+  <g transform="translate(80, 185)">
+    <rect width="286" height="85" rx="16" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" />
+    <text x="16" y="26" fill="#94a3b8" font-family="monospace" font-size="12">08:15 – 09:45</text>
+    <rect x="220" y="12" width="52" height="18" rx="9" fill="#10b981" fill-opacity="0.2" />
+    <text x="246" y="25" fill="#34d399" font-family="sans-serif" font-size="10" font-weight="600" text-anchor="middle">KÉSZ</text>
+    <text x="16" y="50" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Analízis I. Előadás</text>
+    <text x="16" y="70" fill="#cbd5e1" font-family="sans-serif" font-size="12">Terem: QBF08 • Dr. Kovács János</text>
+  </g>
+
+  <!-- Active Class (Pulsing Arrow) -->
+  <circle cx="56" cy="330" r="10" fill="#f97316" fill-opacity="0.3" />
+  <circle cx="56" cy="330" r="6" fill="#f97316" />
+  <path d="M 68,330 L 76,326 L 76,334 Z" fill="#f97316" />
+  <g transform="translate(80, 290)">
+    <rect width="286" height="98" rx="16" fill="#1e1b4b" stroke="#f97316" stroke-width="2" />
+    <text x="16" y="26" fill="#fb923c" font-family="monospace" font-size="12" font-weight="700">10:00 – 11:30 (MOST ZAJLIK)</text>
+    <rect x="210" y="12" width="62" height="20" rx="10" fill="#f97316" />
+    <text x="241" y="26" fill="#ffffff" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">ÉLŐ ÓRA</text>
+    <text x="16" y="52" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="800">Szoftverarchitektúrák</text>
+    <text x="16" y="72" fill="#e2e8f0" font-family="sans-serif" font-size="12">Terem: IB028 • Laborgyakorlat</text>
+    <rect x="16" y="82" width="180" height="4" rx="2" fill="#334155" />
+    <rect x="16" y="82" width="110" height="4" rx="2" fill="#f97316" />
+  </g>
+
+  <!-- Upcoming Class -->
+  <circle cx="56" cy="445" r="5" fill="#64748b" />
+  <g transform="translate(80, 410)">
+    <rect width="286" height="85" rx="16" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" />
+    <text x="16" y="26" fill="#94a3b8" font-family="monospace" font-size="12">12:15 – 13:45</text>
+    <text x="16" y="50" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Adatbázisok tervezése</text>
+    <text x="16" y="70" fill="#94a3b8" font-family="sans-serif" font-size="12">Terem: Q1 • Prof. Varga Tamás</text>
+  </g>
+
+  <!-- Next Class -->
+  <circle cx="56" cy="555" r="5" fill="#64748b" />
+  <g transform="translate(80, 520)">
+    <rect width="286" height="85" rx="16" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" />
+    <text x="16" y="26" fill="#94a3b8" font-family="monospace" font-size="12">14:00 – 15:30</text>
+    <text x="16" y="50" fill="#f8fafc" font-family="sans-serif" font-size="15" font-weight="700">Mesterséges Intelligencia</text>
+    <text x="16" y="70" fill="#94a3b8" font-family="sans-serif" font-size="12">Terem: CH Maxima • Szeminárium</text>
+  </g>
+
+  <!-- Bottom Jiggly Bar -->
+  <rect x="16" y="750" width="358" height="66" rx="33" fill="#0f172a" stroke="#334155" stroke-width="1" />
+  <circle cx="68" cy="783" r="22" fill="#f97316" />
+  <text x="68" y="788" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">📅</text>
+  <text x="144" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">⭐</text>
+  <text x="210" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">📑</text>
+  <text x="268" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">💳</text>
+  <text x="322" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">⚙️</text>
+</svg>

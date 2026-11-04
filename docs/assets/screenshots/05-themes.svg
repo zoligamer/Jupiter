@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <linearGradient id="tBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="cardGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+
+  <rect width="390" height="844" fill="url(#tBg)" />
+
+  <!-- Status Bar -->
+  <text x="28" y="38" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">09:41</text>
+  <circle cx="340" cy="34" r="4" fill="#10b981" />
+  <rect x="352" y="28" width="18" height="10" rx="3" fill="none" stroke="#e2e8f0" stroke-width="1.5" />
+  <rect x="354" y="30" width="10" height="6" rx="1.5" fill="#e2e8f0" />
+
+  <!-- Top App Bar -->
+  <text x="24" y="86" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700">Témák &amp; Testreszabás</text>
+
+  <!-- Current Theme: Jovian Amber -->
+  <g transform="translate(20, 110)">
+    <rect width="350" height="96" rx="18" fill="#1e1b4b" stroke="#f97316" stroke-width="2" />
+    <circle cx="50" cy="48" r="24" fill="#f97316" />
+    <ellipse cx="50" cy="48" rx="20" ry="6" fill="none" stroke="#fed7aa" stroke-width="2" transform="rotate(-20 50 48)" />
+    <text x="90" y="42" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="700">Jovian Amber (Alapértelmezett)</text>
+    <text x="90" y="62" fill="#fed7aa" font-family="sans-serif" font-size="12">Meleg bolygóközi színek • Aktív téma</text>
+    <rect x="90" y="72" width="60" height="14" rx="7" fill="#f97316" />
+    <text x="120" y="83" fill="#ffffff" font-family="sans-serif" font-size="9" font-weight="700" text-anchor="middle">AKTÍV</text>
+  </g>
+
+  <!-- Theme Grid -->
+  <!-- Theme 2: Cyberpunk Violet -->
+  <g transform="translate(20, 218)">
+    <rect width="168" height="110" rx="16" fill="url(#cardGrad5)" stroke="#334155" stroke-width="1" />
+    <circle cx="36" cy="36" r="16" fill="#8b5cf6" />
+    <text x="20" y="74" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Cyberpunk Violet</text>
+    <text x="20" y="94" fill="#94a3b8" font-family="sans-serif" font-size="11">Neon éjszakai mód</text>
+  </g>
+
+  <!-- Theme 3: Midnight Ocean -->
+  <g transform="translate(202, 218)">
+    <rect width="168" height="110" rx="16" fill="url(#cardGrad5)" stroke="#334155" stroke-width="1" />
+    <circle cx="36" cy="36" r="16" fill="#0284c7" />
+    <text x="20" y="74" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Midnight Ocean</text>
+    <text x="20" y="94" fill="#94a3b8" font-family="sans-serif" font-size="11">Mélykék nyugalom</text>
+  </g>
+
+  <!-- Theme 4: Forest Nature -->
+  <g transform="translate(20, 340)">
+    <rect width="168" height="110" rx="16" fill="url(#cardGrad5)" stroke="#334155" stroke-width="1" />
+    <circle cx="36" cy="36" r="16" fill="#10b981" />
+    <text x="20" y="74" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">Forest Emerald</text>
+    <text x="20" y="94" fill="#94a3b8" font-family="sans-serif" font-size="11">Természetközeli zöld</text>
+  </g>
+
+  <!-- Theme 5: E-Ink Minimal -->
+  <g transform="translate(202, 340)">
+    <rect width="168" height="110" rx="16" fill="url(#cardGrad5)" stroke="#334155" stroke-width="1" />
+    <circle cx="36" cy="36" r="16" fill="#e2e8f0" stroke="#475569" stroke-width="1" />
+    <text x="20" y="74" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="700">E-Ink Minimal</text>
+    <text x="20" y="94" fill="#94a3b8" font-family="sans-serif" font-size="11">Magas kontraszt</text>
+  </g>
+
+  <!-- Jiggly Spring Navigation Feature Card -->
+  <g transform="translate(20, 465)">
+    <rect width="350" height="135" rx="16" fill="#1e1b4b" stroke="#38bdf8" stroke-width="1.5" />
+    <text x="20" y="32" fill="#38bdf8" font-family="sans-serif" font-size="14" font-weight="700">✨ Rugalmas "Jiggly" Animáció</text>
+    <text x="20" y="56" fill="#f8fafc" font-family="sans-serif" font-size="13">Fizika-alapú rugós visszajelzés váltáskor</text>
+    <text x="20" y="76" fill="#cbd5e1" font-family="sans-serif" font-size="11">A tabváltások finoman rugóznak, és haptikus</text>
+    <text x="20" y="92" fill="#cbd5e1" font-family="sans-serif" font-size="11">rezgéssel adják a prémium natív élményt.</text>
+    
+    <rect x="20" y="104" width="160" height="20" rx="10" fill="#38bdf8" fill-opacity="0.15" />
+    <text x="100" y="118" fill="#38bdf8" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">Dinamikus Színharmónia</text>
+  </g>
+
+  <!-- Bottom Jiggly Bar -->
+  <rect x="16" y="750" width="358" height="66" rx="33" fill="#0f172a" stroke="#334155" stroke-width="1" />
+  <text x="68" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">📅</text>
+  <text x="144" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">⭐</text>
+  <text x="210" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">📑</text>
+  <text x="268" y="788" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">💳</text>
+  <circle cx="322" cy="783" r="22" fill="#f97316" />
+  <text x="322" y="788" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">⚙️</text>
+</svg>
