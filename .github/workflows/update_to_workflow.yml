@@ -5,7 +5,8 @@ on:
     # Minden hétfőn éjjel 02:00-kor lefut automatikusan
     - cron: '0 2 * * 1'
   workflow_dispatch: # Kézzel is indítható bármikor a GitHub felületén
-
+permissions:
+  contents: write
 jobs:
   update-schedules:
     runs-on: ubuntu-latest
