@@ -54,6 +54,9 @@ import '../storage.dart';
     static const String DOCUMENT_STORAGE_BY_STUDENT_URL = "/api/DocumentContainer/GetDocumentsUploadedByStudent";
     static const String DOCUMENT_STORAGE_TR_URL = "/api/DocumentContainer/GetTrDocuments";
     static const String DOCUMENT_STORAGE_DOWNLOAD_URL = "/api/DocumentContainer/DownloadDocumentationOrZip";
+    static const String PACK_URL_PREFIX = 'https://raw.githubusercontent.com/zoligamer/Jupiter/';
+    /// Packs feed the UI directly, so only this repository is trusted.
+    static bool isTrustedPackUrl(String url) => url.startsWith(PACK_URL_PREFIX);
   }
   
   class _APIRequest{
@@ -147,7 +150,8 @@ import '../storage.dart';
       }
     }
 
-    static void _extractAndSaveCookiesAndTokens(http.Response response, String username) {
+    static void _extractAndSaveCookiesAndTokens(http.Response response, String username, int sessionGen) {
+      if (!APISession.isCurrent(sessionGen)) return;
       final setCookie = response.headers['set-cookie'];
       if (setCookie == null || setCookie.isEmpty) return;
 
@@ -214,8 +218,43 @@ import '../storage.dart';
     }
 
     static bool _isRefreshingToken = false;
+    static int _reloginFailures = 0;
+
+    /// Token refresh, then a password re-login (stops after 3 failures in a row).
+    /// Serialized: concurrent callers wait for the running attempt.
+    static Future<void> reauthenticate() async {
+      if (_isRefreshingToken) {
+        // Ha egy másik fül már frissíti a tokent, várunk rá!
+        debug.log("Egy másik fül már frissít, várakozás...");
+        while (_isRefreshingToken) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+        return;
+      }
+      _isRefreshingToken = true; // Bezárjuk a lakatot
+      final sessionGen = APISession.generation;
+      try {
+        debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
+        bool refreshSuccess = false;
+        if (storage.DataCache.getIsModernApi()) {
+          refreshSuccess = await tryTokenRefresh();
+        }
+        if (!refreshSuccess && _reloginFailures < 3 && APISession.isCurrent(sessionGen)) {
+          final username = storage.DataCache.getUsername();
+          final password = storage.DataCache.getPassword();
+          final baseUrl = storage.DataCache.getInstituteUrl();
+          if (username != null && password != null && baseUrl != null) {
+            final result = await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            _reloginFailures = result == 0 ? _reloginFailures + 1 : 0;
+          }
+        }
+      } finally {
+        _isRefreshingToken = false; // Kinyitjuk a lakatot
+      }
+    }
 
     static Future<bool> tryTokenRefresh() async {
+      final sessionGen = APISession.generation;
       try {
         final refreshToken = storage.DataCache.getRefreshToken();
         if (refreshToken == null || refreshToken.isEmpty) {
@@ -243,10 +282,10 @@ import '../storage.dart';
         if (response.statusCode == 200) {
           final bodyJson = conv.jsonDecode(response.body);
           final String? newAccessToken = bodyJson["accessToken"] ?? bodyJson["data"]?["accessToken"];
-          if (newAccessToken != null && newAccessToken.isNotEmpty) {
+          if (newAccessToken != null && newAccessToken.isNotEmpty && APISession.isCurrent(sessionGen)) {
             await storage.DataCache.setAccessToken(newAccessToken);
             if (username != null && username.isNotEmpty) {
-              _extractAndSaveCookiesAndTokens(response, username);
+              _extractAndSaveCookiesAndTokens(response, username, sessionGen);
             }
             return true;
           }
@@ -269,6 +308,7 @@ import '../storage.dart';
     }
 
     static Future<String> getRequest(Uri url, {required String bearerToken, bool isRetry = false}) async {
+      final sessionGen = APISession.generation;
       HttpOverrides.global = NeptunCerts.getCerts();
       if (bearerToken.isEmpty && storage.DataCache.getIsModernApi()) {
         bearerToken = await getSafeAccessToken();
@@ -288,41 +328,18 @@ import '../storage.dart';
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
         if (username != null && username.isNotEmpty) {
-          _extractAndSaveCookiesAndTokens(response, username);
+          _extractAndSaveCookiesAndTokens(response, username, sessionGen);
         }
 
         // Ha a token lejárt:
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
 
           // --- ÚJ VERSENYHELYZET GÁTLÓ LOGIKA ---
-          if (!_isRefreshingToken) {
-            _isRefreshingToken = true; // Bezárjuk a lakatot
-            debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
-
-            bool refreshSuccess = false;
-            if (storage.DataCache.getIsModernApi()) {
-              refreshSuccess = await tryTokenRefresh();
-            }
-
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-            }
-
-            _isRefreshingToken = false; // Kinyitjuk a lakatot
-          } else {
-            // Ha egy másik fül már frissíti a tokent, várunk rá!
-            debug.log("Egy másik fül már frissít, várakozás...");
-            while (_isRefreshingToken) {
-              await Future.delayed(const Duration(milliseconds: 100));
-            }
-          }
+          await reauthenticate();
           // ----------------------------------------
 
           // Mindenki megkapja az új tokent, és újra próbálkozik
+          if (!APISession.isCurrent(sessionGen)) return response.body;
           final newToken = storage.DataCache.getAccessToken();
           return await getRequest(url, bearerToken: newToken!, isRetry: true);
         }
@@ -335,6 +352,7 @@ import '../storage.dart';
     }
 
     static Future<String> postRequestWithRetry(Uri url, String requestBody, {bool isRetry = false}) async {
+      final sessionGen = APISession.generation;
       HttpOverrides.global = NeptunCerts.getCerts();
       final client = http.Client();
       final request = http.Request('POST', url);
@@ -356,28 +374,12 @@ import '../storage.dart';
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
         if (username != null && username.isNotEmpty) {
-          _extractAndSaveCookiesAndTokens(response, username);
+          _extractAndSaveCookiesAndTokens(response, username, sessionGen);
         }
 
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
-          if (!_isRefreshingToken) {
-            _isRefreshingToken = true;
-            bool refreshSuccess = false;
-            if (storage.DataCache.getIsModernApi()) {
-              refreshSuccess = await tryTokenRefresh();
-            }
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-            }
-            _isRefreshingToken = false;
-          } else {
-            while (_isRefreshingToken) {
-              await Future.delayed(const Duration(milliseconds: 100));
-            }
-          }
+          await reauthenticate();
+          if (!APISession.isCurrent(sessionGen)) return response.body;
           return await postRequestWithRetry(url, requestBody, isRetry: true);
         }
 
@@ -389,6 +391,7 @@ import '../storage.dart';
     }
 
     static Future<http.Response> postRequestRawWithRetry(Uri url, String requestBody, {bool isRetry = false}) async {
+      final sessionGen = APISession.generation;
       HttpOverrides.global = NeptunCerts.getCerts();
       final client = http.Client();
       final request = http.Request('POST', url);
@@ -405,24 +408,8 @@ import '../storage.dart';
         client.close();
 
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
-          if (!_isRefreshingToken) {
-            _isRefreshingToken = true;
-            bool refreshSuccess = false;
-            if (storage.DataCache.getIsModernApi()) {
-              refreshSuccess = await tryTokenRefresh();
-            }
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-            }
-            _isRefreshingToken = false;
-          } else {
-            while (_isRefreshingToken) {
-              await Future.delayed(const Duration(milliseconds: 100));
-            }
-          }
+          await reauthenticate();
+          if (!APISession.isCurrent(sessionGen)) return response;
           return await postRequestRawWithRetry(url, requestBody, isRetry: true);
         }
 
@@ -434,11 +421,7 @@ import '../storage.dart';
     }
 
     static String getGenericPostData(String username, String password){
-      return
-        '{'
-          '"UserLogin":"$username",'
-          '"Password":"$password"'
-        '}';
+      return conv.jsonEncode({"UserLogin": username, "Password": password});
     }
   }
 
@@ -651,14 +634,27 @@ import '../storage.dart';
     }
     //
 // --- 2FA
+    /// Forces https and strips a trailing slash.
+    static String normalizeLoginUrl(String rawUrl) {
+      String url = rawUrl.trim();
+      if (!url.toLowerCase().startsWith('http://') && !url.toLowerCase().startsWith('https://')) {
+        url = 'https://$url';
+      } else if (url.toLowerCase().startsWith('http://')) {
+        url = 'https://${url.substring(7)}';
+      }
+      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+      return url;
+    }
+
     static Future<int> validateLoginCredentialsUrl(String rawUrl, String username, String password) async {
       if(username == 'DEMO' && password == 'DEMO'){
         await storage.DataCache.setIsDemoAccount(1);
         return 1;
       }
 
-      String url = rawUrl.trim();
-      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+      APISession.clear();
+      final sessionGen = APISession.generation;
+      String url = normalizeLoginUrl(rawUrl);
       bool containsAspx = url.toLowerCase().contains('.aspx');
 
       String baseUrl = url.replaceAll(RegExp(r'/login(\.aspx)?$', caseSensitive: false), '');
@@ -672,6 +668,7 @@ import '../storage.dart';
         if (oldSuccess) {
           return 1;
         }
+        if (!APISession.isCurrent(sessionGen)) return 0;
         return await _tryModernLogin(baseUrl, username, password);
       } else {
         // Try modern login first, but fallback to old login if modern login fails
@@ -679,12 +676,14 @@ import '../storage.dart';
         if (modernResult != 0) {
           return modernResult;
         }
+        if (!APISession.isCurrent(sessionGen)) return 0;
         bool oldSuccess = await _tryOldLogin(baseUrl, username, password);
         return oldSuccess ? 1 : 0;
       }
     }
 
     static Future<int> _tryModernLogin(String baseUrl, String username, String password) async {
+      final sessionGen = APISession.generation;
       final modernApiUrl = Uri.parse("$baseUrl/api/Account/Authenticate");
       final body = conv.jsonEncode({
         "userName": username, "password": password,
@@ -698,10 +697,11 @@ import '../storage.dart';
           final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
           final cookieHeader = 'devicecookie-$b64=$savedCookieVal';
           final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
+          if (!APISession.isCurrent(sessionGen)) return 0;
 
           if (responseRaw.statusCode == 200 || responseRaw.statusCode == 202) {
             final response = conv.jsonDecode(responseRaw.body);
-            _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
+            _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username, sessionGen);
 
             final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
             if (is2fa) {
@@ -722,11 +722,13 @@ import '../storage.dart';
       }
 
       // 2. Clean login attempt without cookies (first-time login or cookie invalidation)
+      if (!APISession.isCurrent(sessionGen)) return 0;
       try {
         final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body);
+        if (!APISession.isCurrent(sessionGen)) return 0;
         final response = conv.jsonDecode(responseRaw.body);
 
-        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
+        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username, sessionGen);
 
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
@@ -747,6 +749,7 @@ import '../storage.dart';
 
 
     static Future<bool> submitTwoFactorCode(String username, String password, String code) async {
+      final sessionGen = APISession.generation;
       try {
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
@@ -763,10 +766,11 @@ import '../storage.dart';
         // Load device cookie and sticky session cookies if they exist
         final cookieHeader = _APIRequest._buildCookieHeader(username);
         final responseRaw = await _APIRequest.postRequestRaw(url, body, cookie: cookieHeader.isNotEmpty ? cookieHeader : null);
+        if (!APISession.isCurrent(sessionGen)) return false;
         final response = conv.jsonDecode(responseRaw.body);
 
         // Extract and save cookies/tokens
-        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
+        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username, sessionGen);
 
         if (response["data"] != null && response["data"]["accessToken"] != null) {
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
@@ -778,12 +782,14 @@ import '../storage.dart';
       return false;
     }
     static Future<bool> _tryOldLogin(String baseUrl, String username, String password) async {
+      final sessionGen = APISession.generation;
       try {
         final oldApiUrl = Uri.parse("$baseUrl/MobileService.svc${URLs.TRAININGS_URL}");
         final request = await _APIRequest.postRequest(
             oldApiUrl,
             _APIRequest.getGenericPostData(username, password)
         );
+        if (!APISession.isCurrent(sessionGen)) return false;
 
         if (request.trim().startsWith('{')) {
           final decodedResponse = conv.json.decode(request);
@@ -951,6 +957,7 @@ class CalendarRequest {
   static List<String>? _cachedTrainingIds;
 
   static Future<List<String>> getStudentTrainingIds({bool forceRefresh = false}) async {
+    final sessionGen = APISession.generation;
     if (forceRefresh) {
       _cachedTrainingIds = null;
     }
@@ -988,6 +995,7 @@ class CalendarRequest {
           }
         }
         if (ids.isNotEmpty) {
+          if (!APISession.isCurrent(sessionGen)) return [];
           _cachedTrainingIds = ids;
           await storage.DataCache.setStudentTrainingId(ids.first);
           return ids;
@@ -1004,6 +1012,7 @@ class CalendarRequest {
         if (uInfoDecoded['data'] != null) {
           final tid = uInfoDecoded['data']['studentTrainingId']?.toString();
           if (tid != null && tid.isNotEmpty) {
+            if (!APISession.isCurrent(sessionGen)) return [];
             _cachedTrainingIds = [tid];
             await storage.DataCache.setStudentTrainingId(tid);
             return [tid];
@@ -1028,6 +1037,7 @@ class CalendarRequest {
           }
         }
         if (ids.isNotEmpty) {
+          if (!APISession.isCurrent(sessionGen)) return [];
           _cachedTrainingIds = ids;
           await storage.DataCache.setStudentTrainingId(ids.first);
           return ids;
@@ -1171,15 +1181,7 @@ class CalendarRequest {
 
         if (needsReAuth) {
           debug.log("Naptár: Lejárt token/ID érzékelve. Újra-azonosítás indul...");
-          bool refreshSuccess = false;
-          if (storage.DataCache.getIsModernApi()) {
-            refreshSuccess = await _APIRequest.tryTokenRefresh();
-          }
-          if (!refreshSuccess) {
-            final username = storage.DataCache.getUsername()!;
-            final password = storage.DataCache.getPassword()!;
-            await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-          }
+          await _APIRequest.reauthenticate();
 
           final newTrainingIds = await getStudentTrainingIds(forceRefresh: true);
           final newToken = storage.DataCache.getAccessToken();
@@ -3009,6 +3011,9 @@ class CashinEntry{
         return null;
       }
 
+      if (!URLs.isTrustedPackUrl(langUrl)) {
+        return null;
+      }
       final url = Uri.parse(langUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
@@ -3115,6 +3120,9 @@ class CashinEntry{
         return null;
       }
 
+      if (!URLs.isTrustedPackUrl(themeUrl)) {
+        return null;
+      }
       final url = Uri.parse(themeUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
@@ -4234,25 +4242,30 @@ class CashinEntry{
     HttpClient createHttpClient(SecurityContext? context) {
       return super.createHttpClient(context)
         ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-          final lowerHost = host.toLowerCase();
-          final instUrl = storage.DataCache.getInstituteUrl() ?? '';
-          final instHost = Uri.tryParse(instUrl)?.host.toLowerCase() ?? '';
-
-          // 1. A hallgató által kiválasztott egyetemi szerver hosztja
-          if (instHost.isNotEmpty && (lowerHost == instHost || lowerHost.endsWith('.$instHost'))) {
-            return true;
-          }
-
-          // 2. Hivatalos egyetemi Neptun és SDA kiszolgáló domainek ellenőrzése
-          if (lowerHost.contains('neptun') ||
-              lowerHost.endsWith('.sdakft.hu') ||
-              lowerHost.endsWith('.duf.hu') ||
-              lowerHost.endsWith('.uni-mate.hu')) {
-            return true;
-          }
-
-          // Minden egyéb ismeretlen vagy idegen hoszt esetén az érvénytelen tanúsítvány elutasításra kerül (MitM védelem)
+          // Runs only after the platform rejected the certificate; never accept it.
+          hasValidCertificate = false;
           return false;
         };
     }
   }
+
+/// Per-user static state; cleared on logout and before a new login.
+class APISession {
+  static int _generation = 0;
+
+  /// Changes on logout; work started earlier must not write session state.
+  static int get generation => _generation;
+  static bool isCurrent(int generation) => generation == _generation;
+
+  static void clear() {
+    _APIRequest._cookieJar.clear();
+    CalendarRequest._cachedTrainingIds = null;
+  }
+
+  static void logout() {
+    _generation++;
+    clear();
+    _APIRequest._isRefreshingToken = false;
+    _APIRequest._reloginFailures = 0;
+  }
+}

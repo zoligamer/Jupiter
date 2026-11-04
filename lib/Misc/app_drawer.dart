@@ -18,6 +18,8 @@ import '../Pages/document_storage_page.dart';
 import '../Pages/subject_registration_page.dart';
 import '../Misc/auto_updater.dart';
 import 'to_office_service.dart';
+import 'background_service.dart';
+import '../local_file_actions.dart';
 
 class AppDrawer extends StatefulWidget {
   final String loggedInUsername;
@@ -785,9 +787,12 @@ class _AppDrawerState extends State<AppDrawer> {
               onTap: () {
                 AppHaptics.lightImpact();
                 Future.delayed(Duration.zero, ()async{
+                  await BackgroundService.cancelPeriodicCheck();
                   ToOfficeService.reset();
+                  APISession.logout();
                   await storage.DataCache.dataWipe();
                   await AppNotifications.cancelScheduledNotifs();
+                  await LocalFileActions.clearTempFiles();
                 }).whenComplete((){
                   Navigator.popUntil(context, (route) => route.willHandlePopInternally);
                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const root_page.Splitter()));

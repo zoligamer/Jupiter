@@ -35,6 +35,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
 import '../Misc/background_service.dart';
+import '../local_file_actions.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -418,8 +419,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     Future.delayed(Duration.zero, ()async{
       await BackgroundService.cancelPeriodicCheck();
       ToOfficeService.reset();
+      api.APISession.logout();
       await storage.DataCache.dataWipe();
       await AppNotifications.cancelScheduledNotifs();
+      await LocalFileActions.clearTempFiles();
     }).whenComplete((){
       Navigator.popUntil(context, (route) => route.willHandlePopInternally);
       Navigator.push(

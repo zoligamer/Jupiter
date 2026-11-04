@@ -1,9 +1,21 @@
 import json
 import os
 import requests
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 JSON_PATH = "universityNameUrlPairs.json"
+
+def _same_site(original, redirected):
+    """Redirect must stay on https and on the same registered domain."""
+    try:
+        o, r = urlparse(original), urlparse(redirected)
+        if r.scheme != "https" or not o.hostname or not r.hostname:
+            return False
+        base = lambda h: ".".join(h.lower().rstrip(".").split(".")[-2:])
+        return base(o.hostname) == base(r.hostname)
+    except Exception:
+        return False
 
 def check_and_update_urls():
     if not os.path.exists(JSON_PATH):
@@ -30,7 +42,7 @@ def check_and_update_urls():
                 if to_url:
                     try:
                         res = requests.get(to_url, headers=headers, timeout=8, allow_redirects=True)
-                        if res.status_code == 200 and res.url != to_url:
+                        if res.status_code == 200 and res.url != to_url and _same_site(to_url, res.url):
                             print(f"[{name} - {fac.get('FacultyName')}] URL redirect frissítve: {res.url}")
                             fac["ToUrl"] = res.url
                     except Exception as e:
@@ -41,7 +53,7 @@ def check_and_update_urls():
             if to_url:
                 try:
                     res = requests.get(to_url, headers=headers, timeout=8, allow_redirects=True)
-                    if res.status_code == 200 and res.url != to_url:
+                    if res.status_code == 200 and res.url != to_url and _same_site(to_url, res.url):
                         print(f"[{name}] URL redirect frissítve: {res.url}")
                         inst["ToUrl"] = res.url
                 except Exception as e:

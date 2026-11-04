@@ -52,12 +52,24 @@ class ClickableTextSpan extends StatelessWidget{
     return TextStyle(color: AppColors.getTheme().onSecondaryContainer, decoration: TextDecoration.underline, decorationColor: AppColors.getTheme().onSecondaryContainer);
   }
 
+  /// Only web and mail links are opened.
+  static Uri? allowedLinkUri(String text) {
+    final url = Uri.tryParse(text.trim());
+    if (url == null || !const {'http', 'https', 'mailto'}.contains(url.scheme)) {
+      return null;
+    }
+    return url;
+  }
+
   static VoidCallback getNewOpenLinkCallback(String text){
     return ()async{
       if(!Platform.isAndroid){
         return;
       }
-      final url = Uri.parse(text);
+      final url = allowedLinkUri(text);
+      if (url == null) {
+        return;
+      }
       await launchUrl(url);
     };
   }

@@ -355,7 +355,7 @@ class ToOfficeService {
   /// Weboldal lekérdezése és a nyitvatartás dinamikus frissítése a weboldalról
   static Future<bool> fetchAndRefreshSchedule() async {
     try {
-      if (currentToUrl.isEmpty) return false;
+      if (!currentToUrl.startsWith('https://')) return false;
       final response = await http.get(Uri.parse(currentToUrl)).timeout(const Duration(seconds: 4));
       if (response.statusCode != 200) {
         return false;

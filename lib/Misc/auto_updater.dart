@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:ffi';
 import 'package:dio/dio.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:open_filex/open_filex.dart';
@@ -360,8 +361,12 @@ class AppUpdater {
     }
 
     final downloadUrl = asset['browser_download_url']?.toString() ?? '';
-    final assetFileName = asset['name']?.toString() ?? 'Neptun_Update.apk';
-    if (downloadUrl.isEmpty) return;
+    // Only this repo's release assets, safe file name, digest check when GitHub provides one.
+    final releasePrefix = 'https://github.com/$repoOwner/$repoName/releases/download/';
+    if (!downloadUrl.startsWith(releasePrefix)) return;
+    final rawName = asset['name']?.toString() ?? 'Neptun_Update.apk';
+    final assetFileName = rawName.split('/').last.split('\\').last.replaceAll('..', '_');
+    final expectedDigest = asset['digest']?.toString() ?? '';
 
     final tempDir = await getTemporaryDirectory();
     final savePath = "${tempDir.path}/$assetFileName";
@@ -385,6 +390,13 @@ class AppUpdater {
     try {
       final dio = Dio();
       await dio.download(downloadUrl, savePath);
+      if (expectedDigest.startsWith('sha256:')) {
+        final actual = (await sha256.bind(File(savePath).openRead()).first).toString();
+        if (actual.toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+          try { File(savePath).deleteSync(); } catch (_) {}
+          throw Exception('APK digest mismatch');
+        }
+      }
 
       if (context.mounted) {
         Navigator.pop(context); // Töltés ablak bezárása
