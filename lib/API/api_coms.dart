@@ -434,11 +434,7 @@ import '../storage.dart';
     }
 
     static String getGenericPostData(String username, String password){
-      return
-        '{'
-          '"UserLogin":"$username",'
-          '"Password":"$password"'
-        '}';
+      return conv.jsonEncode({"UserLogin": username, "Password": password});
     }
   }
 
@@ -651,14 +647,25 @@ import '../storage.dart';
     }
     //
 // --- 2FA
+    /// Forces https and strips a trailing slash.
+    static String normalizeLoginUrl(String rawUrl) {
+      String url = rawUrl.trim();
+      if (!url.toLowerCase().startsWith('http://') && !url.toLowerCase().startsWith('https://')) {
+        url = 'https://$url';
+      } else if (url.toLowerCase().startsWith('http://')) {
+        url = 'https://${url.substring(7)}';
+      }
+      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+      return url;
+    }
+
     static Future<int> validateLoginCredentialsUrl(String rawUrl, String username, String password) async {
       if(username == 'DEMO' && password == 'DEMO'){
         await storage.DataCache.setIsDemoAccount(1);
         return 1;
       }
 
-      String url = rawUrl.trim();
-      if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+      String url = normalizeLoginUrl(rawUrl);
       bool containsAspx = url.toLowerCase().contains('.aspx');
 
       String baseUrl = url.replaceAll(RegExp(r'/login(\.aspx)?$', caseSensitive: false), '');
@@ -4234,24 +4241,8 @@ class CashinEntry{
     HttpClient createHttpClient(SecurityContext? context) {
       return super.createHttpClient(context)
         ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-          final lowerHost = host.toLowerCase();
-          final instUrl = storage.DataCache.getInstituteUrl() ?? '';
-          final instHost = Uri.tryParse(instUrl)?.host.toLowerCase() ?? '';
-
-          // 1. A hallgató által kiválasztott egyetemi szerver hosztja
-          if (instHost.isNotEmpty && (lowerHost == instHost || lowerHost.endsWith('.$instHost'))) {
-            return true;
-          }
-
-          // 2. Hivatalos egyetemi Neptun és SDA kiszolgáló domainek ellenőrzése
-          if (lowerHost.contains('neptun') ||
-              lowerHost.endsWith('.sdakft.hu') ||
-              lowerHost.endsWith('.duf.hu') ||
-              lowerHost.endsWith('.uni-mate.hu')) {
-            return true;
-          }
-
-          // Minden egyéb ismeretlen vagy idegen hoszt esetén az érvénytelen tanúsítvány elutasításra kerül (MitM védelem)
+          // Runs only after the platform rejected the certificate; never accept it.
+          hasValidCertificate = false;
           return false;
         };
     }

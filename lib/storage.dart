@@ -243,6 +243,7 @@ class DataCache{
       if (oldPassword != null && oldPassword.isNotEmpty) {
         _password = oldPassword;
         await _secureStorage.write(key: 'neptun_password', value: oldPassword);
+        await (await SharedPreferences.getInstance()).remove('Password');
 
       }
     }
@@ -254,6 +255,7 @@ class DataCache{
       if (oldToken != null && oldToken.isNotEmpty) {
         _accessToken = oldToken;
         await _secureStorage.write(key: 'neptun_jwt_token', value: oldToken);
+        await (await SharedPreferences.getInstance()).remove('AccessToken');
       }
     }
 
