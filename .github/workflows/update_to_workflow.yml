@@ -25,10 +25,17 @@ jobs:
       - name: Run TO Schedule Verifier & Scraper
         run: |
           python .github/scripts/update_to_schedules.py
-
-      - name: Commit & Push changes if updated
+          
+      - name: Commit & Push changes if updated # update kiterjed mindkét fájlra, mind gyökér mind asset/ mappába
         run: |
+          # Átmásoljuk a frissített fájlt a gyökérbe is
+          cp assets/universityNameUrlPairs.json universityNameUrlPairs.json
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action Bot"
-          git add universityNameUrlPairs.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update TO schedules and links" && git push)
+          
+          # Mindkettőt hozzáadjuk
+          git add assets/universityNameUrlPairs.json universityNameUrlPairs.json
+          
+          # Ha bármelyik változott, mehet a commit és push
+          git diff --staged --quiet || (git commit -m "Auto-update TO schedules and links" && git push)
