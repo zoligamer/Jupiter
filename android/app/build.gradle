@@ -72,7 +72,11 @@ android {
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release // Ezt a sort add hozzá vagy módosítsd
+            if (keystoreProperties['storeFile'] && file(keystoreProperties['storeFile']).exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled true // Opcionális: extra tömörítés
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
