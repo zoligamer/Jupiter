@@ -1382,7 +1382,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )
         );
         list.add(const SizedBox(height: 6));
-        final pinfo = widget.pinfo ?? PackageInfo(appName: 'neptun2', packageName: 'com.domedav.neptun2', version: '1.1.2', buildNumber: '7', buildSignature: '');
+        final pinfo = widget.pinfo ?? PackageInfo(appName: 'jupiter', packageName: 'com.zoligamer.jupiter', version: '2.1.1', buildNumber: '1', buildSignature: '');
         list.add(Container(
           alignment: Alignment.bottomLeft,
           margin: const EdgeInsets.all(10),

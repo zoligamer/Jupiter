@@ -245,7 +245,18 @@ import '../storage.dart';
           final baseUrl = storage.DataCache.getInstituteUrl();
           if (username != null && password != null && baseUrl != null) {
             final result = await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-            _reloginFailures = result == 0 ? _reloginFailures + 1 : 0;
+            if (result == 0) {
+              // Hibás hitelesítési adatok: azonnal leállítjuk az újrapróbálkozást és töröljük a mentett jelszót,
+              // megakadályozva a Neptun-fiók tiltását / zárolását!
+              debug.log("Érvénytelen jelszó vagy hitelesítési hiba a háttérben! Jelszó törlése és relog leállítása...");
+              await storage.DataCache.setPassword(null);
+              await storage.DataCache.setHasLogin(0);
+              APISession.logout();
+              _reloginFailures = 0;
+              return;
+            } else {
+              _reloginFailures = 0;
+            }
           }
         }
       } finally {
@@ -1731,6 +1742,96 @@ class MarkbookRequest{
     }
     return latest;
   }
+
+  static Future<CreditProgressModel?> getCreditProgress() async {
+    final cachedJson = storage.DataCache.getCachedCreditProgressJson();
+    CreditProgressModel? cachedModel;
+    if (cachedJson != null && cachedJson.isNotEmpty) {
+      try {
+        final decoded = conv.json.decode(cachedJson);
+        cachedModel = _parseCreditProgress(decoded);
+      } catch (_) {}
+    }
+
+    if (!storage.DataCache.getHasNetwork()) {
+      return cachedModel;
+    }
+
+    if (storage.DataCache.getIsModernApi()) {
+      try {
+        final token = storage.DataCache.getAccessToken();
+        String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        final urlsToTry = [
+          "$baseUrl/api/dashboard/creditprogress",
+          if (!baseUrl.contains('/ujhallgato')) "$baseUrl/ujhallgato/api/dashboard/creditprogress",
+        ];
+
+        for (final urlStr in urlsToTry) {
+          try {
+            final url = Uri.parse(urlStr);
+            final responseRaw = await _APIRequest.getRequest(url, bearerToken: token ?? "");
+            final decoded = conv.json.decode(responseRaw);
+            if (decoded != null && decoded['data'] != null) {
+              final data = decoded['data'];
+              final model = _parseCreditProgress(data);
+              if (model != null) {
+                await storage.DataCache.setCachedCreditProgressJson(conv.json.encode(data));
+                return model;
+              }
+            }
+          } catch (e) {
+            debug.log("Hiba a creditprogress lekérésekor a(z) $urlStr végponton: $e");
+          }
+        }
+      } catch (e) {
+        debug.log("Hiba a getCreditProgress során: $e");
+      }
+    }
+    return cachedModel;
+  }
+
+  static CreditProgressModel? _parseCreditProgress(dynamic data) {
+    if (data == null || data is! Map) return null;
+    final completed = (data['completedCredit'] as num?)?.toInt();
+    final required = (data['requiredCredit'] as num?)?.toInt();
+    if (completed == null || required == null) return null;
+
+    return CreditProgressModel(
+      completedCredit: completed,
+      requiredCredit: required,
+      completedRequiredSubjectCredit: (data['completedRequiredSubjectCredit'] as num?)?.toInt() ?? 0,
+      completedRequiredOptionalSubjectCredit: (data['completedRequiredOptionalSubjectCredit'] as num?)?.toInt() ?? 0,
+      completedOptionalSubjectCredit: (data['completedOptionalSubjectCredit'] as num?)?.toInt(),
+      completedCurriculumCount: (data['completedCurriculumCount'] as num?)?.toInt() ?? 0,
+      allCurriculumCount: (data['allCurriculumCount'] as num?)?.toInt() ?? 0,
+      hasCompletedCourseRequirements: data['hasCompletedCourseRequirements'] == true,
+    );
+  }
+}
+
+class CreditProgressModel {
+  final int completedCredit;
+  final int requiredCredit;
+  final int completedRequiredSubjectCredit;
+  final int completedRequiredOptionalSubjectCredit;
+  final int? completedOptionalSubjectCredit;
+  final int completedCurriculumCount;
+  final int allCurriculumCount;
+  final bool hasCompletedCourseRequirements;
+
+  const CreditProgressModel({
+    required this.completedCredit,
+    required this.requiredCredit,
+    this.completedRequiredSubjectCredit = 0,
+    this.completedRequiredOptionalSubjectCredit = 0,
+    this.completedOptionalSubjectCredit,
+    this.completedCurriculumCount = 0,
+    this.allCurriculumCount = 0,
+    this.hasCompletedCourseRequirements = false,
+  });
+
+  double get progressRatio => requiredCredit > 0 ? (completedCredit / requiredCredit).clamp(0.0, 1.0) : 0.0;
+  double get percentage => progressRatio * 100.0;
 }
 
 class CashinRequest{
@@ -1834,11 +1935,12 @@ class CashinRequest{
             final status = item['transactionStatus']?.toString() ?? '';
             final txId = item['transactionId']?.toString() ?? 'ismeretlen_id';
 
+            final bool enableColoring = storage.DataCache.getEnablePaymentColoring();
             final combined = "$payingType $dir $note";
-            final bool ignored = _isIgnoredTransaction(combined);
-            final bool isIncome = !ignored && _isPositiveIncome(combined);
+            final bool ignored = enableColoring && _isIgnoredTransaction(combined);
+            final bool isIncome = enableColoring && !ignored && _isPositiveIncome(combined);
 
-            int amount = isIncome ? rawAmount : -rawAmount;
+            int amount = (enableColoring && isIncome) ? rawAmount : (enableColoring ? -rawAmount : rawAmount);
 
             final rawDate = item['transferDate']?.toString();
             final dateMs = rawDate != null ? (DateTime.tryParse(rawDate)?.millisecondsSinceEpoch ?? 0) : 0;
@@ -1846,8 +1948,8 @@ class CashinRequest{
             String displayTitle = payingType.isNotEmpty ? payingType : 'Tranzakció';
             String? displayNote = note.isNotEmpty ? note : null;
 
-            // Ösztöndíj esetén keressük meg a pontos, részletes nevet
-            if (isIncome && scholarships.isNotEmpty) {
+            // Ösztöndíj esetén keressük meg a pontos, részletes nevet (ha engedélyezve van az intelligens felismerés)
+            if (enableColoring && isIncome && scholarships.isNotEmpty) {
               for (var s in scholarships) {
                 final sAmount = ((s['amount'] as num?) ?? 0).toInt().abs();
                 if (sAmount == rawAmount) {

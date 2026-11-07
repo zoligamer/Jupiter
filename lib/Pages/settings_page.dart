@@ -12,6 +12,7 @@ import '../Misc/emojirich_text.dart';
 import '../Misc/background_service.dart';
 import '../Pages/startup_page.dart';
 import '../Misc/auto_updater.dart';
+import '../Widgets/app_tutorial_modal.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -481,6 +482,19 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
 
+          // Intelligens pénzügyi színezés
+          _buildSwitchTile(
+            icon: Icons.palette_outlined,
+            title: 'Intelligens pénzügyi színezés (+/-)',
+            subtitle: 'Kísérleti: bevételek és ösztöndíjak automatikus színezése (alapértelmezetten kikapcsolva)',
+            value: DataCache.getEnablePaymentColoring(),
+            onChanged: (b) async {
+              AppHaptics.lightImpact();
+              await DataCache.setEnablePaymentColoring(b);
+              setState(() {});
+            },
+          ),
+
           // Időszak értesítések
           _buildSwitchTile(
             icon: Icons.date_range_rounded,
@@ -776,6 +790,42 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () {
               AppHaptics.lightImpact();
               AppUpdater.checkAndInstallUpdate(context, force: true);
+            },
+          ),
+
+          // Alkalmazás bemutató újrajátszása
+          ListTile(
+            leading: Icon(Icons.help_outline_rounded, color: theme.primary, size: 22),
+            title: Text(
+              'Alkalmazás bemutató újrajátszása',
+              style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: Text(
+              'A Jupiter funkcióinak és trükkjeinek bemutatása',
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11.5),
+            ),
+            trailing: Icon(Icons.chevron_right_rounded, color: theme.textColor.withValues(alpha: 0.4)),
+            onTap: () {
+              AppHaptics.lightImpact();
+              AppTutorialModal.showTutorial(context);
+            },
+          ),
+
+          // Újdonságok és kiadási megjegyzések (Changelog)
+          ListTile(
+            leading: Icon(Icons.notes_rounded, color: theme.primary, size: 22),
+            title: Text(
+              'Újdonságok (Kiadási megjegyzések)',
+              style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: Text(
+              'Verzióinformációk és változtatások áttekintése',
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 11.5),
+            ),
+            trailing: Icon(Icons.chevron_right_rounded, color: theme.textColor.withValues(alpha: 0.4)),
+            onTap: () {
+              AppHaptics.lightImpact();
+              AppUpdater.showReleaseChangelog(context);
             },
           ),
 

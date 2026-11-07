@@ -769,9 +769,10 @@ class _AppDrawerState extends State<AppDrawer> {
                       onTap: () {
                         AppHaptics.lightImpact();
                         Navigator.pop(context);
-                        if(Platform.isAndroid){
-                          launchUrl(Uri.parse('https://github.com/zoligamer/Jupiter/issues/new/choose'));
-                        }
+                        launchUrl(
+                          Uri.parse('https://tally.so/r/2jX62M'),
+                          mode: LaunchMode.externalApplication,
+                        );
                       },
                     ),
                   ],

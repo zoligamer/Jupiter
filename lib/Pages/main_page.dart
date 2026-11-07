@@ -36,6 +36,7 @@ import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
 import '../Misc/background_service.dart';
 import '../local_file_actions.dart';
+import '../Widgets/app_tutorial_modal.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -167,6 +168,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
   int unreadMailCount = 0;
   int totalMailCount = 0;
   int allLoadedMailCount = 0;
+  bool hasMoreMails = true;
+  api.CreditProgressModel? creditProgress;
+  final List<ScrollController> _dayScrollControllers = List.generate(7, (_) => ScrollController());
 
   double bottomNavSwitchValue = 0.0;
   bool bottomNavCanNavigate = true;
@@ -297,38 +301,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
     currentMailPageController = ScrollController();
     currentMailPageController.addListener(() {
-      if(currentMailPageController.position.atEdge && currentMailPageController.position.userScrollDirection == ScrollDirection.reverse && allLoadedMailCount < totalMailCount){
-        if(currentMailLoadingDebounce){
-          return;
-        }
-        currentMailLoadingDebounce = true;
-        Future.delayed(Duration.zero, ()async{
-          setState((){
-            currentMailPage++;
-            mailList.add(Column(
-              children: [
-                CircularProgressIndicator(
-                  color: AppColors.getTheme().textColor,
-                ),
-                const Padding(padding: EdgeInsets.symmetric(vertical: 5)),
-                Text(
-                 api.Generic.randomLoadingCommentMini(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.getTheme().textColor.withValues(alpha: .4),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w300
-                  ),
-                ),
-                const Padding(padding: EdgeInsets.symmetric(vertical: 8)),
-              ],
-            ),);
-          });
-          await fetchMails(force: true);
-          setupMails(clear: true);
-        }).whenComplete((){
-          currentMailLoadingDebounce = false;
-        });
+      if (currentMailPageController.position.pixels >= currentMailPageController.position.maxScrollExtent - 250 &&
+          !currentMailLoadingDebounce &&
+          hasMoreMails &&
+          (storage.DataCache.getHasNetwork() || mailEntries.isNotEmpty)) {
+        _loadMoreMails();
       }
     });
 
@@ -373,6 +350,15 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       Future.microtask(() async {
         await _performStartupPrefetch();
       });
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        await AppUpdater.showPostUpdateChangelogIfNeeded(context);
+        if (mounted) {
+          await AppTutorialModal.checkAndShow(context);
+        }
+      }
     });
 
     setupCalendarGreetText();
@@ -573,6 +559,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
   void clearMarkbook(){
     setState(() {
+      creditProgress = null;
       markbookEntries.clear();
       markbookList.clear();
     });
@@ -597,6 +584,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
   void clearMails(){
     setState(() {
+      hasMoreMails = true;
       mailEntries.clear();
       mailList.clear();
       currentMailPage = 1;
@@ -798,10 +786,31 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       return;
     }
 
+    final now = DateTime.now();
     for(var item in items){
-      final time = DateTime.fromMillisecondsSinceEpoch(item.startEpoch);
-      await AppNotifications.scheduleNotification('Időszak', '"${api.Generic.capitalizePeriodText(item.name)}" időszak lesz HOLNAP!', DateTime(time.year, time.month, time.day - 1, 11, 00), 3);
-      await AppNotifications.scheduleNotification('Időszak', '"${api.Generic.capitalizePeriodText(item.name)}" időszak van MA!', DateTime(time.year, time.month, time.day, 06, 00), 3);
+      final startTime = DateTime.fromMillisecondsSinceEpoch(item.startEpoch);
+      final endTime = DateTime.fromMillisecondsSinceEpoch(item.endEpoch);
+      final periodTitle = api.Generic.capitalizePeriodText(item.name);
+
+      // Kezdeti értesítések (1 nappal előtte és az adott nap reggelén)
+      final startDayBefore = DateTime(startTime.year, startTime.month, startTime.day - 1, 11, 00);
+      if (startDayBefore.isAfter(now)) {
+        await AppNotifications.scheduleNotification('Időszak', '"$periodTitle" időszak lesz HOLNAP!', startDayBefore, 3);
+      }
+      final startDay = DateTime(startTime.year, startTime.month, startTime.day, 06, 00);
+      if (startDay.isAfter(now)) {
+        await AppNotifications.scheduleNotification('Időszak', '"$periodTitle" időszak van MA!', startDay, 3);
+      }
+
+      // Lejárati értesítések (1 nappal előtte és a lejárat napján reggel)
+      final endDayBefore = DateTime(endTime.year, endTime.month, endTime.day - 1, 11, 00);
+      if (endDayBefore.isAfter(now)) {
+        await AppNotifications.scheduleNotification('Időszak lejárata', '"$periodTitle" időszak HOLNAP véget ér! Ne maradj le!', endDayBefore, 3);
+      }
+      final endDay = DateTime(endTime.year, endTime.month, endTime.day, 06, 00);
+      if (endDay.isAfter(now)) {
+        await AppNotifications.scheduleNotification('Időszak lejárata', '"$periodTitle" időszak MA lezárul! Utolsó esély!', endDay, 3);
+      }
     }
   }
 
@@ -1184,7 +1193,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     });
   }
 
-  void _fillOneCalendarElement(BuildContext context, List<Widget> w, String name, bool isLoading){
+  void _fillOneCalendarElement(BuildContext context, List<Widget> w, String name, bool isLoading, int dayIndex){
     calendarTabs.add(Tab(
       height: 32,
       child: Padding(
@@ -1195,9 +1204,42 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
         ),
       ),
     ));
+
+    // Valós idejű óra és görgetés: a mai napon automatikusan az aktuális vagy következő órára fókuszálunk
+    final nowWk = DateTime.now().weekday;
+    final isCurrentWeek = currentWeekOffset == 1;
+    final isToday = (isCurrentWeek && nowWk == (dayIndex + 1));
+    if (isToday && w.isNotEmpty) {
+      int targetIndex = -1;
+      final now = DateTime.now();
+      for (int i = 0; i < w.length; i++) {
+        final item = w[i];
+        if (item is t_table.TimetableElementWidget) {
+          if (item.isCurrent || item.endDateNormalized.isAfter(now)) {
+            targetIndex = i;
+            break;
+          }
+        }
+      }
+      if (targetIndex > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_dayScrollControllers[dayIndex].hasClients) {
+            final maxScroll = _dayScrollControllers[dayIndex].position.maxScrollExtent;
+            final offset = (targetIndex * 115.0).clamp(0.0, maxScroll);
+            _dayScrollControllers[dayIndex].animateTo(
+              offset,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        });
+      }
+    }
+
     calendarTabViews.add(RefreshIndicator(
       onRefresh: ()async{AppHaptics.lightImpact(); onCalendarRefresh(false);},
       child: SingleChildScrollView(
+        controller: _dayScrollControllers[dayIndex],
         physics: const AlwaysScrollableScrollPhysics(),
         scrollDirection: Axis.vertical,
         padding: const EdgeInsets.only(top: 4, bottom: 20),
@@ -1250,13 +1292,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       return shortName;
     }
 
-    _fillOneCalendarElement(context, mondayCalendar, formatDayTab(1, 'H'), isLoading);
-    _fillOneCalendarElement(context, tuesdayCalendar, formatDayTab(2, 'K'), isLoading);
-    _fillOneCalendarElement(context, wednessdayCalendar, formatDayTab(3, 'Sze'), isLoading);
-    _fillOneCalendarElement(context, thursdayCalendar, formatDayTab(4, 'Cs'), isLoading);
-    _fillOneCalendarElement(context, fridayCalendar, formatDayTab(5, 'P'), isLoading);
-    _fillOneCalendarElement(context, saturdayCalendar, formatDayTab(6, 'Szo'), isLoading);
-    _fillOneCalendarElement(context, sundayCalendar, formatDayTab(7, 'V'), isLoading);
+    _fillOneCalendarElement(context, mondayCalendar, formatDayTab(1, 'H'), isLoading, 0);
+    _fillOneCalendarElement(context, tuesdayCalendar, formatDayTab(2, 'K'), isLoading, 1);
+    _fillOneCalendarElement(context, wednessdayCalendar, formatDayTab(3, 'Sze'), isLoading, 2);
+    _fillOneCalendarElement(context, thursdayCalendar, formatDayTab(4, 'Cs'), isLoading, 3);
+    _fillOneCalendarElement(context, fridayCalendar, formatDayTab(5, 'P'), isLoading, 4);
+    _fillOneCalendarElement(context, saturdayCalendar, formatDayTab(6, 'Szo'), isLoading, 5);
+    _fillOneCalendarElement(context, sundayCalendar, formatDayTab(7, 'V'), isLoading, 6);
   }
 
   void _mbookPopupResult(int result, int idx){
@@ -1436,6 +1478,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     totalAvg /= currCredits;
   }
 
+  void refreshPayments(){
+    setState(() {
+      _setupPayments();
+    });
+  }
+
   void _setupPayments(){
     _paymentsNotificationList.clear();
     paymentsList.clear();
@@ -1444,8 +1492,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     // Sort descending by date (newest first)
     paymentsEntries.sort((a, b) => b.dueDateMs.compareTo(a.dueDateMs));
 
+    final bool enableColoring = storage.DataCache.getEnablePaymentColoring();
     for(var item in paymentsEntries){
-      if(!item.isIgnored && item.completed && item.ammount < 0){
+      if(!item.isIgnored && item.completed && (item.ammount < 0 || !enableColoring)){
         totalMoney += item.ammount.abs();
       }
       if(!item.completed && !item.isIgnored && (item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0)){
@@ -1695,7 +1744,25 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     }
   }
 
+  Future<void> _loadMoreMails() async {
+    if (currentMailLoadingDebounce || !hasMoreMails) return;
+    currentMailLoadingDebounce = true;
+    setState(() {
+      _setupMails();
+    });
+    await fetchMails(force: true, isPaging: true);
+    if (mounted) {
+      setState(() {
+        currentMailLoadingDebounce = false;
+        _setupMails();
+      });
+    }
+  }
+
   void _setupMails({bool clearLoader = false}){
+    mailList.clear();
+    allLoadedMailCount = mailEntries.length;
+
     if(mailEntries.isEmpty){
       mailList.add(Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
@@ -1716,54 +1783,85 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           ),
         ),
       ));
+      return;
     }
 
-    if(clearLoader && mailList.isNotEmpty){
-      mailList.removeAt(mailList.length-1);
-    }
-
-    int idx = 0;
-    var prevDate = DateTime.now();
+    var prevDate = DateTime.fromMillisecondsSinceEpoch(0);
     mailList.add(
         const Padding(padding: EdgeInsets.only(top: 10))
     );
     for(var item in mailEntries){
-      allLoadedMailCount++;
       final date = DateTime.fromMillisecondsSinceEpoch(item.sendDateMs);
       final currDate = DateTime(date.year, date.month, date.day);
-      if(mailEntries.length != ++idx && prevDate != currDate){
+      if(prevDate != currDate){
         prevDate = currDate;
         mailList.add(_getSeparatorLine('${currDate.year}. ${api.Generic.monthToText(date.month)}. ${date.day}.'));
       }
-      mailList.add(MailElementWidget(subject: item.subject, details: item.detail, sender: item.senderName, sendTime: item.sendDateMs, isRead: item.isRead, mailID: item.ID, callback: (element){
-        setState(() {
-          if(element.isRead){
-            return;
-          }
-          item.isRead = true;
-          final indx = mailList.indexOf(element);
-          mailList.insert(indx, MailElementWidget(subject: element.subject, details: element.details, sender: element.sender, sendTime: element.sendTime, isRead: true, mailID: element.mailID, callback: (_){}));
-          mailList.remove(element);
-          final remainingUnread = mailEntries.where((m) => !m.isRead).length;
-          unreadMailCount = remainingUnread;
-          storage.saveInt('CachedMailsUnread', unreadMailCount);
-          storage.DataCache.setUnreadMailCount(unreadMailCount);
-          Future.delayed(Duration.zero, ()async{
-            await api.MailRequest.setMailRead(element.mailID);
-            if(currentMailPage == 1){
-              storage.DataCache.setHasCachedMail(0);
+      mailList.add(MailElementWidget(
+        subject: item.subject,
+        details: item.detail,
+        sender: item.senderName,
+        sendTime: item.sendDateMs,
+        isRead: item.isRead,
+        mailID: item.ID,
+        callback: (element){
+          setState(() {
+            if(element.isRead){
+              return;
             }
-            if (mounted) {
-              setState(() {
-                final localUnread = mailEntries.where((m) => !m.isRead).length;
-                unreadMailCount = localUnread;
-                storage.saveInt('CachedMailsUnread', unreadMailCount);
-                storage.DataCache.setUnreadMailCount(unreadMailCount);
-              });
+            item.isRead = true;
+            final indx = mailList.indexOf(element);
+            if (indx != -1) {
+              mailList.removeAt(indx);
+              mailList.insert(indx, MailElementWidget(
+                subject: element.subject,
+                details: element.details,
+                sender: element.sender,
+                sendTime: element.sendTime,
+                isRead: true,
+                mailID: element.mailID,
+                callback: (_){},
+              ));
             }
+            final remainingUnread = mailEntries.where((m) => !m.isRead).length;
+            unreadMailCount = remainingUnread;
+            storage.saveInt('CachedMailsUnread', unreadMailCount);
+            storage.DataCache.setUnreadMailCount(unreadMailCount);
+            Future.delayed(Duration.zero, ()async{
+              await api.MailRequest.setMailRead(element.mailID);
+              if (mounted) {
+                setState(() {
+                  final localUnread = mailEntries.where((m) => !m.isRead).length;
+                  unreadMailCount = localUnread;
+                  storage.saveInt('CachedMailsUnread', unreadMailCount);
+                  storage.DataCache.setUnreadMailCount(unreadMailCount);
+                });
+              }
+            });
           });
-        });
-      },));
+        },
+      ));
+    }
+
+    if (currentMailLoadingDebounce) {
+      mailList.add(Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          children: [
+            CircularProgressIndicator(
+              color: AppColors.getTheme().primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              api.Generic.randomLoadingCommentMini(storage.DataCache.getNeedFamilyFriendlyComments() ?? true),
+              style: TextStyle(
+                color: AppColors.getTheme().textColor.withValues(alpha: .5),
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ));
     }
   }
 
@@ -1823,7 +1921,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     int todayIndex = currWkday - 1;
     if (todayIndex < 0 || todayIndex > 6) todayIndex = 0;
     _pendingDayTabIndex = todayIndex;
-    await onCalendarRefresh(false);
+    await onCalendarRefresh(true);
     if (mounted && calendarTabController.length > todayIndex) {
       calendarTabController.animateTo(todayIndex);
     }
@@ -2021,6 +2119,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           Future.delayed(Duration.zero, () async {
             await _setupClassesNotifications(_classesNotificationList);
           });
+          // Két hét előreolvasása a hálózatról a háttérben (gyors és akadásmentes lapozáshoz)
+          Future.microtask(() async {
+            try {
+              final nextWeekEntries = await fetchCalendarToList(1);
+              if (nextWeekEntries.isNotEmpty) {
+                final permKey2 = 'PermanentCalendar_w2';
+                await storage.saveInt('${permKey2}_len', nextWeekEntries.length);
+                for (int i = 0; i < nextWeekEntries.length; i++) {
+                  await storage.saveString('${permKey2}_$i', nextWeekEntries[i].toString());
+                }
+              }
+            } catch (_) {}
+          });
         }
       } else {
         // A szerver válaszolt, de nincs óra erre a hétre (vagy üres lista):
@@ -2147,6 +2258,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           }
         }
         if (markbookEntries.isNotEmpty) {
+          creditProgress = await api.MarkbookRequest.getCreditProgress();
           return;
         }
       }
@@ -2160,9 +2272,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     final request = await api.MarkbookRequest.getMarkbookSubjects(termId: currentTerm.isNotEmpty ? currentTerm : null);
     if(request == null || request.isEmpty){
       markbookEntries = [];
+      creditProgress = await api.MarkbookRequest.getCreditProgress();
       return;
     }
     markbookEntries = request;
+    creditProgress = await api.MarkbookRequest.getCreditProgress();
 
     if (markbookEntries.isNotEmpty) {
       storage.saveInt('CachedMarkbookLength', markbookEntries.length);
@@ -2280,7 +2394,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
   int currentMailPage = 1;
   bool currentMailLoadingDebounce = false;
   late ScrollController currentMailPageController;
-  Future<void> fetchMails({bool force = false})async{
+  Future<void> fetchMails({bool force = false, bool isPaging = false})async{
     bool hasCachedMails = storage.DataCache.getHasCachedMail() ?? false;
 
     final cacheTime = await storage.getString('MailCacheTime');
@@ -2289,33 +2403,42 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       return;
     }
 
-    if(!force && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!force && !isPaging && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       final len = await storage.getInt('CachedMailsLength');
       unreadMailCount = (await storage.getInt('CachedMailsUnread')) ?? 0;
       totalMailCount = (await storage.getInt('CachedMailsTotal')) ?? 0;
-      for(int i = 0; i < len!; i++){
+      mailEntries.clear();
+      for(int i = 0; i < (len ?? 0); i++){
         final calEntry = await storage.getString('CachedMails_$i');
-        mailEntries.add(api.MailEntry("ERROR", "ERROR", "ERROR", 0, false,"").fillWithExisting(calEntry!));
+        if (calEntry != null) {
+          mailEntries.add(api.MailEntry("ERROR", "ERROR", "ERROR", 0, false,"").fillWithExisting(calEntry));
+        }
       }
       final localUnread = mailEntries.where((m) => !m.isRead).length;
-      if (mailEntries.isNotEmpty) {
-        unreadMailCount = localUnread;
-        storage.DataCache.setUnreadMailCount(unreadMailCount);
+      unreadMailCount = localUnread > 0 ? localUnread : unreadMailCount;
+      storage.DataCache.setUnreadMailCount(unreadMailCount);
+      return;
+    }
+
+    if (!force && !isPaging) {
+      return;
+    }
+
+    int targetPage = isPaging ? (currentMailPage + 1) : 1;
+    final request = await api.MailRequest.getMails(targetPage);
+    if(request == null || request.isEmpty){
+      if (isPaging) {
+        hasMoreMails = false;
       }
       return;
     }
 
-    if (!force) {
-      return;
+    if (request.length < 20) {
+      hasMoreMails = false;
     }
 
-    final request = await api.MailRequest.getMails(currentMailPage);
-    if(request == null || request.isEmpty){
-      return;
-    }
-
-    // Új olvasatlan üzenetek figyelése és helyi értesítés küldése
-    if (storage.DataCache.getNeedMessageNotifications() ?? true) {
+    // Új olvasatlan üzenetek figyelése és helyi értesítés küldése (csak nem-lapozott hívás esetén)
+    if (!isPaging && (storage.DataCache.getNeedMessageNotifications() ?? true)) {
       final lastKnownTopId = await storage.getString('LastKnownTopMailId');
       if (lastKnownTopId != null && lastKnownTopId.isNotEmpty) {
         final newUnreadMails = <api.MailEntry>[];
@@ -2346,22 +2469,31 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       }
     }
 
-    mailEntries = request;
-
-    if(force){
-      return;
+    if (isPaging) {
+      currentMailPage = targetPage;
+      final existingIds = mailEntries.map((m) => m.ID).toSet();
+      final newUnique = request.where((m) => !existingIds.contains(m.ID)).toList();
+      if (newUnique.isEmpty) {
+        hasMoreMails = false;
+      } else {
+        mailEntries.addAll(newUnique);
+      }
+    } else {
+      mailEntries = List<api.MailEntry>.from(request);
+      currentMailPage = 1;
+      hasMoreMails = request.length >= 20;
     }
-    
+
     final nums = await api.MailRequest.getUnreadMessagesAndAllMessages();
     final localUnread = mailEntries.where((m) => !m.isRead).length;
-    unreadMailCount = (mailEntries.isNotEmpty && localUnread == 0) ? 0 : (localUnread > 0 ? localUnread : nums[0]);
-    totalMailCount = nums[1] > 0 ? nums[1] : mailEntries.length;
+    unreadMailCount = (nums.isNotEmpty && nums[0] > 0) ? nums[0] : localUnread;
+    totalMailCount = (nums.length > 1 && nums[1] > 0) ? nums[1] : mailEntries.length;
 
     storage.saveInt('CachedMailsLength', mailEntries.length);
     storage.saveInt('CachedMailsUnread', unreadMailCount);
     storage.saveInt('CachedMailsTotal', totalMailCount);
     storage.DataCache.setUnreadMailCount(unreadMailCount);
-    //cache calendar
+
     for (int i = 0; i < mailEntries.length; i++) {
       storage.saveString('CachedMails_$i', mailEntries[i].toString());
     }
@@ -2579,6 +2711,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     mailList.clear();
     mailEntries.clear();
     currentMailPageController.dispose();
+    for (final c in _dayScrollControllers) {
+      c.dispose();
+    }
     blurController.dispose();
   }
 
@@ -2892,6 +3027,7 @@ class MarkbookPageWidget extends StatelessWidget{
                           Visibility(
                             visible: homePage.markbookList.isNotEmpty,
                             child: ProgressSummaryHeader(
+                              creditProgress: homePage.creditProgress,
                               semesterWeightedAvg: totalAvg,
                               semesterScholarshipIndex: totalAvg30,
                               semesterCredits: homePage.markbookEntries.fold(0, (sum, e) => sum + e.credit) > 0
@@ -2901,6 +3037,45 @@ class MarkbookPageWidget extends StatelessWidget{
                               termName: storage.DataCache.getSelectedTermName(),
                             ),
                           ),
+                          if (homePage.markbookEntries.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.library_books_rounded, size: 16, color: AppColors.getTheme().primary),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "${homePage.markbookEntries.length} felvett tantárgy",
+                                        style: TextStyle(
+                                          color: AppColors.getTheme().textColor,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.getTheme().primary.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      "${homePage.markbookEntries.fold(0, (sum, e) => sum + e.credit)} kredit",
+                                      style: TextStyle(
+                                        color: AppColors.getTheme().primary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: 6, bottom: 90),
                             child: Column(
@@ -2973,6 +3148,46 @@ class PaymentsPageWidget extends StatelessWidget{
       children: <Widget>[
         topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
         HomePageState.getSeparatorLine(context),
+        // Intelligens színezés kapcsoló kártya a lap tetején
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.getTheme().secondary.withValues(alpha: AppColors.isDarktheme() ? 0.25 : 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.getTheme().secondary.withValues(alpha: AppColors.isDarktheme() ? 0.40 : 0.18),
+              ),
+            ),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+              secondary: Icon(Icons.palette_outlined, color: AppColors.getTheme().primary, size: 22),
+              title: Text(
+                'Intelligens színezés (+/-)',
+                style: TextStyle(
+                  color: AppColors.getTheme().textColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                'Ösztöndíjak és kiadások megkülönböztetése',
+                style: TextStyle(
+                  color: AppColors.getTheme().textColor.withValues(alpha: 0.60),
+                  fontSize: 10.5,
+                ),
+              ),
+              value: storage.DataCache.getEnablePaymentColoring(),
+              activeThumbColor: AppColors.getTheme().primary,
+              activeTrackColor: AppColors.getTheme().primary.withValues(alpha: 0.35),
+              onChanged: (val) async {
+                AppHaptics.lightImpact();
+                await storage.DataCache.setEnablePaymentColoring(val);
+                homePage.refreshPayments();
+              },
+            ),
+          ),
+        ),
         Expanded(
             child: RefreshIndicator(
                 onRefresh: onRefresh,

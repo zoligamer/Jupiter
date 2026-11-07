@@ -38,14 +38,17 @@ class PaymentElementWidget extends StatelessWidget {
     final isNonTimed = dueDateMs <= 0;
     final isMissed = dueDateMs < nowMs && !isNonTimed && !completed;
 
-    final isPositive = ammount > 0;
-    final isNegative = ammount < 0;
+    final bool enableColoring = DataCache.getEnablePaymentColoring();
+    final isPositive = enableColoring && ammount > 0;
+    final isNegative = enableColoring && ammount < 0;
 
-    final cardColor = isIgnored
-        ? theme.textColor.withValues(alpha: 0.5)
-        : completed
-            ? (isPositive ? theme.currentClassGreen : theme.primary)
-            : (isMissed ? theme.errorRed : const Color(0xFFFFA726));
+    final cardColor = !enableColoring
+        ? (completed ? theme.primary : (isMissed ? theme.errorRed : const Color(0xFFFFA726)))
+        : isIgnored
+            ? theme.textColor.withValues(alpha: 0.5)
+            : completed
+                ? (isPositive ? theme.currentClassGreen : theme.primary)
+                : (isMissed ? theme.errorRed : const Color(0xFFFFA726));
 
     final curr = (currency != null && currency!.isNotEmpty) ? currency! : 'Ft';
     final absAmount = ammount.abs();
@@ -54,7 +57,7 @@ class PaymentElementWidget extends StatelessWidget {
           (Match m) => '${m[1]} ',
         );
 
-    final formattedAmount = isIgnored
+    final formattedAmount = (!enableColoring || isIgnored)
         ? "$formattedNum $curr"
         : completed
             ? (isPositive ? "+$formattedNum $curr" : (isNegative ? "-$formattedNum $curr" : "$formattedNum $curr"))
@@ -171,10 +174,10 @@ class PaymentElementWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: (isPositive ? theme.currentClassGreen : theme.primary).withValues(alpha: 0.18),
+                    color: (!enableColoring ? theme.primary : (isPositive ? theme.currentClassGreen : theme.primary)).withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isPositive ? theme.currentClassGreen : theme.primary,
+                      color: !enableColoring ? theme.primary : (isPositive ? theme.currentClassGreen : theme.primary),
                       width: 1,
                     ),
                   ),
@@ -184,13 +187,13 @@ class PaymentElementWidget extends StatelessWidget {
                       Icon(
                         Icons.check_rounded,
                         size: 13,
-                        color: isPositive ? theme.currentClassGreen : theme.primary,
+                        color: !enableColoring ? theme.primary : (isPositive ? theme.currentClassGreen : theme.primary),
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        isPositive ? "JÓVÁÍRVA" : "BEFIZETVE",
+                        !enableColoring ? "TELJESÍTVE" : (isPositive ? "JÓVÁÍRVA" : "BEFIZETVE"),
                         style: TextStyle(
-                          color: isPositive ? theme.currentClassGreen : theme.primary,
+                          color: !enableColoring ? theme.primary : (isPositive ? theme.currentClassGreen : theme.primary),
                           fontWeight: FontWeight.w900,
                           fontSize: 10.5 * fontScale,
                           fontFamily: 'monospace',

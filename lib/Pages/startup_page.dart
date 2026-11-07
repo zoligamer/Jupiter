@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jupiter/API/api_coms.dart' as api;
 import 'package:jupiter/colors.dart';
@@ -80,7 +80,7 @@ class _SplitterState extends State<Splitter>{
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => const setup_page.SetupPageLoginTypeSelection()),
+            builder: (context) => const setup_page.SetupPageInstitudeSelection(fetchData: true)),
       );
     });
   }

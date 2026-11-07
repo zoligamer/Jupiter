@@ -192,6 +192,11 @@ class DataCache{
   late int? _persistentSetting_userSelectedLanguage = -1;
   String? _persistentSetting_userSelectedLanguageCode;
 
+  bool _persistentSetting_enablePaymentColoring = false;
+  String? _persistentSetting_tutorialStatus;
+  String? _cachedCreditProgressJson;
+  String? _lastSeenChangelogVersion;
+
   late int? _permanentConfiguration_isInstalledFromGooglePlay = 0;
 
 
@@ -361,6 +366,13 @@ class DataCache{
     if(tmp == null){
       _persistentSetting_needBetterHaptics = true;
     }
+
+    tmp = await getInt('SETTING_EnablePaymentColoring');
+    _persistentSetting_enablePaymentColoring = tmp != null && tmp != 0;
+
+    _persistentSetting_tutorialStatus = await getString('SETTING_TutorialStatus');
+    _cachedCreditProgressJson = await getString('CACHED_CreditProgressJson');
+    _lastSeenChangelogVersion = await getString('LastSeenChangelogVersion');
 
     tmp = await getInt('SETTING_UserWeekOffset');
     _persistentSetting_weekOffset = tmp ?? 0;
@@ -736,6 +748,34 @@ class DataCache{
   static Future<void> setShowPeriodsInCalendar(bool value) async {
     _instance._persistentSetting_showPeriodsInCalendar = value;
     await saveInt('SETTING_ShowPeriodsInCalendar', value ? 1 : 0);
+  }
+
+  static bool getEnablePaymentColoring() => _instance._persistentSetting_enablePaymentColoring;
+  static Future<void> setEnablePaymentColoring(bool value) async {
+    _instance._persistentSetting_enablePaymentColoring = value;
+    await saveInt('SETTING_EnablePaymentColoring', value ? 1 : 0);
+  }
+
+  static String? getTutorialStatus() => _instance._persistentSetting_tutorialStatus;
+  static Future<void> setTutorialStatus(String status) async {
+    _instance._persistentSetting_tutorialStatus = status;
+    await saveString('SETTING_TutorialStatus', status);
+  }
+
+  static String? getCachedCreditProgressJson() => _instance._cachedCreditProgressJson;
+  static Future<void> setCachedCreditProgressJson(String? json) async {
+    _instance._cachedCreditProgressJson = json;
+    if (json == null) {
+      await (await SharedPreferences.getInstance()).remove('CACHED_CreditProgressJson');
+    } else {
+      await saveString('CACHED_CreditProgressJson', json);
+    }
+  }
+
+  static String? getLastSeenChangelogVersion() => _instance._lastSeenChangelogVersion;
+  static Future<void> setLastSeenChangelogVersion(String version) async {
+    _instance._lastSeenChangelogVersion = version;
+    await saveString('LastSeenChangelogVersion', version);
   }
 
   static int? getUserWeekOffset(){return _instance._persistentSetting_weekOffset;}

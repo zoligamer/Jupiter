@@ -241,6 +241,118 @@ class AppUpdater {
     ) ?? false;
   }
 
+  /// Megjeleníti a kiadási megjegyzéseket frissítés után (csak egyszer verziónként)
+  static Future<void> showPostUpdateChangelogIfNeeded(BuildContext context) async {
+    if (installedVersion.isEmpty) {
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        installedVersion = packageInfo.version;
+      } catch (_) {
+        installedVersion = "1.0.5";
+      }
+    }
+
+    final lastSeen = DataCache.getLastSeenChangelogVersion();
+    if (lastSeen == null) {
+      // Első telepítés: elmentjük a verziót, nem zavarjuk a felhasználót régebbi jegyzetekkel
+      await DataCache.setLastSeenChangelogVersion(installedVersion);
+      return;
+    }
+
+    if (lastSeen != installedVersion) {
+      await DataCache.setLastSeenChangelogVersion(installedVersion);
+      if (context.mounted) {
+        await showReleaseChangelog(context, version: installedVersion);
+      }
+    }
+  }
+
+  /// Megjeleníti a megadott (vagy legújabb) verzió kiadási jegyzeteit
+  static Future<void> showReleaseChangelog(BuildContext context, {String? version}) async {
+    final theme = AppColors.getTheme();
+    final targetVer = version ?? (installedVersion.isNotEmpty ? installedVersion : "legújabb");
+
+    String releaseNotes = "Kiadási megjegyzések betöltése...";
+    try {
+      final response = await http.get(
+        Uri.parse("https://api.github.com/repos/$repoOwner/$repoName/releases/latest"),
+        headers: {
+          'User-Agent': 'Neptun2-App',
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final body = data['body']?.toString();
+        if (body != null && body.trim().isNotEmpty) {
+          releaseNotes = body.trim();
+        } else {
+          releaseNotes = "Nincsenek részletes kiadási megjegyzések ehhez a verzióhoz.";
+        }
+      }
+    } catch (_) {
+      releaseNotes = "A kiadási megjegyzések eléréséhez internetkapcsolat szükséges.";
+    }
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.rootBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.celebration_rounded, color: theme.primary, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Újdonságok a Jupiterben",
+                    style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    "Verzió: $targetVer",
+                    style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Text(
+              releaseNotes,
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.85), fontSize: 13, height: 1.45),
+            ),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Bezárás", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Detektálja, hogy 64-bites (ARM8) vagy 32-bites (ARM7) környezetben futunk
   static Future<bool> _detectIs64Bit() async {
     // 1. Android eszköz ABI lekérdezése
@@ -302,6 +414,14 @@ class AppUpdater {
     }).cast<Map<String, dynamic>>().toList();
 
     if (apkAssets.isEmpty) return null;
+
+    // 0. Elsődleges: Univerzális APK csomag (így az Android csomagkezelő maga választhat a megfelelő binárisokból)
+    for (final a in apkAssets) {
+      final name = a['name']?.toString().toLowerCase() ?? '';
+      if (name.contains('universal')) {
+        return a;
+      }
+    }
 
     final is64Bit = await _detectIs64Bit();
 

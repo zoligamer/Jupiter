@@ -109,765 +109,483 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          Center(
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: IconButton(
-                        tooltip: 'Change language / Nyelvválasztás',
-                        icon: Icon(Icons.language_rounded, color: AppColors.getTheme().primary, size: 28),
-                        onPressed: () async {
-                          AppHaptics.lightImpact();
-                          final changed = await Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LanguageSelectPage(isFromSetup: true)),
-                          );
-                          if (changed == true && mounted) {
-                            setState(() {});
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      AppStrings.getLanguagePack().rootpage_setupPage_SelectLoginTypeHeader,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.getTheme().textColor
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-                    Column(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        GestureDetector(
-                          onTap: (){
-                            AppHaptics.lightImpact();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => SetupPageInstitudeSelection(fetchData: _obtainFreshData, callback: changeFreshDataVal)));
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            margin: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.getTheme().rootBackground,
-                              borderRadius: const BorderRadius.all(Radius.circular(30)),
-                              border: Border.all(
-                                color: AppColors.getTheme().textColor.withValues(alpha: .3),
-                                width: 1
-                              )
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    Icon(
-                                      Icons.list_rounded,
-                                      color: AppColors.getTheme().textColor,
-                                      size: 40,
-                                    ),
-                                    Flexible(
-                                      child: Text(
-                                        AppStrings.getLanguagePack().rootpage_setupPage_InstitutesSelection,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            color: AppColors.getTheme().textColor,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  AppStrings.getLanguagePack().rootpage_setupPage_InstitutesSelectionDescription,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: (){
-                            AppHaptics.lightImpact();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupPageURLInput()));
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            margin: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                                color: AppColors.getTheme().rootBackground,
-                                borderRadius: const BorderRadius.all(Radius.circular(30)),
-                                border: Border.all(
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .3),
-                                    width: 1
-                                )
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    Icon(
-                                      Icons.link_rounded,
-                                      color: AppColors.getTheme().textColor,
-                                      size: 40,
-                                    ),
-                                    Flexible(
-                                      child: Text(
-                                        AppStrings.getLanguagePack().rootpage_setupPage_UrlLogin,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            color: AppColors.getTheme().textColor,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  AppStrings.getLanguagePack().rootpage_setupPage_UrlLoginDescription,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const SizedBox(height: 50),
-                    Container(
-                        margin: const EdgeInsets.all(20),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Flexible(
-                              child: EmojiRichText(
-                                text: AppStrings.getLanguagePack().rootpage_setupPage_AppProblemReporting,
-                                defaultStyle: TextStyle(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14.0,
-                                ),
-                                emojiStyle: TextStyle(
-                                    color: AppColors.getTheme().textColor,
-                                    fontSize: 14.0,
-                                    fontFamily: "Noto Color Emoji"
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Container(
-                              decoration: BoxDecoration(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: .06),
-                                  borderRadius: const BorderRadius.all(Radius.circular(90))
-                              ),
-                              child: IconButton(
-                                onPressed: (){
-                                  if(!Platform.isAndroid){
-                                    return;
-                                  }
+    return const SetupPageInstitudeSelection(fetchData: true);
+  }
+}
 
-                                  final url = Uri.parse('https://github.com/domedav/Neptun-2/issues/new/choose');
-                                  launchUrl(url);
-                                },
-                                icon: Icon(
-                                  Icons.feed_rounded,
-                                  color: AppColors.getTheme().textColor.withValues(alpha: 0.4),
-                                  size: 32,
-                                ),
-                              ),
-                            )
-                          ],
-                        )
-                    ),
-                  ],
-                ),
-              ),
-            ),
+class UniversityLogoWidget extends StatelessWidget {
+  final String name;
+  final String url;
+  final double size;
+
+  const UniversityLogoWidget({
+    super.key,
+    required this.name,
+    required this.url,
+    this.size = 44,
+  });
+
+  static String getAcronym(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('műszaki és gazdaság') || lower.contains('bme')) return 'BME';
+    if (lower.contains('eötvös loránd') || lower.contains('elte')) return 'ELTE';
+    if (lower.contains('óbudai') || lower.contains('obuda')) return 'ÓE';
+    if (lower.contains('semmelweis')) return 'SE';
+    if (lower.contains('debreceni egyetem')) return 'DE';
+    if (lower.contains('pécsi')) return 'PTE';
+    if (lower.contains('szegedi')) return 'SZTE';
+    if (lower.contains('corvinus')) return 'BCE';
+    if (lower.contains('gazdasági egyetem') || lower.contains('bge')) return 'BGE';
+    if (lower.contains('pázmány')) return 'PPKE';
+    if (lower.contains('széchenyi istván') || lower.contains('sze')) return 'SZE';
+    if (lower.contains('miskolci')) return 'ME';
+    if (lower.contains('pannon')) return 'PE';
+    if (lower.contains('állatorvos') || lower.contains('univet')) return 'ÁTE';
+    if (lower.contains('dunaújváros') || lower.contains('duf')) return 'DUE';
+    if (lower.contains('metropolitan')) return 'METU';
+    if (lower.contains('edutus')) return 'EDUTUS';
+    if (lower.contains('eszterházy')) return 'EKKE';
+    if (lower.contains('kodolányi')) return 'KJE';
+    if (lower.contains('károli')) return 'KRE';
+    if (lower.contains('soproni')) return 'SOE';
+    if (lower.contains('színház')) return 'SZFE';
+    if (lower.contains('képzőművészeti')) return 'MKE';
+    if (lower.contains('zeneművészeti') || lower.contains('liszt')) return 'LFZE';
+    if (lower.contains('iparművészeti') || lower.contains('moholy')) return 'MOME';
+    if (lower.contains('mate') || lower.contains('agrár- és élettudományi')) return 'MATE';
+    if (lower.contains('nemzeti közszolgálati')) return 'NKE';
+    if (lower.contains('testnevelési')) return 'TF';
+    if (lower.contains('neumann jános')) return 'NJE';
+    if (lower.contains('nyíregyházi')) return 'NYE';
+    if (lower.contains('milton')) return 'MF';
+
+    final words = name.split(RegExp(r'\s+')).where((w) => w.isNotEmpty && w[0] == w[0].toUpperCase()).toList();
+    if (words.length >= 2) {
+      return words.take(3).map((w) => w[0]).join();
+    }
+    return name.substring(0, min(name.length, 3)).toUpperCase();
+  }
+
+  static String? getFaviconUrl(String rawUrl) {
+    try {
+      final uri = Uri.parse(rawUrl);
+      if (uri.host.isNotEmpty) {
+        return "https://www.google.com/s2/favicons?domain=${uri.host}&sz=128";
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AppColors.getTheme();
+    final favicon = getFaviconUrl(url);
+    final acronym = getAcronym(name);
+
+    Widget fallbackBadge = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: theme.primary.withValues(alpha: 0.12),
+        border: Border.all(
+          color: theme.primary.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        acronym,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: theme.primary,
+          fontSize: (size * 0.32).clamp(10.0, 16.0),
+          fontWeight: FontWeight.w800,
+          fontFamily: 'monospace',
+          letterSpacing: -0.5,
+        ),
+      ),
+    );
+
+    if (favicon == null) {
+      return fallbackBadge;
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(
+          color: theme.textColor.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: ClipOval(
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.14),
+          child: Image.network(
+            favicon,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => fallbackBadge,
           ),
-          Visibility(
-            visible: _showBlur,
-            child: AnimatedBuilder(
-              animation: blurController,
-              builder: (context, widget) {
-                return Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: blurAnimation.value * 15, sigmaY: blurAnimation.value * 15),
-                    child: Container(
-                      color: Colors.black.withValues(alpha: blurAnimation.value * 0.4),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class SetupPageInstitudeSelection extends StatefulWidget{
-  const SetupPageInstitudeSelection({super.key, required this.fetchData, required this.callback});
   final bool fetchData;
-  final Function(bool) callback;
+  final Function(bool)? callback;
+
+  const SetupPageInstitudeSelection({super.key, this.fetchData = true, this.callback});
 
   @override
   State<StatefulWidget> createState() => _SetupPageInstitudeSelectionState();
 }
+
 class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelection>{
-
-  void proceedToLogin(){
-    if(!_canProceed){
-      return;
-    }
-
-    PageDTO.validatedURL = false;
-    PageDTO.selected = _selectedValue;
-
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupPageLogin()));
-  }
-
-  int _hasData = 0;
-  bool _drawNoInternet = false;
-
-  final List<String> _filteredValues = [];
-  late List<api.Institute> _institutes = [];
-  String _selectedValue = AppStrings.getLanguagePack().instituteSelection_setupPage_LoadingText;
+  final TextEditingController _searchController = TextEditingController();
+  List<api.Institute> _allInstitutes = [];
+  List<api.Institute> _filteredInstitutes = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarIconBrightness: AppColors.isDarktheme() ? Brightness.light : Brightness.dark,
-      systemNavigationBarColor: AppColors.getTheme().rootBackground, // navigation bar color
-      statusBarColor: AppColors.getTheme().rootBackground, // status bar color
+      systemNavigationBarColor: AppColors.getTheme().rootBackground,
+      statusBarColor: AppColors.getTheme().rootBackground,
     ));
 
-    fetchDataFromStorage();
-
-    if(storage.DataCache.getHasNetwork()){
-      _hasData++;
-    }
+    _loadInstitutes();
 
     AppColors.subThemeChangeCallback((){
-      if(!mounted){
-        return;
-      }
-      setState(() {
-
-      });
+      if(mounted) setState(() {});
     });
 
     FlutterNativeSplash.remove();
+  }
 
-    Future.delayed(Duration.zero,()async{
-      final hasNetwork = await Connectivity().checkConnectivity() == ConnectivityResult.none;
-      setState(() {
-        _drawNoInternet = hasNetwork;
-      });
-    });
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
-    if(widget.fetchData) {
-      api.InstitutesRequest.fetchInstitudesJSON().then((value) {
-        if(value == null || value.isEmpty){
-          widget.callback(false);
-          return;
-        }
+  Future<void> _loadInstitutes() async {
+    try {
+      final rawData = await api.InstitutesRequest.fetchInstitudesJSON();
+      if (rawData != null && rawData.isNotEmpty && mounted) {
+        final list = api.InstitutesRequest.getDataFromInstitudesJSON(rawData);
         setState(() {
-          final data = api.InstitutesRequest.getDataFromInstitudesJSON(value);
-          PageDTO.institutes = data;
-          _institutes = data;
-
-          for(var item in data){
-            _filteredValues.add(item.Name);
-          }
-
-          if (_filteredValues.isNotEmpty) {
-            _selectedValue = _filteredValues[Random().nextInt(1000) % _filteredValues.length];
-          }
-          _hasData++;
+          _allInstitutes = list;
+          _filteredInstitutes = list;
+          _isLoading = false;
         });
+        PageDTO.institutes = list;
+      }
+    } catch (_) {}
 
-        widget.callback(false);
-      }).catchError((_) {
-        widget.callback(false);
-      });
-    }
-    else{
-      setState(() {
-        _drawNoInternet = false;
-        _institutes = PageDTO.institutes!;
-
-        for(var item in _institutes){
-          _filteredValues.add(item.Name);
-        }
-
-        _selectedValue = _filteredValues[Random().nextInt(_filteredValues.length)];
-
-        _hasData++;
-      });
+    if (widget.callback != null) {
+      widget.callback!(false);
     }
   }
-  
-  Future<void> fetchDataFromStorage() async {
-    PageDTO.username = storage.DataCache.getUsername() ?? "";
-    PageDTO.password = storage.DataCache.getPassword() ?? "";
+
+  static String _normalize(String s) {
+    return s.toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ö', 'o')
+        .replaceAll('ő', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ű', 'u');
   }
 
-  String _snackbarMessage = "";
-  Duration _displayDuration = Duration.zero;
-  bool _shouldShowSnackbar = false;
-
-  void _showSnackbar(String text, int displayDurationSec){
-    if(!mounted){
-      return;
-    }
+  void _onSearchChanged(String query) {
     setState(() {
-      _shouldShowSnackbar = true;
-      _displayDuration = Duration(seconds: displayDurationSec);
-      _snackbarMessage = text;
+      _searchQuery = query.trim();
+      if (_searchQuery.isEmpty) {
+        _filteredInstitutes = _allInstitutes;
+      } else {
+        final normQ = _normalize(_searchQuery);
+        _filteredInstitutes = _allInstitutes.where((inst) {
+          final normName = _normalize(inst.Name);
+          final acronym = _normalize(UniversityLogoWidget.getAcronym(inst.Name));
+          final normUrl = _normalize(inst.URL);
+          return normName.contains(normQ) || acronym.contains(normQ) || normUrl.contains(normQ);
+        }).toList();
+      }
     });
   }
-  
-  double _horizontalDrag = 0;
-  bool _dragDebounce = false;
-  bool _canProceed = true;
 
-  final GlobalKey _dropdownSelectionGK = GlobalKey();
+  void _onSelectInstitute(api.Institute institute) {
+    AppHaptics.lightImpact();
+    PageDTO.selected = institute.Name;
+    PageDTO.customURL = institute.URL;
+    PageDTO.validatedURL = false;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SetupPageLogin()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return (_hasData < 2) ? Scaffold(
-      body: GestureDetector(
-        onHorizontalDragStart: (_){
-          _horizontalDrag = 0;
-          _dragDebounce = false;
-        },
-        onHorizontalDragEnd: (_){
-          _horizontalDrag = 0;
-          _dragDebounce = false;
-        },
-        onHorizontalDragUpdate: (e){
-          _horizontalDrag += e.delta.dx;
-          if(_horizontalDrag >= 25 && !_dragDebounce){
-            _horizontalDrag = 0;
-            _dragDebounce = true;
+    final theme = AppColors.getTheme();
+    final isDark = AppColors.isDarktheme();
 
-            AppHaptics.lightImpact();
-            Navigator.pop(context);
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          child: Center(
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: _drawNoInternet ?
-              Text(
-                AppStrings.getLanguagePack().instituteSelection_setupPage_NoNetwork,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.getTheme().textColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 38
-                ),
-              ) :
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.max,
+    return Scaffold(
+      backgroundColor: theme.rootBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top App Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    AppStrings.getLanguagePack().instituteSelection_setupPage_LoadingText,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.primary.withValues(alpha: 0.12),
+                        ),
+                        child: Icon(
+                          Icons.account_balance_rounded,
+                          color: theme.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppStrings.getLanguagePack().instituteSelection_setupPage_SelectInstitute,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: theme.textColor,
+                            ),
+                          ),
+                          Text(
+                            "Válaszd ki az egyetemed a belépéshez",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textColor.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 50),
-                  CircularProgressIndicator(color: AppColors.getTheme().textColor),
-                  const SizedBox(height: 20),
-                  Text(
-                    api.Generic.randomLoadingComment(storage.DataCache.getNeedFamilyFriendlyComments()!),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                        fontWeight: FontWeight.w300,
-                        fontSize: 10
-                    ),
-                  )
+                  IconButton(
+                    tooltip: 'Change language / Nyelvválasztás',
+                    icon: Icon(Icons.language_rounded, color: theme.primary, size: 26),
+                    onPressed: () async {
+                      AppHaptics.lightImpact();
+                      final changed = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LanguageSelectPage(isFromSetup: true)),
+                      );
+                      if (changed == true && mounted) {
+                        setState(() {});
+                      }
+                    },
+                  ),
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    ) : Scaffold(
-        body: GestureDetector(
-          onHorizontalDragStart: (_){
-            _horizontalDrag = 0;
-            _dragDebounce = false;
-          },
-          onHorizontalDragEnd: (_){
-            _horizontalDrag = 0;
-            _dragDebounce = false;
-          },
-          onHorizontalDragUpdate: (e){
-            _horizontalDrag += e.delta.dx;
-            if(_horizontalDrag <= -25 && !_dragDebounce){
-              _horizontalDrag = 0;
-              _dragDebounce = true;
 
-              if(!_canProceed){
-                _showSnackbar(AppStrings.getLanguagePack().instituteSelection_setupPage_SelectValidInstitute, 5);
-                AppHaptics.attentionLightImpact();
-                return;
-              }
-
-              AppHaptics.lightImpact();
-              proceedToLogin();
-            }
-            else if(_horizontalDrag >= 25 && !_dragDebounce){
-              _horizontalDrag = 0;
-              _dragDebounce = true;
-
-              AppHaptics.lightImpact();
-              Navigator.pop(context);
-            }
-          },
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              Center(
-                child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 40),
-                      Text(
-                        AppStrings.getLanguagePack().instituteSelection_setupPage_SelectInstitute,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.getTheme().textColor
-                        ),
-                      ),
-                      const SizedBox(height: 60),
-                      Column(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: TextField(
-                              keyboardType: TextInputType.name,
-                              decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.all(18),
-                                  suffixIcon: Icon(Icons.search_rounded),
-                                  labelText: AppStrings.getLanguagePack().instituteSelection_setupPage_Search,
-                                  labelStyle: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                      fontWeight: FontWeight.w400
-                                  ),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                                      borderSide: BorderSide.none
-                                  ),
-                                  filled: true,
-                                  fillColor: AppColors.getTheme().textColor.withValues(alpha: .05)
-                              ),
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.getTheme().textColor,
-                                  fontWeight: FontWeight.w600
-                              ),
-                              autofocus: true,
-                              enableSuggestions: false,
-                              autocorrect: false,
-                              onChanged: (value) {
-                                AppHaptics.textEditingImpact();
-                                setState(() {
-                                  _filteredValues.clear();
-                                  for(var item in _institutes){
-                                    if(item.Name.toLowerCase().contains(value.toLowerCase())){
-                                      _filteredValues.add(item.Name);
-                                    }
-                                  }
-                                  if(_filteredValues.isNotEmpty) {
-                                    _selectedValue = _filteredValues[0];
-                                    _canProceed = true;
-                                  } else{
-                                    AppHaptics.attentionLightImpact();
-                                    _filteredValues.add(AppStrings.getLanguagePack().instituteSelection_setupPage_SearchNotFound);
-                                    _selectedValue = _filteredValues[0];
-                                    _canProceed = false;
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            child: DropdownButtonFormField<String>(
-                              key: _dropdownSelectionGK,
-                              borderRadius: BorderRadius.circular(12),
-                              initialValue: _selectedValue, // The currently selected value.
-                              icon: const SizedBox(),
-                              style: TextStyle(
-                                  color: AppColors.getTheme().textColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600
-                              ),
-                              enableFeedback: true,
-                              onTap: AppHaptics.lightImpact,
-                              focusColor: Colors.transparent,
-                              dropdownColor: AppColors.getTheme().rootBackground,
-                              decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.all(18),
-                                  suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
-                                  labelStyle: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                      fontWeight: FontWeight.w400
-                                  ),
-                                  border: const OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                                      borderSide: BorderSide.none
-                                  ),
-                                  filled: true,
-                                  fillColor: AppColors.getTheme().textColor.withValues(alpha: .05)
-                              ),
-                              items: _filteredValues.map<DropdownMenuItem<String>>((String value) {
-                                return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-                                      child: Text(
-                                        value,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.start,
-                                        style: TextStyle(
-                                          color: AppColors.getTheme().textColor,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w400
-                                        ),
-                                      ),
-                                    )
-                                );
-                              }).toList(),
-                              selectedItemBuilder: (context){
-                                return _filteredValues.map<Widget>((String value){
-                                  return Container(
-                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 105),
-                                    child: Text(
-                                      value,
-                                      textAlign: TextAlign.start,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        color: AppColors.getTheme().textColor,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400
-                                      ),
-                                    ),
-                                  );
-                                }).toList();
-                              },
-                              onChanged: (String? value) {
-                                AppHaptics.lightImpact();
-                                setState(() {
-                                  _selectedValue = value!;
-                                });
-                              }
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 35),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Container(
-                              margin: const EdgeInsets.all(15),
-                              child: Text(
-                                AppStrings.getLanguagePack().instituteSelection_setupPage_InstituteCantFindHelpText,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .6)
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(90)),
-                                color: AppColors.getTheme().textColor.withValues(alpha: .06)
-                            ),
-                            child: IconButton(
-                              onPressed: (){
-                                _showSnackbar(AppStrings.getLanguagePack().instituteSelection_setupPage_InstituteCantFindHelpTextDescription, 12);
-                                AppHaptics.attentionLightImpact();
-                              },
-                              icon: Icon(
-                                Icons.question_mark_rounded,
-                                color: AppColors.getTheme().textColor.withValues(alpha: .4),
-                              ),
-                              enableFeedback: true,
-                              iconSize: 24,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 50),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                                onPressed: (){
-                                  AppHaptics.lightImpact();
-                                  Navigator.pop(context);
-                                },
-                                style: ButtonStyle(
-                                    backgroundColor: WidgetStateProperty.all(AppColors.getTheme().buttonEnabled),
-                                    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 35, vertical: 20))
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.arrow_back_ios_rounded,
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                    ),
-                                    Text(
-                                      AppStrings.getLanguagePack().any_setupPage_GoBack,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 12,
-                                        color: AppColors.getTheme().textColor
-                                      ),
-                                    )
-                                  ],
-                                )
-                            ),
-                            SizedBox(width: MediaQuery.of(context).size.width / 10),
-                            ElevatedButton(
-                                onPressed: _canProceed ? (){
-                                  AppHaptics.lightImpact();
-                                  proceedToLogin();
-                                } : (){
-                                  _showSnackbar(AppStrings.getLanguagePack().instituteSelection_setupPage_SelectValidInstitute, 5);
-                                  AppHaptics.attentionLightImpact();
-                                },
-                                style: ButtonStyle(
-                                    backgroundColor: _canProceed ? WidgetStateProperty.all(AppColors.getTheme().buttonEnabled) : WidgetStateProperty.all(AppColors.getTheme().buttonDisabled),
-                                    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 35, vertical: 20))
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      AppStrings.getLanguagePack().any_setupPage_ProceedLogin,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 12,
-                                          color: AppColors.getTheme().textColor
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                    ),
-                                  ],
-                                )
-                            )
-                          ],
-                        ),
-                      )
-                    ],
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: theme.textColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  hintText: "${AppStrings.getLanguagePack().instituteSelection_setupPage_Search} (pl. BME, ELTE, Óbuda...)",
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: theme.textColor.withValues(alpha: 0.45),
+                  ),
+                  prefixIcon: Icon(Icons.search_rounded, color: theme.primary, size: 22),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.close_rounded, color: theme.textColor.withValues(alpha: 0.5)),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: isDark
+                      ? theme.textColor.withValues(alpha: 0.05)
+                      : theme.textColor.withValues(alpha: 0.04),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.textColor.withValues(alpha: 0.12),
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.textColor.withValues(alpha: 0.12),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
             ),
-            Visibility(
-              visible: _shouldShowSnackbar,
-              child: AppSnackbar(text: _snackbarMessage, displayDuration: _displayDuration, changer: (){
-                if(!mounted){
-                  return;
-                }
-                AppSnackbar.cancelTimer();
-                setState(() {
-                  _shouldShowSnackbar = false;
-                });
-              }, state: _shouldShowSnackbar,
-              ),
+
+            const SizedBox(height: 4),
+
+            // List of Universities
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(color: theme.primary),
+                    )
+                  : _filteredInstitutes.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.search_off_rounded,
+                                  size: 48,
+                                  color: theme.textColor.withValues(alpha: 0.3),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  AppStrings.getLanguagePack().instituteSelection_setupPage_SearchNotFound,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "Próbálj más névre vagy rövidítésre keresni",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.textColor.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _filteredInstitutes.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final institute = _filteredInstitutes[index];
+                            final host = Uri.tryParse(institute.URL)?.host ?? '';
+
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onSelectInstitute(institute),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? theme.secondary.withValues(alpha: 0.35)
+                                        : theme.secondary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? theme.secondary.withValues(alpha: 0.55)
+                                          : theme.secondary.withValues(alpha: 0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      UniversityLogoWidget(
+                                        name: institute.Name,
+                                        url: institute.URL,
+                                        size: 44,
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              institute.Name,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w700,
+                                                color: theme.textColor,
+                                              ),
+                                            ),
+                                            if (host.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                host,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: theme.textColor.withValues(alpha: 0.5),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        size: 14,
+                                        color: theme.textColor.withValues(alpha: 0.35),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -1387,8 +1105,70 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
           _isLoading = false;
           _showNeptunServerError = false;
         });
+        _showLoginErrorDialog(
+          title: "Sikertelen bejelentkezés",
+          message: "Hibás Neptun kód vagy jelszó!\n\nKérjük, ellenőrizd az adataidat, a kis- és nagybetűket, valamint a kiválasztott intézményt.",
+        );
       }
+    }).catchError((err) {
+      if (!mounted) return;
+      AppHaptics.attentionLightImpact();
+      setState(() {
+        _paintRed = true;
+        _canProceed = true;
+        _isLoading = false;
+        _showNeptunServerError = false;
+      });
+      _showLoginErrorDialog(
+        title: "Kapcsolódási hiba",
+        message: "Nem sikerült elérni az egyetemi Neptun szervert!\n\nKérjük, ellenőrizd az internetkapcsolatodat, vagy próbáld meg később.",
+      );
     });
+  }
+
+  void _showLoginErrorDialog({required String title, required String message}) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.getTheme().rootBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: AppColors.getTheme().errorRed, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.getTheme().textColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: AppColors.getTheme().textColor.withValues(alpha: 0.9),
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.getTheme().primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Rendben", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1475,29 +1255,79 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                         ),
                       ),
                       const SizedBox(height: 60),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.house_rounded,
-                            color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                            size: 22,
+                      // University Selection Banner
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.isDarktheme()
+                              ? AppColors.getTheme().secondary.withValues(alpha: 0.35)
+                              : AppColors.getTheme().secondary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.isDarktheme()
+                                ? AppColors.getTheme().secondary.withValues(alpha: 0.55)
+                                : AppColors.getTheme().secondary.withValues(alpha: 0.25),
+                            width: 1,
                           ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              PageDTO.validatedURL ? PageDTO.customURL!.replaceAll(RegExp(r'/hallgato/login\.aspx'), '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), "").replaceAll("https://", '') : (PageDTO.selected ?? AppStrings.getLanguagePack().loginPage_setupPage_ActivityCacheInvalidHelper),
-                              textAlign: TextAlign.start,
-                              style: TextStyle(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: .2),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600
+                        ),
+                        child: Row(
+                          children: [
+                            UniversityLogoWidget(
+                              name: PageDTO.selected ?? "Neptun",
+                              url: PageDTO.customURL ?? "",
+                              size: 40,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    PageDTO.selected ?? "Kiválasztott Intézmény",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.getTheme().textColor,
+                                    ),
+                                  ),
+                                  if (PageDTO.customURL != null && PageDTO.customURL!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      Uri.tryParse(PageDTO.customURL!)?.host ?? '',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.getTheme().textColor.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          )
-                        ],
+                            TextButton(
+                              onPressed: () {
+                                AppHaptics.lightImpact();
+                                Navigator.pop(context);
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                "Váltás",
+                                style: TextStyle(
+                                  color: AppColors.getTheme().primary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.max,
@@ -1602,47 +1432,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                                 fontSize: 12
                             ),
                           ),
-                          const SizedBox(height: 45),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Container(
-                                  margin: const EdgeInsets.all(15),
-                                  child: Text(
-                                    AppStrings.getLanguagePack().loginPage_setupPage_2faWarning,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.getTheme().textColor.withValues(alpha: .6)
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                margin: const EdgeInsets.all(15),
-                                decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.all(Radius.circular(90)),
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .06)
-                                ),
-                                child: IconButton(
-                                  onPressed: (){
-                                    _showSnackbar(AppStrings.getLanguagePack().loginPage_setupPage_2faWarningDescription, 18);
-                                    AppHaptics.attentionLightImpact();
-                                  },
-                                  icon: Icon(
-                                    Icons.question_mark_rounded,
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .4),
-                                  ),
-                                  enableFeedback: true,
-                                  iconSize: 24,
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 35),
                           const SizedBox(height: 50),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,

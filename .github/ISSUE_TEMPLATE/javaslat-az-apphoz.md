@@ -3,7 +3,7 @@ name: Javaslat az apphoz
 about: Ha van ötleted hogyan lehetne jobb az app, ide írd le
 title: "[IDEA]"
 labels: enhancement
-assignees: domedav
+assignees: zoligamer
 
 ---
 

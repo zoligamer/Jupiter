@@ -169,7 +169,7 @@ class _LanguageSelectPageState extends State<LanguageSelectPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const setup_page.SetupPageLoginTypeSelection(),
+          builder: (context) => const setup_page.SetupPageInstitudeSelection(fetchData: true),
         ),
       );
     }

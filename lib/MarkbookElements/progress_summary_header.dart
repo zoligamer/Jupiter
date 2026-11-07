@@ -4,30 +4,7 @@ import '../colors.dart';
 import '../storage.dart';
 import 'package:jupiter/API/api_coms.dart' as api;
 
-class CreditProgressModel {
-  final int completedCredit;
-  final int requiredCredit;
-  final int completedRequiredSubjectCredit;
-  final int completedRequiredOptionalSubjectCredit;
-  final int? completedOptionalSubjectCredit;
-  final int completedCurriculumCount;
-  final int allCurriculumCount;
-  final bool hasCompletedCourseRequirements;
-
-  const CreditProgressModel({
-    required this.completedCredit,
-    required this.requiredCredit,
-    this.completedRequiredSubjectCredit = 0,
-    this.completedRequiredOptionalSubjectCredit = 0,
-    this.completedOptionalSubjectCredit,
-    this.completedCurriculumCount = 0,
-    this.allCurriculumCount = 0,
-    this.hasCompletedCourseRequirements = false,
-  });
-
-  double get progressRatio => requiredCredit > 0 ? (completedCredit / requiredCredit).clamp(0.0, 1.0) : 0.0;
-  double get percentage => progressRatio * 100.0;
-}
+typedef CreditProgressModel = api.CreditProgressModel;
 
 class ProgressSummaryHeader extends StatelessWidget {
   final CreditProgressModel? creditProgress;
@@ -57,14 +34,7 @@ class ProgressSummaryHeader extends StatelessWidget {
     final isDark = AppColors.isDarktheme();
     final fontScale = DataCache.getFontScale();
 
-    final prog = creditProgress ??
-        CreditProgressModel(
-          completedCredit: semesterCompletedCredits > 0 ? semesterCompletedCredits : 40,
-          requiredCredit: 210,
-          completedRequiredSubjectCredit: 40,
-          completedCurriculumCount: 1,
-          allCurriculumCount: 2,
-        );
+    final prog = creditProgress;
 
     final cardBg = isDark
         ? theme.secondary.withValues(alpha: 0.35)
@@ -137,7 +107,7 @@ class ProgressSummaryHeader extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      '${prog.percentage.toStringAsFixed(1)}%',
+                      prog != null ? '${prog.percentage.toStringAsFixed(1)}%' : '--%',
                       style: TextStyle(
                         color: theme.currentClassGreen,
                         fontSize: 11 * fontScale,
@@ -164,7 +134,7 @@ class ProgressSummaryHeader extends StatelessWidget {
                         CustomPaint(
                           size: const Size(100, 100),
                           painter: _CircularProgressRingPainter(
-                            progress: prog.progressRatio,
+                            progress: prog?.progressRatio ?? 0.0,
                             trackColor: theme.textColor.withValues(alpha: isDark ? 0.08 : 0.07),
                             progressColor: theme.currentClassGreen,
                             strokeWidth: 9.0,
@@ -178,7 +148,7 @@ class ProgressSummaryHeader extends StatelessWidget {
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: '${prog.completedCredit}',
+                                    text: prog != null ? '${prog.completedCredit}' : '-',
                                     style: TextStyle(
                                       color: isDark ? Colors.white : theme.textColor,
                                       fontSize: 19 * fontScale,
@@ -187,7 +157,7 @@ class ProgressSummaryHeader extends StatelessWidget {
                                     ),
                                   ),
                                   TextSpan(
-                                    text: '\n/${prog.requiredCredit}',
+                                    text: prog != null ? '\n/${prog.requiredCredit}' : '\n/-',
                                     style: TextStyle(
                                       color: theme.textColor.withValues(alpha: 0.55),
                                       fontSize: 12 * fontScale,
@@ -221,9 +191,9 @@ class ProgressSummaryHeader extends StatelessWidget {
                       children: [
                         _buildProgressInfoRow(
                           title: 'Szabadon választható kredit',
-                          value: prog.completedOptionalSubjectCredit != null
+                          value: (prog != null && prog.completedOptionalSubjectCredit != null)
                               ? '${prog.completedOptionalSubjectCredit} kredit teljesítve'
-                              : '- kredit teljesített',
+                              : '- kredit teljesítve',
                           theme: theme,
                           isDark: isDark,
                           fontScale: fontScale,
@@ -231,7 +201,9 @@ class ProgressSummaryHeader extends StatelessWidget {
                         const SizedBox(height: 8),
                         _buildProgressInfoRow(
                           title: 'Teljesített mintatanterv',
-                          value: '${prog.completedCurriculumCount}/${prog.allCurriculumCount} db teljesített',
+                          value: prog != null
+                              ? '${prog.completedCurriculumCount}/${prog.allCurriculumCount} db teljesített'
+                              : '- / - db teljesített',
                           theme: theme,
                           isDark: isDark,
                           fontScale: fontScale,

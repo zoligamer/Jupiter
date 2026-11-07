@@ -3,7 +3,7 @@ name: Hibabejelentés
 about: Írd le mi a probléma
 title: "[BUG]"
 labels: bug
-assignees: domedav
+assignees: zoligamer
 
 ---
 
