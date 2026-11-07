@@ -77,7 +77,8 @@ android {
             } else {
                 signingConfig signingConfigs.debug
             }
-            minifyEnabled true // Opcionális: extra tömörítés
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {

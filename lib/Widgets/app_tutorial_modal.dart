@@ -77,90 +77,92 @@ class AppTutorialModal {
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.rootBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Üdvözöl a Jupiter!',
-                style: TextStyle(
-                  color: theme.textColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Szeretnél egy gyors, 1 perces bemutatót az alkalmazás leghasznosabb funkcióiról és felületeiről?',
-          style: TextStyle(
-            color: theme.textColor.withValues(alpha: 0.85),
-            fontSize: 14,
-            height: 1.4,
-          ),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        actions: [
-          Row(
+      builder: (ctx) => SafeArea(
+        child: AlertDialog(
+          backgroundColor: theme.rootBackground,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
             children: [
-              TextButton(
-                onPressed: () {
-                  DataCache.setTutorialStatus('never');
-                  Navigator.pop(ctx, 'never');
-                },
-                child: Text(
-                  'Soha többé',
-                  style: TextStyle(
-                    color: theme.textColor.withValues(alpha: 0.45),
-                    fontSize: 12,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 24),
               ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  DataCache.setTutorialStatus('later');
-                  Navigator.pop(ctx, 'later');
-                },
+              const SizedBox(width: 12),
+              Expanded(
                 child: Text(
-                  'Nem most',
+                  'Üdvözöl a Jupiter!',
                   style: TextStyle(
-                    color: theme.textColor.withValues(alpha: 0.70),
-                    fontSize: 13,
+                    color: theme.textColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
                   ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primary,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx, 'show');
-                },
-                child: const Text(
-                  'Igen, mutasd!',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ],
           ),
-        ],
+          content: Text(
+            'Szeretnél egy gyors, 1 perces bemutatót az alkalmazás leghasznosabb funkcióiról és felületeiről?',
+            style: TextStyle(
+              color: theme.textColor.withValues(alpha: 0.85),
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          actions: [
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    DataCache.setTutorialStatus('never');
+                    Navigator.pop(ctx, 'never');
+                  },
+                  child: Text(
+                    'Soha többé',
+                    style: TextStyle(
+                      color: theme.textColor.withValues(alpha: 0.45),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    DataCache.setTutorialStatus('later');
+                    Navigator.pop(ctx, 'later');
+                  },
+                  child: Text(
+                    'Nem most',
+                    style: TextStyle(
+                      color: theme.textColor.withValues(alpha: 0.70),
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx, 'show');
+                  },
+                  child: const Text(
+                    'Igen, mutasd!',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
 
@@ -211,7 +213,7 @@ class _TutorialSheetState extends State<_TutorialSheet> {
     final theme = widget.theme;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.70,
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: BoxDecoration(
         color: theme.rootBackground,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -223,178 +225,186 @@ class _TutorialSheetState extends State<_TutorialSheet> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.textColor.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(2),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
 
-          // Fejléc
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.explore_rounded, color: theme.primary, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Jupiter funkciók áttekintése',
-                      style: TextStyle(
-                        color: theme.textColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Kihagyás',
-                    style: TextStyle(
-                      color: theme.textColor.withValues(alpha: 0.50),
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1, thickness: 0.5),
-
-          // PageView
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: steps.length,
-              onPageChanged: (idx) => setState(() => _currentPage = idx),
-              itemBuilder: (ctx, index) {
-                final s = steps[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            // Fejléc
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: s.accentColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: s.accentColor.withValues(alpha: 0.35),
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(s.icon, color: s.accentColor, size: 46),
-                      ),
-                      const SizedBox(height: 24),
+                      Icon(Icons.explore_rounded, color: theme.primary, size: 22),
+                      const SizedBox(width: 8),
                       Text(
-                        s.title,
-                        textAlign: TextAlign.center,
+                        'Jupiter funkciók áttekintése',
                         style: TextStyle(
                           color: theme.textColor,
                           fontWeight: FontWeight.w800,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        s.description,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: theme.textColor.withValues(alpha: 0.80),
-                          fontSize: 14,
-                          height: 1.5,
+                          fontSize: 15,
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
-          ),
-
-          // Alsó sáv lapozó indikátorral és gombokkal
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Vissza gomb (vagy üres hely)
-                if (_currentPage > 0)
                   TextButton(
-                    onPressed: () {
-                      _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutCubic,
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Kihagyás',
+                      style: TextStyle(
+                        color: theme.textColor.withValues(alpha: 0.50),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1, thickness: 0.5),
+
+            // PageView
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: steps.length,
+                onPageChanged: (idx) => setState(() => _currentPage = idx),
+                itemBuilder: (ctx, index) {
+                  final s = steps[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 8),
+                    child: Center(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 84,
+                              height: 84,
+                              decoration: BoxDecoration(
+                                color: s.accentColor.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: s.accentColor.withValues(alpha: 0.35),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Icon(s.icon, color: s.accentColor, size: 44),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              s.title,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.textColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              s.description,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.textColor.withValues(alpha: 0.80),
+                                fontSize: 14,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Alsó sáv lapozó indikátorral és gombokkal
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Vissza gomb (vagy üres hely)
+                  if (_currentPage > 0)
+                    TextButton(
+                      onPressed: () {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                        );
+                      },
+                      child: Text(
+                        'Vissza',
+                        style: TextStyle(color: theme.textColor.withValues(alpha: 0.70)),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 60),
+
+                  // Lapozó pontok
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(steps.length, (idx) {
+                      final isSel = idx == _currentPage;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: isSel ? 20 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: isSel ? theme.primary : theme.textColor.withValues(alpha: 0.20),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       );
+                    }),
+                  ),
+
+                  // Következő / Befejezés gomb
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      if (_currentPage < steps.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                        );
+                      } else {
+                        Navigator.pop(context);
+                      }
                     },
                     child: Text(
-                      'Vissza',
-                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.70)),
+                      _currentPage == steps.length - 1 ? 'Kész' : 'Tovább',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
-                  )
-                else
-                  const SizedBox(width: 60),
-
-                // Lapozó pontok
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(steps.length, (idx) {
-                    final isSel = idx == _currentPage;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: isSel ? 20 : 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: isSel ? theme.primary : theme.textColor.withValues(alpha: 0.20),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  }),
-                ),
-
-                // Következő / Befejezés gomb
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primary,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () {
-                    if (_currentPage < steps.length - 1) {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutCubic,
-                      );
-                    } else {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text(
-                    _currentPage == steps.length - 1 ? 'Kész' : 'Tovább',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
