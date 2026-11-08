@@ -5,18 +5,18 @@
 const REPO_OWNER = "zoligamer";
 const REPO_NAME = "Jupiter";
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
-const CACHE_KEY = "jupiter_latest_release";
+const CACHE_KEY = "jupiter_latest_release_v220";
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 mins
 
 const FALLBACK_RELEASE = {
-  tagName: "2.1.1-B2",
-  universalUrl: "https://github.com/zoligamer/Jupiter/releases/download/2.1.1-B2/Jupiter_Universal_v2.1.1-B2.apk",
-  universalSize: "61.7 MB",
-  arm8Url: "https://github.com/zoligamer/Jupiter/releases/download/2.1.1-B2/Jupiter_ARM8_v2.1.1-B2.apk",
-  arm8Size: "27.6 MB",
-  arm7Url: "https://github.com/zoligamer/Jupiter/releases/download/2.1.1-B2/Jupiter_ARM7_v2.1.1-B2.apk",
-  arm7Size: "25.2 MB",
-  universalSha1: "88eb423f6b6e3afbe6d5e7005ba7c958fd2ba6a8"
+  tagName: "2.2.0",
+  universalUrl: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_Universal_v2.2.0.apk",
+  universalSize: "71.4 MB",
+  arm8Url: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM8.apk",
+  arm8Size: "33.5 MB",
+  arm7Url: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM7.apk",
+  arm7Size: "31.3 MB",
+  universalSha1: "804d9a334f3e65b34e822facaed1d2d66ab7298f"
 };
 
 /* Showcase Data */
@@ -171,15 +171,19 @@ function parseReleasePayload(data) {
   let universal = null;
   let arm8 = null;
   let arm7 = null;
-  let universalSha1 = "";
+  let sha1Asset = null;
 
   for (const asset of assets) {
     const name = asset.name.toLowerCase();
+    if (name.endsWith(".sha1")) {
+      if (name.includes("universal")) sha1Asset = asset;
+      continue;
+    }
     if (name.includes("universal") && name.endsWith(".apk")) {
       universal = asset;
-    } else if ((name.includes("arm8") || name.includes("arm64")) && name.endsWith(".apk")) {
+    } else if ((name.includes("arm8") || name.includes("arm64") || name.includes("v8a")) && name.endsWith(".apk")) {
       arm8 = asset;
-    } else if ((name.includes("arm7") || name.includes("armv7")) && name.endsWith(".apk")) {
+    } else if ((name.includes("arm7") || name.includes("armv7") || name.includes("v7a")) && name.endsWith(".apk")) {
       arm7 = asset;
     }
   }
@@ -188,11 +192,12 @@ function parseReleasePayload(data) {
     tagName: tagName || FALLBACK_RELEASE.tagName,
     universalUrl: universal ? universal.browser_download_url : FALLBACK_RELEASE.universalUrl,
     universalSize: universal ? formatBytes(universal.size) : FALLBACK_RELEASE.universalSize,
-    arm8Url: arm8 ? arm8.browser_download_url : FALLBACK_RELEASE.arm8Url,
+    arm8Url: arm8 ? arm8.browser_download_url : (universal ? universal.browser_download_url : FALLBACK_RELEASE.arm8Url),
     arm8Size: arm8 ? formatBytes(arm8.size) : FALLBACK_RELEASE.arm8Size,
-    arm7Url: arm7 ? arm7.browser_download_url : FALLBACK_RELEASE.arm7Url,
+    arm7Url: arm7 ? arm7.browser_download_url : (universal ? universal.browser_download_url : FALLBACK_RELEASE.arm7Url),
     arm7Size: arm7 ? formatBytes(arm7.size) : FALLBACK_RELEASE.arm7Size,
-    universalSha1: FALLBACK_RELEASE.universalSha1
+    universalSha1: FALLBACK_RELEASE.universalSha1,
+    sha1Url: sha1Asset ? sha1Asset.browser_download_url : null
   };
 }
 
@@ -217,19 +222,34 @@ function applyReleaseData(rel) {
 
   // Split ARM8 Card
   const cardArm8Btn = document.getElementById("card-arm8-btn");
+  const cardArm8Ver = document.getElementById("card-arm8-version");
   const cardArm8Size = document.getElementById("card-arm8-size");
   if (cardArm8Btn && rel.arm8Url) cardArm8Btn.href = rel.arm8Url;
+  if (cardArm8Ver && rel.tagName) cardArm8Ver.textContent = `v${rel.tagName}`;
   if (cardArm8Size && rel.arm8Size) cardArm8Size.textContent = rel.arm8Size;
 
   // Split ARM7 Card
   const cardArm7Btn = document.getElementById("card-arm7-btn");
+  const cardArm7Ver = document.getElementById("card-arm7-version");
   const cardArm7Size = document.getElementById("card-arm7-size");
   if (cardArm7Btn && rel.arm7Url) cardArm7Btn.href = rel.arm7Url;
+  if (cardArm7Ver && rel.tagName) cardArm7Ver.textContent = `v${rel.tagName}`;
   if (cardArm7Size && rel.arm7Size) cardArm7Size.textContent = rel.arm7Size;
 
   // Universal SHA1
   const sha1Elem = document.getElementById("universal-sha1-val");
-  if (sha1Elem && rel.universalSha1) sha1Elem.textContent = rel.universalSha1;
+  if (sha1Elem) {
+    if (rel.universalSha1) sha1Elem.textContent = rel.universalSha1;
+    if (rel.sha1Url) {
+      fetch(rel.sha1Url)
+        .then(r => r.text())
+        .then(hash => {
+          const cleaned = hash.trim().split(/\s+/)[0];
+          if (cleaned && cleaned.length >= 20) sha1Elem.textContent = cleaned;
+        })
+        .catch(() => {});
+    }
+  }
 }
 
 /* Showcase Controller */

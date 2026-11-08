@@ -114,50 +114,69 @@ class AppTutorialModal {
           ),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           actions: [
-            Row(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextButton(
-                  onPressed: () {
-                    DataCache.setTutorialStatus('never');
-                    Navigator.pop(ctx, 'never');
-                  },
-                  child: Text(
-                    'Soha többé',
-                    style: TextStyle(
-                      color: theme.textColor.withValues(alpha: 0.45),
-                      fontSize: 12,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx, 'show');
+                    },
+                    child: const Text(
+                      'Igen, mutasd!',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    DataCache.setTutorialStatus('later');
-                    Navigator.pop(ctx, 'later');
-                  },
-                  child: Text(
-                    'Nem most',
-                    style: TextStyle(
-                      color: theme.textColor.withValues(alpha: 0.70),
-                      fontSize: 13,
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () {
+                        DataCache.setTutorialStatus('never');
+                        Navigator.pop(ctx, 'never');
+                      },
+                      child: Text(
+                        'Soha többé',
+                        style: TextStyle(
+                          color: theme.textColor.withValues(alpha: 0.45),
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primary,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx, 'show');
-                  },
-                  child: const Text(
-                    'Igen, mutasd!',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () {
+                        DataCache.setTutorialStatus('later');
+                        Navigator.pop(ctx, 'later');
+                      },
+                      child: Text(
+                        'Nem most',
+                        style: TextStyle(
+                          color: theme.textColor.withValues(alpha: 0.70),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -248,20 +267,27 @@ class _TutorialSheetState extends State<_TutorialSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.explore_rounded, color: theme.primary, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Jupiter funkciók áttekintése',
-                        style: TextStyle(
-                          color: theme.textColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.explore_rounded, color: theme.primary, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Jupiter funkciók áttekintése',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.textColor,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(

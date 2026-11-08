@@ -1855,6 +1855,8 @@ class CashinRequest{
     final norm = _normalizeText(text);
     return norm.contains('utalas a gyujtoszamlara') ||
         norm.contains('utalas a gyujto') ||
+        norm.contains('gyujtoszamla egyenleg feltoltes') ||
+        norm.contains('gyujtoszamla feltoltes') ||
         (norm.contains('utalas') && norm.contains('gyujto'));
   }
 
@@ -1916,6 +1918,7 @@ class CashinRequest{
         final results = await Future.wait([
           _APIRequest.getRequest(txUrl, bearerToken: token ?? ""),
           getScholarshipPayments(),
+          getCollectiveInvoiceBalance(),
         ]);
 
         final responseRaw = results[0] as String;
@@ -1924,6 +1927,12 @@ class CashinRequest{
 
         List<CashinEntry> modernCashins = [];
         Set<String> processedTxIds = {};
+
+        // Dinamikusan a szervertől kapott vagy helyben tárolt intézményi gyűjtőszámla számlaszám
+        final String? dynamicCollectiveAcc = storage.DataCache.getAccountCollectiveBankAccount();
+        final String cleanDynamicAcc = (dynamicCollectiveAcc != null)
+            ? dynamicCollectiveAcc.replaceAll(RegExp(r'[^0-9]'), '')
+            : '';
 
         if (decoded['data'] != null && decoded['data'] is List) {
           for (var item in decoded['data']) {
@@ -1937,10 +1946,41 @@ class CashinRequest{
 
             final bool enableColoring = storage.DataCache.getEnablePaymentColoring();
             final combined = "$payingType $dir $note";
-            final bool ignored = enableColoring && _isIgnoredTransaction(combined);
-            final bool isIncome = enableColoring && !ignored && _isPositiveIncome(combined);
+            final normDir = _normalizeText(dir);
+            final normPayingType = _normalizeText(payingType);
+            final normCombined = _normalizeText(combined);
 
-            int amount = (enableColoring && isIncome) ? rawAmount : (enableColoring ? -rawAmount : rawAmount);
+            final String targetAcc = (item['targetAccountNumber']?.toString() ?? '')
+                .replaceAll(RegExp(r'[^0-9]'), '');
+
+            // 1. Gyűjtőszámla feltöltés / belső banki átvezetés (Semleges, nem kiadás és nem bevétel)
+            // Felismeri a Neptun natív irányát, fizetési módját, szöveges kulcsszavakat,
+            // és dinamikusan összeveti a szervertől kapott egyetemi gyűjtőszámla számlaszámmal is!
+            final bool isAccountMatch = cleanDynamicAcc.isNotEmpty &&
+                targetAcc.isNotEmpty &&
+                (targetAcc == cleanDynamicAcc ||
+                 (cleanDynamicAcc.length >= 16 && targetAcc.startsWith(cleanDynamicAcc.substring(0, 16))));
+
+            final bool isTopup = normDir.contains('gyujtoszamla egyenleg feltoltes') ||
+                normPayingType.contains('utalas a gyujtoszamlara') ||
+                normPayingType.contains('utalas a gyujto') ||
+                isAccountMatch ||
+                _isIgnoredTransaction(normCombined);
+
+            // 2. Egyetem által utalt juttatás (Ösztöndíjak, támogatások, jutalmak = Bevétel / +)
+            final bool isIncome = !isTopup && (
+                normDir == 'kifizetes' ||
+                normPayingType.contains('osztondij') ||
+                _isPositiveIncome(normCombined)
+            );
+
+            // 3. Diák által fizetett tétel (Tandíj, kollégium, pótdíj, vizsgadíj, stb. = Kiadás / -)
+            final bool isExpense = !isTopup && !isIncome;
+
+            final bool ignored = enableColoring && isTopup;
+            int amount = (!enableColoring || isTopup)
+                ? rawAmount
+                : (isIncome ? rawAmount : -rawAmount);
 
             final rawDate = item['transferDate']?.toString();
             final dateMs = rawDate != null ? (DateTime.tryParse(rawDate)?.millisecondsSinceEpoch ?? 0) : 0;
@@ -2050,6 +2090,7 @@ class CashinRequest{
   static Future<double?> getCollectiveInvoiceBalance() async {
     if (storage.DataCache.getIsDemoAccount()!) {
       await storage.DataCache.setAccountBalance(15000.0, currency: 'HUF');
+      await storage.DataCache.setAccountCollectiveBankAccount('00000000-00000000-00000000');
       return 15000.0;
     }
     if (storage.DataCache.getIsModernApi()) {
@@ -2063,7 +2104,11 @@ class CashinRequest{
           final first = decoded['data'][0];
           final balance = (first['collectiveInvoiceBalance'] as num?)?.toDouble() ?? 0.0;
           final currency = first['collectiveInvoiceCurrency']?.toString() ?? 'HUF';
+          final bankAccount = first['collectiveInvoiceBankAccount']?.toString();
           await storage.DataCache.setAccountBalance(balance, currency: currency);
+          if (bankAccount != null && bankAccount.isNotEmpty) {
+            await storage.DataCache.setAccountCollectiveBankAccount(bankAccount);
+          }
           return balance;
         }
       } catch (e) {

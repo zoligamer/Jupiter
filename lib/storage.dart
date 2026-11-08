@@ -173,6 +173,7 @@ class DataCache{
 
   double? _accountBalance;
   String? _accountBalanceCurrency = 'HUF';
+  String? _accountCollectiveBankAccount;
   int _unreadMailCount = 0;
 
   late bool? _persistentSetting_familyFriendlyLoadingComments = false;
@@ -434,6 +435,7 @@ class DataCache{
 
     _accountBalance = await getDouble('ACCOUNT_Balance');
     _accountBalanceCurrency = await getString('ACCOUNT_BalanceCurrency') ?? 'HUF';
+    _accountCollectiveBankAccount = await getString('ACCOUNT_CollectiveBankAccount');
     final unread = await getInt('CachedMailsUnread');
     _unreadMailCount = unread ?? 0;
 
@@ -629,6 +631,14 @@ class DataCache{
     if (value != null) {
       await saveDouble('ACCOUNT_Balance', value);
       await saveString('ACCOUNT_BalanceCurrency', currency);
+    }
+  }
+
+  static String? getAccountCollectiveBankAccount() => _instance._accountCollectiveBankAccount;
+  static Future<void> setAccountCollectiveBankAccount(String? value) async {
+    _instance._accountCollectiveBankAccount = value;
+    if (value != null) {
+      await saveString('ACCOUNT_CollectiveBankAccount', value);
     }
   }
 

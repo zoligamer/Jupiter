@@ -38,12 +38,14 @@ A Jupiterrel másodpercek alatt áttekintheted az órarendedet, megnézheted a j
 ## 🌟 Legfrissebb Stabil Verzió (Kiemelt)
 
 > [!TIP]
-> ### 🚀 Jupiter v2.1.1 — Tárgyfelvétel Szimuláció, Új Beállítások és Kiberbiztonság
-> - ⚡ **0ms Párhuzamosított Indítás:** Az órarend azonnal betölt, miközben a jegyek és üzenetek a háttérben frissülnek.
-> - 📅 **Élő Idővonal & Auto-Scroll:** Az app a rendszeridő alapján automatikusan a következő vagy épp zajló órádhoz görget.
-> - 🛡️ **Biztonsági megerősítés:** Hardveres AES-256 titkosítás és brute-force védelem a Neptun-fiókod megóvására.
+> ### 🚀 Jupiter v2.2.0 — Új Egyetemválasztó, Bevezető Bemutató és Teljes Üzenetszinkron
+> - 🏛️ **Teljes Képernyős Egyetemválasztó:** Keresés intézménynév és mozaikszó szerint nagy felbontású logókkal és címerekkel.
+> - 💡 **1 Perces Interaktív Bemutató:** Képernyőbarát (SafeArea) gyorstúra az órarendről, tárgyakról, pénzügyekről és időszakokról.
+> - 💬 **Végtelen Üzenetgörgetés:** Megszűnt a 20 üzenetes korlát; szinkronizált számlálók a tálcán és a fejlécben.
+> - 💳 **Új Gyűjtőszámla Kártya & Hibrid Pénzügyek:** Nagy borostyánsárga egyenlegkártya, egykoppintásos „Feltöltés” és számlaszám-másolás, valamint intelligens hibrid szétválasztás (ösztöndíjak +, kiadások -, gyűjtőszámlás belső utalások ⚪).
+> - 📚 **Valós Kredit-Előrehaladás:** Merev számok helyett az egyetemed által visszaadott valós képzési adatok és féléves tantárgy-összesítő.
 > 
-> 👉 **[Kattints ide a v2.1.1 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
+> 👉 **[Kattints ide a legfrissebb v2.2.0 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
 
 ---
 
@@ -85,6 +87,16 @@ Egyetlen perc alatt elküldheted nekünk az észrevételedet:
 <details open>
 <summary><b>✨ v2.x Kiadások (Legfrissebb változatok)</b></summary>
 <br/>
+
+### 🪐 v2.2.0 (2026. november) — Új Egyetemválasztó, Bemutató Túra & Stabilitás
+* 🏛️ **Új Egyetemválasztó & Bejelentkezés:** Kereshető, logókkal és címerekkel ellátott teljes képernyős lista. Kétlépcsős azonosítás (2FA) egyszerű ablakban, és azonnali fióktiltás elleni védelem hibás jelszó esetén.
+* 💡 **1 Perces Funkcióbemutató (Onboarding):** Alsó SafeArea védett bemutató lap az órarendről, jegyekről, pénzügyekről és időszakokról (bármikor újranézhető a Beállításokból).
+* 💬 **Üzenetközpont Megújítás:** Végtelen görgetés korlátok nélkül; pontosan szinkronizált olvasatlan üzenet jelvények.
+* 💳 **Új Gyűjtőszámla Kártya & Hibrid Pénzügyek:** Nagy borostyánsárga egyenlegkártya a lap tetején, egykoppintásos „Feltöltés” pill gomb és számlaszám / közlemény másolás. Hibrid tranzakció-szétválasztás: ösztöndíjak (+), kiadások (-), és belső gyűjtőszámlás átvezetések (⚪ Átvezetés).
+* 📚 **Dinamikus Kreditek & Tantárgyszámláló:** Valós előrehaladási sáv a fix hardkódolt számok helyett, és tantárgy / kredit összesítő chip.
+* 📅 **Órarendi Fókusz:** Automatikus fókusz és gördítés a nap épp zajló vagy következő órájához.
+* 🔔 **Kétfázisú Időszak Értesítések:** Értesítés mind az időszakok kezdetekor (pl. tárgyfelvételi rajt), mind a határidők előtt.
+* 🛠️ **Hibajavítás:** Gomb-túlcsordulások (overflow) megszüntetése a felugró ablakokban.
 
 ### 🪐 v2.1.1 (2026. október) — Tárgyfelvétel TEST, Beállítások & Biztonság
 * 🔮 **Tárgyfelvétel (TEST):** Dinamikus félévválasztó a hallgató képzése szerint, intelligens tantárgy-kategorizálás (Ajánlott félév, Csúszásban lévő, Előrehozott kurzusok), részletes adatlap hosszú érintésre.

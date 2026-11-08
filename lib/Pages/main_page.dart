@@ -35,6 +35,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
 import '../Misc/background_service.dart';
+import '../Widgets/collective_account_card.dart';
 import '../local_file_actions.dart';
 import '../Widgets/app_tutorial_modal.dart';
 
@@ -3148,6 +3149,8 @@ class PaymentsPageWidget extends StatelessWidget{
       children: <Widget>[
         topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Payments, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_payments_TotalMoneySpent, [totalMoney]), loggedInUsername: storage.DataCache.getUsername() ?? '', loggedInURL: (storage.DataCache.getInstituteUrl() ?? '').replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
         HomePageState.getSeparatorLine(context),
+        // Fix Gyűjtőszámla Egyenleg Card a lap tetején
+        CollectiveAccountCard(onRefreshRequested: onRefresh),
         // Intelligens színezés kapcsoló kártya a lap tetején
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
