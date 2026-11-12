@@ -14,9 +14,11 @@
     <uses-permission
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <application
         android:label="Jupiter"
         android:name="${applicationName}"
@@ -43,8 +45,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <intent-filter>
-                <action
-                    android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="jupiter" android:host="open" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -52,9 +56,92 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
-        <meta-data
-            android:name="android.appwidget.provider"
-            android:resource="@xml/time_remaining_homescreen_widget_info"/>
+
+        <!-- Jupiter Home Screen Widget Providers -->
+        <receiver
+            android:name=".NextClassWidgetProvider"
+            android:label="@string/widget_next_class_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_class_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".FinancesWidgetProvider"
+            android:label="@string/widget_finances_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/finances_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MessagesWidgetProvider"
+            android:label="@string/widget_messages_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/messages_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CreditsWidgetProvider"
+            android:label="@string/widget_credits_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/credits_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".PeriodsWidgetProvider"
+            android:label="@string/widget_periods_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/periods_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".TasksWidgetProvider"
+            android:label="@string/widget_tasks_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tasks_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MasterHubWidgetProvider"
+            android:label="@string/widget_master_hub_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/master_hub_widget_info" />
+        </receiver>
+
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>

@@ -72,7 +72,6 @@ class AppTutorialModal {
     if (!context.mounted) return;
 
     final theme = AppColors.getTheme();
-    final isDark = AppColors.isDarktheme();
 
     final result = await showDialog<String>(
       context: context,

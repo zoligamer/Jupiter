@@ -13,6 +13,7 @@ import '../Misc/background_service.dart';
 import '../Pages/startup_page.dart';
 import '../Misc/auto_updater.dart';
 import '../Widgets/app_tutorial_modal.dart';
+import '../Widgets/widget_data_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -28,6 +29,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late int _bgIntervalMinutes;
   late bool _bgWifiOnly;
   late bool _bgSyncEnabled;
+  late bool _widgetSyncEnabled;
+  late bool _seasonalThemeEnabled;
   List<LangPackMap> _availableLanguages = Language.getAllLanguagesWithNative();
 
   @override
@@ -40,6 +43,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _bgIntervalMinutes = DataCache.getBackgroundSyncInterval();
     _bgWifiOnly = DataCache.getBackgroundSyncWifiOnly();
     _bgSyncEnabled = DataCache.getBackgroundSyncEnabled();
+    _widgetSyncEnabled = DataCache.getWidgetBackgroundSyncEnabled();
+    _seasonalThemeEnabled = DataCache.getSeasonalThemeEnabled();
 
     _initLanguageSelection();
     _loadOnlineLanguages();
@@ -233,63 +238,79 @@ class _SettingsPageState extends State<SettingsPage> {
           // ==========================================
           _buildSectionHeader("Megjelenés és Nyelv", Icons.palette_rounded),
 
-          // Témaválasztó
+          // Időszakos (Szezonális) téma kapcsoló
+          SwitchListTile(
+            secondary: Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 22),
+            title: const Text(
+              "Időszakos téma (Automatikus)",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: Text(
+              _seasonalThemeEnabled
+                  ? "Aktív: ${AppColors.getSeasonalThemeName()} (szezonális naptár szerint)"
+                  : "Évszakokhoz, ünnepekhez és vizsgákhoz igazodó megjelenés",
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 12),
+            ),
+            value: _seasonalThemeEnabled,
+            activeThumbColor: theme.currentClassGreen,
+            onChanged: (bool value) async {
+              AppHaptics.lightImpact();
+              await DataCache.setSeasonalThemeEnabled(value);
+              if (!context.mounted) return;
+              AppColors.setUserTheme(context);
+              AppColors.refreshThemeIndexing();
+              setState(() {
+                _seasonalThemeEnabled = value;
+                _themesCurrSelect = AppColors.getTheme().paletteName;
+              });
+            },
+          ),
+
+          // Témaválasztó (Lebegőablakos négyzethálós választó)
           ListTile(
             leading: Icon(Icons.color_lens_outlined, color: theme.primary, size: 22),
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption9_ThemeSwap, style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 14)),
-            trailing: Container(
-              width: 160,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: theme.textColor.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.textColor.withValues(alpha: 0.12)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _themesCurrSelect,
-                  dropdownColor: theme.rootBackground,
-                  icon: Icon(Icons.arrow_drop_down_rounded, color: theme.primary),
-                  isExpanded: true,
-                  style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600),
-                  items: AppColors.getThemesOnline().map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Row(
-                        children: [
-                          Icon(Icons.circle, color: AppColors.getThemePopupAccentByName(value), size: 16),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+            subtitle: Text(
+              _seasonalThemeEnabled ? "Időszakos téma aktív (koppints a módosításhoz)" : "${AppColors.getAllThemes().length} elérhető témapaletta",
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 11.5),
+            ),
+            trailing: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => _showThemePickerDialog(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: theme.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppColors.getTheme().primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: AppColors.getTheme().primary.withValues(alpha: 0.4), blurRadius: 4),
                         ],
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    if (value == null) return;
-                    AppHaptics.lightImpact();
-                    DataCache.setPreferredAppTheme(value);
-                    if (!AppColors.hasThemeDownloaded(value)) {
-                      Future.delayed(Duration.zero, () async {
-                        final pack = await Coloring.getAllThemes();
-                        await Coloring.getThemePackById(pack, value).then((val) async {
-                          if (val != null) {
-                            AppColors.saveDownloadedPaletteData();
-                            AppColors.setUserThemeByName(val.paletteName, context);
-                            AppColors.refreshThemeIndexing();
-                            setState(() {
-                              _themesCurrSelect = value;
-                            });
-                          }
-                        });
-                      });
-                    } else {
-                      setState(() {
-                        _themesCurrSelect = value;
-                        AppColors.setUserTheme(context);
-                        AppColors.refreshThemeIndexing();
-                      });
-                    }
-                  },
+                    ),
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 88),
+                      child: Text(
+                        _themesCurrSelect,
+                        style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.keyboard_arrow_down_rounded, color: theme.primary, size: 18),
+                  ],
                 ),
               ),
             ),
@@ -647,6 +668,25 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
 
+          // Kezdőképernyő widgetek háttérfrissítése
+          _buildSwitchTile(
+            icon: Icons.widgets_outlined,
+            title: 'Kezdőképernyő widgetek szinkronizálása',
+            subtitle: 'Widget adatok frissítése a háttérben (kikapcsolva kíméli az akkut és netet)',
+            value: _widgetSyncEnabled,
+            onChanged: (b) async {
+              AppHaptics.lightImpact();
+              setState(() => _widgetSyncEnabled = b);
+              await DataCache.setWidgetBackgroundSyncEnabled(b);
+              if (b) {
+                await WidgetDataService.updateAllWidgets();
+                Fluttertoast.showToast(msg: "Widget szinkronizáció engedélyezve");
+              } else {
+                Fluttertoast.showToast(msg: "Widget háttérfrissítés felfüggesztve");
+              }
+            },
+          ),
+
           // ==========================================
           // 4. KATEGÓRIA: ÓRAREND & TERVEZŐ
           // ==========================================
@@ -832,6 +872,233 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 50),
         ],
       ),
+    );
+  }
+
+  /// Megjeleníti a modern, görgethető négyzethálós témaválasztó lebegőablakot
+  void _showThemePickerDialog(BuildContext context) {
+    final theme = AppColors.getTheme();
+    final allThemes = AppColors.getAllThemes();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: theme.rootBackground,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: theme.textColor.withValues(alpha: 0.12), width: 1),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 480,
+              maxHeight: MediaQuery.of(context).size.height * 0.78,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fejléc
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.palette_rounded, color: theme.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Téma választása",
+                              style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Text(
+                              "${allThemes.length} elérhető témapaletta",
+                              style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 11.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, color: theme.textColor.withValues(alpha: 0.6)),
+                        onPressed: () => Navigator.pop(ctx),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Görgethető kerekített négyzetek rácsa
+                  Flexible(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 1.15,
+                        ),
+                        itemCount: allThemes.length,
+                        itemBuilder: (context, index) {
+                          final p = allThemes[index];
+                          final isSelected = p.paletteName == _themesCurrSelect;
+
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () async {
+                                AppHaptics.lightImpact();
+                                if (_seasonalThemeEnabled) {
+                                  await DataCache.setSeasonalThemeEnabled(false);
+                                }
+                                await DataCache.setPreferredAppTheme(p.paletteName);
+                                if (!context.mounted) return;
+                                AppColors.setUserThemeByName(p.paletteName, context);
+                                AppColors.refreshThemeIndexing();
+                                setState(() {
+                                  _themesCurrSelect = p.paletteName;
+                                  _seasonalThemeEnabled = false;
+                                });
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: p.rootBackground,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? p.primary
+                                        : theme.textColor.withValues(alpha: 0.15),
+                                    width: isSelected ? 2.5 : 1,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: p.primary.withValues(alpha: 0.35),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // Felső sor: Kis körök a téma színeivel + Kijelölő ikon
+                                    Row(
+                                      children: [
+                                        // 3 kis kör
+                                        Container(
+                                          width: 14,
+                                          height: 14,
+                                          decoration: BoxDecoration(
+                                            color: p.primary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          width: 14,
+                                          height: 14,
+                                          decoration: BoxDecoration(
+                                            color: p.secondary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          width: 14,
+                                          height: 14,
+                                          decoration: BoxDecoration(
+                                            color: p.roomHighlightColor,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        if (isSelected)
+                                          Icon(Icons.check_circle_rounded, color: p.primary, size: 18)
+                                        else
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: p.textColor.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              p.isDark ? "Sötét" : "Világos",
+                                              style: TextStyle(
+                                                color: p.textColor.withValues(alpha: 0.7),
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+
+                                    // Alsó sor: Téma neve és stílus
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          p.paletteName,
+                                          style: TextStyle(
+                                            color: p.textColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12.5,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          isSelected ? "● Aktív téma" : (p.isDark ? "Sötét mód" : "Világos mód"),
+                                          style: TextStyle(
+                                            color: isSelected ? p.primary : p.textColor.withValues(alpha: 0.55),
+                                            fontSize: 10,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

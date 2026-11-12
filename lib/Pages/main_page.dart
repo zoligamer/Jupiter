@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -38,6 +37,8 @@ import '../Misc/background_service.dart';
 import '../Widgets/collective_account_card.dart';
 import '../local_file_actions.dart';
 import '../Widgets/app_tutorial_modal.dart';
+import '../Widgets/widget_data_service.dart';
+import '../Pages/questionnaires_page.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -255,9 +256,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           return;
         }
 
-        if((DateTime.now().millisecondsSinceEpoch - cacheTime) > const Duration(hours: 24).inMilliseconds || // once a day update check
-        await Connectivity().checkConnectivity() == ConnectivityResult.none) // only check for updates, if there is internet
-        {return;}
+        final conn = await Connectivity().checkConnectivity();
+        final isOffline = conn.contains(ConnectivityResult.none) || !conn.any((c) => c != ConnectivityResult.none);
+        final isCached = (DateTime.now().millisecondsSinceEpoch - cacheTime) < const Duration(hours: 24).inMilliseconds;
+        if (isCached || isOffline) return;
 
         final appupdateInfo = await InAppUpdate.checkForUpdate();
         storage.saveInt('UpdateCacheTime', DateTime.now().millisecondsSinceEpoch); // save last checked update time
@@ -313,6 +315,38 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     AppNotifications.initialize();
     BackgroundService.registerPeriodicCheck();
     WidgetsBinding.instance.addObserver(this);
+
+    // Kezdőképernyő widget deep-link figyelő: koppintáskor a megfelelő fülre navigál
+    WidgetDataService.initDeepLinking((tab) {
+      if (!mounted) return;
+      switch (tab.toLowerCase()) {
+        case 'timetable':
+        case 'calendar':
+          switchView(0);
+          break;
+        case 'markbook':
+        case 'credits':
+          switchView(1);
+          break;
+        case 'payments':
+        case 'finances':
+          switchView(2);
+          break;
+        case 'periods':
+          switchView(3);
+          break;
+        case 'messages':
+        case 'mails':
+          switchView(4);
+          break;
+        case 'tasks':
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const QuestionnairesPage()),
+          );
+          break;
+      }
+    });
 
     // Óra-reaktivitás: 30 másodpercenként újraszámolja a zajló órát és frissíti a visszaszámlálókat
     _calendarTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -602,29 +636,34 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
       canDoCalendarPaging = true;
       setupCalendarController(false, false);
     });
+    WidgetDataService.updateAllWidgets(calendarEntries: calendarEntries);
   }
   void setupMarkbook(){
     setState(() {
       _setupMarkbook();
     });
+    WidgetDataService.updateAllWidgets(markbook: markbookEntries);
   }
 
   void setupPayments(){
     setState(() {
       _setupPayments();
     });
+    WidgetDataService.updateAllWidgets();
   }
 
   void setupPeriods(){
     setState(() {
       _setupPeriods();
     });
+    WidgetDataService.updateAllWidgets(periods: periodEntries);
   }
 
   void setupMails({bool clear = false}){
     setState(() {
       _setupMails(clearLoader: clear);
     });
+    WidgetDataService.updateAllWidgets();
   }
 
   static void setupExamNotifications(){
@@ -1629,7 +1668,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
 
     List<api.PeriodEntry> expiredPeriods = [];
     bool hasFuturePeriodLine = false;
-    //Map<String, List<api.PeriodType>> values = Map<String, List<api.PeriodType>>.identity();
     for(var item in periodEntries){
       if(item.isActive){
         countActivePeriods++;
@@ -2006,10 +2044,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
   }
 
   Future<List<api.CalendarEntry>> fetchCalendarToList(int offset) async{
-    //final userOffset = storage.DataCache.getUserWeekOffset()!;
     final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, storage.DataCache.getPassword()!, currentWeekOffset + offset));
     final list = api.CalendarRequest.getCalendarEntriesFromJSON(request);
-    //return list2;
     return list;
   }
 
@@ -2185,6 +2221,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
     await fetchMails(force: false);
     setupMails();
 
+    // Azonnali widget frissítés helyi cache adatokkal (0ms)
+    WidgetDataService.updateAllWidgets(
+      calendarEntries: calendarEntries,
+      periods: periodEntries,
+      markbook: markbookEntries,
+    );
+
     // 2. Ha van internet, szekvenciális szerver-szinkronizáció token védelemmel
     if (storage.DataCache.getHasNetwork()) {
       try {
@@ -2216,10 +2259,20 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin, Widge
           fetchPeriods(forceOnline: true).then((_) {
             if (mounted) setupPeriods();
           }).catchError((e) => debugPrint("fetchPeriods háttérhiba: $e")),
+
+          api.TasksRequest.getTasks().catchError((e) {
+            debugPrint("fetchTasks háttérhiba: $e");
+            return <api.TaskItem>[];
+          }),
         ]);
       } catch (e) {
         debugPrint("Hiba az indításkori háttér-előreolvasás során: $e");
       } finally {
+        WidgetDataService.updateAllWidgets(
+          calendarEntries: calendarEntries,
+          periods: periodEntries,
+          markbook: markbookEntries,
+        );
         if (mounted && isLoadingCalendar) {
           setState(() {
             isLoadingCalendar = false;
@@ -2948,21 +3001,24 @@ class MarkbookPageWidget extends StatelessWidget{
     if(homePage._confettiList.isNotEmpty){
       return homePage._confettiList;
     }
-    final confettiAmount = 55 + Random().nextInt(234243) % 30;
+    final confettiAmount = 55 + Random().nextInt(30);
     for(int i = 0; i < confettiAmount; i++){
-      final randomRed = 0xCC000000 + Random().nextInt(0x33000000);
-      final randomGreen = 0x00CC0000 + Random().nextInt(0x0033000);
-      final randomBlue = 0x0000CC00 + Random().nextInt(0x00003300);
-      final alpha = 0x000000FF;
-      final added = randomRed + randomBlue + randomGreen + alpha;
+      final r = 100 + Random().nextInt(156);
+      final g = 100 + Random().nextInt(156);
+      final b = 100 + Random().nextInt(156);
       final confetti = ConfettiHelper(
-        confettiColor: Color(added),
-        startOffset: Offset(lerpDouble(0, MediaQuery.of(context).size.width, Random().nextDouble() % 0.9999)!, lerpDouble(-MediaQuery.of(context).size.height, -50, Random().nextDouble() % 0.9999)!),
-        startRotation: Random().nextDouble() % 360.0,
+        confettiColor: Color.fromARGB(255, r, g, b),
+        startOffset: Offset(lerpDouble(0, MediaQuery.of(context).size.width, Random().nextDouble())!, lerpDouble(-MediaQuery.of(context).size.height, -50, Random().nextDouble())!),
+        startRotation: Random().nextDouble() * 360.0,
         rotationMultiplier: -60 + Random().nextInt(60*2),
         startSize: Size((8 + Random().nextInt(12)).toDouble(), (8 + Random().nextInt(12)).toDouble()),
         offsetMultiplier: -200 + Random().nextInt(200*2),
-        startRadius: BorderRadius.only(topLeft: Radius.circular(4 + 12 * Random().nextDouble() % 0.999), topRight: Radius.circular(4 + 12 * Random().nextDouble() % 0.999), bottomRight: Radius.circular(4 + 12 * Random().nextDouble() % 0.999), bottomLeft: Radius.circular(4 + 12 * Random().nextDouble() % 0.999))
+        startRadius: BorderRadius.only(
+          topLeft: Radius.circular(4 + 12 * Random().nextDouble()),
+          topRight: Radius.circular(4 + 12 * Random().nextDouble()),
+          bottomRight: Radius.circular(4 + 12 * Random().nextDouble()),
+          bottomLeft: Radius.circular(4 + 12 * Random().nextDouble()),
+        ),
       );
       homePage._confettiHelperList.add(confetti);
       homePage._confettiList.add(

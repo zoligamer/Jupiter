@@ -11,6 +11,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../Pages/main_page.dart';
 import '../storage.dart';
 import '../colors.dart';
@@ -333,9 +335,75 @@ class AppUpdater {
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
-            child: Text(
-              releaseNotes,
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.85), fontSize: 13, height: 1.45),
+            child: MarkdownBody(
+              data: releaseNotes,
+              selectable: true,
+              onTapLink: (text, href, title) async {
+                if (href != null && href.isNotEmpty) {
+                  final uri = Uri.tryParse(href);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                }
+              },
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(color: theme.textColor.withValues(alpha: 0.9), fontSize: 13, height: 1.45),
+                h1: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 17),
+                h2: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 15),
+                h3: TextStyle(color: theme.primary, fontWeight: FontWeight.w600, fontSize: 13.5),
+                strong: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold),
+                em: TextStyle(color: theme.textColor.withValues(alpha: 0.85), fontStyle: FontStyle.italic),
+                code: TextStyle(
+                  color: theme.primary,
+                  backgroundColor: theme.textColor.withValues(alpha: 0.08),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: theme.textColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.textColor.withValues(alpha: 0.1)),
+                ),
+                blockquote: TextStyle(color: theme.textColor.withValues(alpha: 0.85), fontStyle: FontStyle.italic, fontSize: 12.5),
+                blockquoteDecoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: theme.primary, width: 3)),
+                ),
+                blockquotePadding: const EdgeInsets.only(left: 10, top: 2, bottom: 2),
+                listBullet: TextStyle(color: theme.primary, fontSize: 13),
+                a: TextStyle(color: theme.primary, decoration: TextDecoration.underline),
+                horizontalRuleDecoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: theme.textColor.withValues(alpha: 0.12), width: 1)),
+                ),
+              ),
+              sizedImageBuilder: (config) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      config.uri.toString(),
+                      width: config.width,
+                      height: config.height,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.textColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.broken_image_rounded, size: 16, color: theme.textColor.withValues(alpha: 0.5)),
+                            const SizedBox(width: 6),
+                            Text(config.alt ?? "Kép betöltése sikertelen", style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -410,7 +478,7 @@ class AppUpdater {
     final apkAssets = assets.where((a) {
       if (a is! Map) return false;
       final name = a['name']?.toString().toLowerCase() ?? '';
-      return name.endsWith('.apk') && !name.endsWith('.sha1') && !name.endsWith('.md5') && !name.endsWith('.sig');
+      return name.endsWith('.apk') && !name.endsWith('.sha1') && !name.endsWith('.sha256') && !name.endsWith('.md5') && !name.endsWith('.sig');
     }).cast<Map<String, dynamic>>().toList();
 
     if (apkAssets.isEmpty) return null;
@@ -488,6 +556,37 @@ class AppUpdater {
     final assetFileName = rawName.split('/').last.split('\\').last.replaceAll('..', '_');
     final expectedDigest = asset['digest']?.toString() ?? '';
 
+    String targetSha256 = '';
+    if (expectedDigest.toLowerCase().startsWith('sha256:')) {
+      targetSha256 = expectedDigest.substring(7).trim().toLowerCase();
+    } else {
+      // Keresünk azonos nevű .sha256 kiadási assetet (mind az .apk.sha256, mind a .sha256 formátum támogatva)
+      final shaNameWithApk = '${rawName.toLowerCase()}.sha256';
+      final shaNameWithoutApk = '${rawName.toLowerCase().replaceAll(RegExp(r'\.apk$'), '')}.sha256';
+      final shaAsset = assets.firstWhere(
+        (a) {
+          if (a is! Map) return false;
+          final aname = a['name']?.toString().toLowerCase();
+          return aname == shaNameWithApk || aname == shaNameWithoutApk;
+        },
+        orElse: () => null,
+      );
+      if (shaAsset != null && shaAsset['browser_download_url'] != null) {
+        try {
+          final shaUrl = shaAsset['browser_download_url'].toString();
+          if (shaUrl.startsWith(releasePrefix)) {
+            final res = await http.get(Uri.parse(shaUrl)).timeout(const Duration(seconds: 5));
+            if (res.statusCode == 200) {
+              final hashMatch = RegExp(r'[a-fA-F0-9]{64}').firstMatch(res.body);
+              if (hashMatch != null) {
+                targetSha256 = hashMatch.group(0)!.toLowerCase();
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
     final tempDir = await getTemporaryDirectory();
     final savePath = "${tempDir.path}/$assetFileName";
 
@@ -510,9 +609,9 @@ class AppUpdater {
     try {
       final dio = Dio();
       await dio.download(downloadUrl, savePath);
-      if (expectedDigest.startsWith('sha256:')) {
-        final actual = (await sha256.bind(File(savePath).openRead()).first).toString();
-        if (actual.toLowerCase() != expectedDigest.substring(7).toLowerCase()) {
+      if (targetSha256.isNotEmpty) {
+        final actual = (await sha256.bind(File(savePath).openRead()).first).toString().toLowerCase();
+        if (actual != targetSha256) {
           try { File(savePath).deleteSync(); } catch (_) {}
           throw Exception('APK digest mismatch');
         }

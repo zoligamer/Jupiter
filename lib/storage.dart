@@ -14,11 +14,6 @@ Future<void> saveInt(String key, int value) async {
   await prefs.setInt(key, value);
 }
 
-Future<void> saveFloat(String key, double value) async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  await prefs.setDouble(key, value);
-}
-
 Future<void> saveStringList(String key, List<String> value) async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   await prefs.setStringList(key, value);
@@ -105,8 +100,8 @@ class DataCache{
     setNeedFamilyFriendlyComments(_persistentSetting_familyFriendlyLoadingComments! ? 1 : 0);
     setNeedExamNotifications(_persistentSetting_showExamNotifications! ? 1 : 0);
     setNeedClassNotifications(_persistentSetting_showClassNotifications! ? 1 : 0);
-    setNeedClassNotifications(_persistentSetting_showPaymentsNotifications! ? 1 : 0);
-    setNeedClassNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
+    setNeedPaymentsNotifications(_persistentSetting_showPaymentsNotifications! ? 1 : 0);
+    setNeedPeriodsNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
     setUserWeekOffset(_persistentSetting_weekOffset!);
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
     setUserSelectedLanguageCode(_persistentSetting_userSelectedLanguageCode);
@@ -194,6 +189,8 @@ class DataCache{
   String? _persistentSetting_userSelectedLanguageCode;
 
   bool _persistentSetting_enablePaymentColoring = false;
+  bool _persistentSetting_widgetBackgroundSyncEnabled = true;
+  bool _persistentSetting_seasonalThemeEnabled = false;
   String? _persistentSetting_tutorialStatus;
   String? _cachedCreditProgressJson;
   String? _lastSeenChangelogVersion;
@@ -445,6 +442,12 @@ class DataCache{
     _backgroundSyncWifiOnly = syncWifi == 1;
     final syncEn = await getInt('SETTING_BackgroundSyncEnabled');
     _backgroundSyncEnabled = syncEn != 0;
+
+    final wSync = await getInt('SETTING_WidgetBackgroundSyncEnabled');
+    _persistentSetting_widgetBackgroundSyncEnabled = wSync == null || wSync != 0;
+
+    final seasonal = await getInt('SETTING_SeasonalThemeEnabled');
+    _persistentSetting_seasonalThemeEnabled = seasonal != null && seasonal != 0;
   }
 
   static Future<void> loadThemeOnly()async{
@@ -640,6 +643,18 @@ class DataCache{
     if (value != null) {
       await saveString('ACCOUNT_CollectiveBankAccount', value);
     }
+  }
+
+  static bool getWidgetBackgroundSyncEnabled() => _instance._persistentSetting_widgetBackgroundSyncEnabled;
+  static Future<void> setWidgetBackgroundSyncEnabled(bool value) async {
+    _instance._persistentSetting_widgetBackgroundSyncEnabled = value;
+    await saveInt('SETTING_WidgetBackgroundSyncEnabled', value ? 1 : 0);
+  }
+
+  static bool getSeasonalThemeEnabled() => _instance._persistentSetting_seasonalThemeEnabled;
+  static Future<void> setSeasonalThemeEnabled(bool value) async {
+    _instance._persistentSetting_seasonalThemeEnabled = value;
+    await saveInt('SETTING_SeasonalThemeEnabled', value ? 1 : 0);
   }
 
   static int getUnreadMailCount() => _instance._unreadMailCount;

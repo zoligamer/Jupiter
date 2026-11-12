@@ -4,6 +4,7 @@ import 'package:workmanager/workmanager.dart';
 import '../storage.dart' as storage;
 import '../API/api_coms.dart' as api;
 import '../notifications.dart';
+import '../Widgets/widget_data_service.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -66,45 +67,48 @@ class BackgroundService {
 
     final hasLogin = storage.DataCache.getHasLogin() ?? false;
     final needNotifications = storage.DataCache.getNeedMessageNotifications() ?? true;
+    final needWidgetSync = storage.DataCache.getWidgetBackgroundSyncEnabled();
 
-    if (!hasLogin || !needNotifications) {
+    if (!hasLogin || (!needNotifications && !needWidgetSync)) {
       return;
     }
 
     try {
       final request = await api.MailRequest.getMails(1);
-      if (request == null || request.isEmpty) return;
+      if (request != null && request.isNotEmpty) {
+        final lastKnownTopId = await storage.getString('LastKnownTopMailId');
+        if (lastKnownTopId != null && lastKnownTopId.isNotEmpty) {
+          final newUnreadMails = <api.MailEntry>[];
+          for (final mail in request) {
+            if (mail.ID == lastKnownTopId) break;
+            if (!mail.isRead) {
+              newUnreadMails.add(mail);
+            }
+          }
 
-      final lastKnownTopId = await storage.getString('LastKnownTopMailId');
-      if (lastKnownTopId != null && lastKnownTopId.isNotEmpty) {
-        final newUnreadMails = <api.MailEntry>[];
-        for (final mail in request) {
-          if (mail.ID == lastKnownTopId) break;
-          if (!mail.isRead) {
-            newUnreadMails.add(mail);
+          if (newUnreadMails.isNotEmpty && needNotifications) {
+            await AppNotifications.initialize();
+            if (newUnreadMails.length == 1) {
+              final m = newUnreadMails.first;
+              await AppNotifications.showNotification(
+                "Új Neptun üzenet",
+                "${m.senderName}: ${m.subject}",
+              );
+            } else {
+              final m = newUnreadMails.first;
+              await AppNotifications.showNotification(
+                "Új Neptun üzenetek (${newUnreadMails.length})",
+                "${m.senderName}: ${m.subject} és még ${newUnreadMails.length - 1} új üzenet",
+              );
+            }
           }
         }
 
-        if (newUnreadMails.isNotEmpty) {
-          await AppNotifications.initialize();
-          if (newUnreadMails.length == 1) {
-            final m = newUnreadMails.first;
-            await AppNotifications.showNotification(
-              "Új Neptun üzenet",
-              "${m.senderName}: ${m.subject}",
-            );
-          } else {
-            final m = newUnreadMails.first;
-            await AppNotifications.showNotification(
-              "Új Neptun üzenetek (${newUnreadMails.length})",
-              "${m.senderName}: ${m.subject} és még ${newUnreadMails.length - 1} új üzenet",
-            );
-          }
-        }
+        await storage.saveString('LastKnownTopMailId', request.first.ID);
       }
 
-      if (request.isNotEmpty) {
-        await storage.saveString('LastKnownTopMailId', request.first.ID);
+      if (needWidgetSync) {
+        await WidgetDataService.updateAllWidgets();
       }
     } catch (_) {}
   }

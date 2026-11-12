@@ -54,6 +54,11 @@ import '../storage.dart';
     static const String DOCUMENT_STORAGE_BY_STUDENT_URL = "/api/DocumentContainer/GetDocumentsUploadedByStudent";
     static const String DOCUMENT_STORAGE_TR_URL = "/api/DocumentContainer/GetTrDocuments";
     static const String DOCUMENT_STORAGE_DOWNLOAD_URL = "/api/DocumentContainer/DownloadDocumentationOrZip";
+    static const String DASHBOARD_TASKS_COUNT_URL = "/api/Dashboard/GetNumberOfTasksByType";
+    static const String DASHBOARD_TASKS_URL = "/api/Dashboard/GetTasks";
+    static const String QUESTIONNAIRES_URL = "/api/Questionnaires/GetQuestionnaires";
+    static const String QUESTIONNAIRES_FINISHED_URL = "/api/Questionnaires/GetFinishedQuestionnaires";
+    static const String QUESTIONNAIRES_UNIPOLL_URL = "/api/Questionnaires/GetUnipollURLWithTokenForFill";
     static const String PACK_URL_PREFIX = 'https://raw.githubusercontent.com/zoligamer/Jupiter/';
     /// Packs feed the UI directly, so only this repository is trusted.
     static bool isTrustedPackUrl(String url) => url.startsWith(PACK_URL_PREFIX);
@@ -352,13 +357,14 @@ import '../storage.dart';
           // Mindenki megkapja az új tokent, és újra próbálkozik
           if (!APISession.isCurrent(sessionGen)) return response.body;
           final newToken = storage.DataCache.getAccessToken();
-          return await getRequest(url, bearerToken: newToken!, isRetry: true);
+          if (newToken == null || newToken.isEmpty) return response.body;
+          return await getRequest(url, bearerToken: newToken, isRetry: true);
         }
 
         return response.body;
       } catch (e) {
         client.close();
-        return '{"ErrorMessage": "$e"}';
+        return conv.jsonEncode({"ErrorMessage": e.toString()});
       }
     }
 
@@ -397,7 +403,7 @@ import '../storage.dart';
         return response.body;
       } catch (e) {
         client.close();
-        return '{"ErrorMessage": "$e"}';
+        return conv.jsonEncode({"ErrorMessage": e.toString()});
       }
     }
 
@@ -658,7 +664,7 @@ import '../storage.dart';
     }
 
     static Future<int> validateLoginCredentialsUrl(String rawUrl, String username, String password) async {
-      if(username == 'DEMO' && password == 'DEMO'){
+      if(username.trim().toUpperCase() == 'DEMO' && password.trim().toUpperCase() == 'DEMO'){
         await storage.DataCache.setIsDemoAccount(1);
         return 1;
       }
@@ -1715,13 +1721,6 @@ class MarkbookRequest{
     return best;
   }
 
-  static bool isMark(String txt){
-    switch(txt){
-      case 'jeles': case 'jó': case 'közepes': case 'elégséges': case 'elégtelen': return true;
-      default: return false;
-    }
-  }
-
   static int parseTextToGrade(String gradeTxt){
     RegExp regex = RegExp(r'(elégtelen|elégséges|közepes|jó|jeles|megfelelt)');
     final matches = regex.allMatches(gradeTxt.toLowerCase());
@@ -1835,8 +1834,6 @@ class CreditProgressModel {
 }
 
 class CashinRequest{
-  static Future<List<CashinEntry>?> getCashin() => getAllCashins();
-
   static String _normalizeText(String s) {
     return s.toLowerCase()
         .replaceAll('á', 'a')
@@ -1973,9 +1970,6 @@ class CashinRequest{
                 normPayingType.contains('osztondij') ||
                 _isPositiveIncome(normCombined)
             );
-
-            // 3. Diák által fizetett tétel (Tandíj, kollégium, pótdíj, vizsgadíj, stb. = Kiadás / -)
-            final bool isExpense = !isTopup && !isIncome;
 
             final bool ignored = enableColoring && isTopup;
             int amount = (!enableColoring || isTopup)
@@ -3103,24 +3097,6 @@ class CashinEntry{
     static bool isDaylightSavings(DateTime time){
       return (daylightSavingsTimeFrom.microsecondsSinceEpoch < time.microsecondsSinceEpoch && time.microsecondsSinceEpoch < daylightSavingsTimeTo.microsecondsSinceEpoch);
     }
-    static Future<AppUpdateHelper?> getAppUpdateHelper() async{
-      final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/appMinimumAllowedVersion.json');
-      final response = await http.get(url);
-
-      if (response.statusCode != 200) {
-        return null;
-      }
-
-      Map<String, dynamic> jsonMap = conv.json.decode(response.body);
-      return AppUpdateHelper(minAppVer: jsonMap["latestMinimumAllowedVerBuildNum"], minDisableVer: jsonMap["disableAppMinimumVersion"], updateUrl: jsonMap["updatePageJumper"]);
-    }
-  }
-
-  class AppUpdateHelper{
-    final int? minAppVer;
-    final int? minDisableVer;
-    final String? updateUrl;
-    const AppUpdateHelper({required this.minAppVer, required this.minDisableVer, required this.updateUrl});
   }
 
   class Language{
@@ -4366,6 +4342,234 @@ class CashinEntry{
         }
       } catch (e) {
         debug.log('Error downloading document PDF: $e');
+      }
+      return null;
+    }
+  }
+
+  class TaskItem {
+    final String unipollReportId;
+    final String subjectId;
+    final String name;
+    final String deadLine;
+    final String taskType;
+    final String created;
+    final String? statusReason;
+
+    TaskItem({
+      required this.unipollReportId,
+      required this.subjectId,
+      required this.name,
+      required this.deadLine,
+      required this.taskType,
+      required this.created,
+      this.statusReason,
+    });
+
+    factory TaskItem.fromJson(Map<String, dynamic> json) {
+      String? reason;
+      if (json['uiDisplayState'] != null && json['uiDisplayState']['reasons'] is List) {
+        final reasons = json['uiDisplayState']['reasons'] as List;
+        if (reasons.isNotEmpty) {
+          reason = reasons.first.toString();
+        }
+      }
+      return TaskItem(
+        unipollReportId: json['unipollReportId'] ?? '',
+        subjectId: json['subjectId'] ?? '',
+        name: json['name'] ?? '',
+        deadLine: json['deadLine'] ?? '',
+        taskType: json['taskType'] ?? 'Questionnaire',
+        created: json['created'] ?? '',
+        statusReason: reason,
+      );
+    }
+
+    DateTime? get deadlineDate => DateTime.tryParse(deadLine);
+
+    int get remainingDays {
+      final d = deadlineDate;
+      if (d == null) return 0;
+      return (d.difference(DateTime.now()).inHours / 24).ceil();
+    }
+  }
+
+  class QuestionnaireItem {
+    final String unipollReportId;
+    final String title;
+    final String subjectName;
+    final String subjectCode;
+    final String courseCode;
+    final String toDate;
+    final String termId;
+    final String termName;
+    final String subjectId;
+    final String unipollSurveyId;
+    final String? statusReason;
+    final bool isFinished;
+
+    QuestionnaireItem({
+      required this.unipollReportId,
+      required this.title,
+      required this.subjectName,
+      required this.subjectCode,
+      required this.courseCode,
+      required this.toDate,
+      required this.termId,
+      required this.termName,
+      required this.subjectId,
+      required this.unipollSurveyId,
+      this.statusReason,
+      this.isFinished = false,
+    });
+
+    factory QuestionnaireItem.fromJson(Map<String, dynamic> json, {bool isFinished = false}) {
+      String? reason;
+      if (json['uiDisplayState'] != null && json['uiDisplayState']['reasons'] is List) {
+        final reasons = json['uiDisplayState']['reasons'] as List;
+        if (reasons.isNotEmpty) {
+          reason = reasons.first.toString();
+        }
+      }
+      return QuestionnaireItem(
+        unipollReportId: json['unipollReportId'] ?? '',
+        title: json['title'] ?? '',
+        subjectName: json['subjectName'] ?? '',
+        subjectCode: json['subjectCode'] ?? '',
+        courseCode: json['courseCode'] ?? '',
+        toDate: json['toDate'] ?? '',
+        termId: json['termId'] ?? '',
+        termName: json['termName'] ?? '',
+        subjectId: json['subjectId'] ?? '',
+        unipollSurveyId: json['unipollSurveyId'] ?? '',
+        statusReason: reason ?? (isFinished ? "Kitöltve" : "Nincs kitöltve"),
+        isFinished: isFinished,
+      );
+    }
+
+    DateTime? get deadlineDate => DateTime.tryParse(toDate);
+
+    int get remainingDays {
+      final d = deadlineDate;
+      if (d == null) return 0;
+      return (d.difference(DateTime.now()).inHours / 24).ceil();
+    }
+  }
+
+  class TaskCounts {
+    final int numberOfQuestionnaires;
+    final int numberOfPayments;
+    final int numberOfSuggestedMark;
+    final int numberOfImpositionStatement;
+    final int numberOfUnregisteredSubjects;
+
+    TaskCounts({
+      this.numberOfQuestionnaires = 0,
+      this.numberOfPayments = 0,
+      this.numberOfSuggestedMark = 0,
+      this.numberOfImpositionStatement = 0,
+      this.numberOfUnregisteredSubjects = 0,
+    });
+
+    int get totalTasks => numberOfQuestionnaires + numberOfPayments + numberOfSuggestedMark;
+
+    factory TaskCounts.fromJson(Map<String, dynamic> json) {
+      return TaskCounts(
+        numberOfQuestionnaires: json['numberOfQuestionnaires'] ?? 0,
+        numberOfPayments: json['numberOfPayments'] ?? 0,
+        numberOfSuggestedMark: json['numberOfSuggestedMark'] ?? 0,
+        numberOfImpositionStatement: json['numberOfImpositionStatement'] ?? 0,
+        numberOfUnregisteredSubjects: json['numberOfUnregisteredSubjects'] ?? 0,
+      );
+    }
+  }
+
+  class TasksRequest {
+    static Future<TaskCounts?> getTaskCounts() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DASHBOARD_TASKS_COUNT_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is Map<String, dynamic>) {
+          final counts = TaskCounts.fromJson(decoded['data']);
+          await storage.saveInt('CachedTasksCount', counts.numberOfQuestionnaires);
+          return counts;
+        }
+      } catch (e) {
+        debug.log('Error fetching task counts: $e');
+      }
+      return null;
+    }
+
+    static Future<List<TaskItem>> getTasks() async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.DASHBOARD_TASKS_URL}');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          final list = (decoded['data'] as List).map((t) => TaskItem.fromJson(t)).toList();
+          if (list.isNotEmpty) {
+            await storage.saveInt('CachedTasksCount', list.length);
+            await storage.saveString('CachedTasksTopTitle', list.first.name);
+            final days = list.first.remainingDays;
+            await storage.saveString('CachedTasksTopDeadline', days > 0 ? "Határidő: még $days nap" : "Hamarosan lejár!");
+          }
+          return list;
+        }
+      } catch (e) {
+        debug.log('Error fetching tasks: $e');
+      }
+      return [];
+    }
+
+    static Future<List<QuestionnaireItem>> getQuestionnaires({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.QUESTIONNAIRES_URL}?firstRow=$firstRow&lastRow=$lastRow');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          return (decoded['data'] as List).map((q) => QuestionnaireItem.fromJson(q, isFinished: false)).toList();
+        }
+      } catch (e) {
+        debug.log('Error fetching questionnaires: $e');
+      }
+      return [];
+    }
+
+    static Future<List<QuestionnaireItem>> getFinishedQuestionnaires({int firstRow = 0, int lastRow = 50}) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.QUESTIONNAIRES_FINISHED_URL}?firstRow=$firstRow&lastRow=$lastRow');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is List) {
+          return (decoded['data'] as List).map((q) => QuestionnaireItem.fromJson(q, isFinished: true)).toList();
+        }
+      } catch (e) {
+        debug.log('Error fetching finished questionnaires: $e');
+      }
+      return [];
+    }
+
+    static Future<String?> getUnipollFillUrl({
+      required String termId,
+      required String subjectId,
+      required String unipollSurveyId,
+      required String unipollReportId,
+    }) async {
+      try {
+        final baseUrl = PetitionsRequest.getModernApiBase();
+        final url = Uri.parse('$baseUrl${URLs.QUESTIONNAIRES_UNIPOLL_URL}?termId=$termId&subjectId=$subjectId&unipollSurveyId=$unipollSurveyId&unipollReportId=$unipollReportId');
+        final response = await _APIRequest.getRequest(url, bearerToken: storage.DataCache.getAccessToken() ?? '');
+        final decoded = conv.jsonDecode(response);
+        if (decoded['data'] != null && decoded['data'] is String) {
+          return decoded['data'] as String;
+        }
+      } catch (e) {
+        debug.log('Error fetching unipoll fill URL: $e');
       }
       return null;
     }

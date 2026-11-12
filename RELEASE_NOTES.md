@@ -4,7 +4,7 @@
 > A Jupiter legújabb frissítése kényelmesebbé, megbízhatóbbá és átláthatóbbá teszi az egyetemi mindennapjaidat!
 
 ---
-
+#### English below
 ## 🇭🇺 Mi újság a v2.2.0-s verzióban?
 
 ### 🏛️ 1. Vadonatúj, villámgyors egyetemválasztó és bejelentkezés
@@ -44,7 +44,7 @@ A legfrissebb kiadást megtalálod a hivatalos weboldalon és a GitHubon:
 
 | Fájl | Kinek ajánlott? |
 | :--- | :--- |
-| **`app-release.apk`** | **Univerzális telepítő** — Minden modern Androidos telefonon (Samsung, Xiaomi, Google Pixel, OnePlus, Huawei, Honor, stb.) azonnal működik! |
+| **`Jupiter Universal.apk`** | **Univerzális telepítő** — Minden modern Androidos telefonon (Samsung, Xiaomi, Google Pixel, OnePlus, Huawei, Honor, stb.) azonnal működik! |
 
 ---
 

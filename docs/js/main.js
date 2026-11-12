@@ -171,12 +171,22 @@ function parseReleasePayload(data) {
   let universal = null;
   let arm8 = null;
   let arm7 = null;
-  let sha1Asset = null;
+  let shaAsset = null;
+  let isSha256 = false;
 
   for (const asset of assets) {
     const name = asset.name.toLowerCase();
+    if (name.endsWith(".sha256")) {
+      if (name.includes("universal") || !shaAsset) {
+        shaAsset = asset;
+        isSha256 = true;
+      }
+      continue;
+    }
     if (name.endsWith(".sha1")) {
-      if (name.includes("universal")) sha1Asset = asset;
+      if (!isSha256 && (name.includes("universal") || !shaAsset)) {
+        shaAsset = asset;
+      }
       continue;
     }
     if (name.includes("universal") && name.endsWith(".apk")) {
@@ -197,7 +207,8 @@ function parseReleasePayload(data) {
     arm7Url: arm7 ? arm7.browser_download_url : (universal ? universal.browser_download_url : FALLBACK_RELEASE.arm7Url),
     arm7Size: arm7 ? formatBytes(arm7.size) : FALLBACK_RELEASE.arm7Size,
     universalSha1: FALLBACK_RELEASE.universalSha1,
-    sha1Url: sha1Asset ? sha1Asset.browser_download_url : null
+    sha1Url: shaAsset ? shaAsset.browser_download_url : null,
+    isSha256: isSha256
   };
 }
 
@@ -236,8 +247,9 @@ function applyReleaseData(rel) {
   if (cardArm7Ver && rel.tagName) cardArm7Ver.textContent = `v${rel.tagName}`;
   if (cardArm7Size && rel.arm7Size) cardArm7Size.textContent = rel.arm7Size;
 
-  // Universal SHA1
+  // Universal Checksum (SHA256 vagy SHA1)
   const sha1Elem = document.getElementById("universal-sha1-val");
+  const shaLabel = document.querySelector(".checksum-label");
   if (sha1Elem) {
     if (rel.universalSha1) sha1Elem.textContent = rel.universalSha1;
     if (rel.sha1Url) {
@@ -245,7 +257,12 @@ function applyReleaseData(rel) {
         .then(r => r.text())
         .then(hash => {
           const cleaned = hash.trim().split(/\s+/)[0];
-          if (cleaned && cleaned.length >= 20) sha1Elem.textContent = cleaned;
+          if (cleaned && cleaned.length >= 20) {
+            sha1Elem.textContent = cleaned;
+            if (shaLabel && (cleaned.length === 64 || rel.isSha256)) {
+              shaLabel.textContent = "SHA-256:";
+            }
+          }
         })
         .catch(() => {});
     }

@@ -16,10 +16,12 @@ import '../Pages/petitions_page.dart';
 import '../Pages/profile_hub_page.dart';
 import '../Pages/document_storage_page.dart';
 import '../Pages/subject_registration_page.dart';
+import '../Pages/questionnaires_page.dart';
 import '../Misc/auto_updater.dart';
 import 'to_office_service.dart';
 import 'background_service.dart';
 import '../local_file_actions.dart';
+import '../Widgets/widget_data_service.dart';
 
 class AppDrawer extends StatefulWidget {
   final String loggedInUsername;
@@ -648,6 +650,22 @@ class _AppDrawerState extends State<AppDrawer> {
                       },
                     ),
                     ListTile(
+                      leading: Icon(Icons.fact_check_rounded, color: const Color(0xFFF59E0B)),
+                      title: Text(
+                        'Kérdőívek & Teendők',
+                        style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+                      ),
+                      trailing: Icon(Icons.chevron_right_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.3)),
+                      onTap: () {
+                        AppHaptics.lightImpact();
+                        Navigator.pop(context); // closes drawer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const QuestionnairesPage()),
+                        );
+                      },
+                    ),
+                    ListTile(
                       leading: Icon(Icons.auto_awesome_motion_rounded, color: const Color(0xFF7158E2)),
                       title: Row(
                         children: [
@@ -792,6 +810,7 @@ class _AppDrawerState extends State<AppDrawer> {
                   ToOfficeService.reset();
                   APISession.logout();
                   await storage.DataCache.dataWipe();
+                  await WidgetDataService.clearAllWidgets();
                   await AppNotifications.cancelScheduledNotifs();
                   await LocalFileActions.clearTempFiles();
                 }).whenComplete((){

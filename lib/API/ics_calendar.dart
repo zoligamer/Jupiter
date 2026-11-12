@@ -3,28 +3,19 @@ import 'package:jupiter/API/api_coms.dart';
 import '../local_file_actions.dart';
 
 class ICSCalendar{
-  static bool _hasInit = false;
   static void initialize(){
     ICSStreamConverter.calendarEntries.clear();
-    IcsImportHelper.streamIcsFileContent(ICSCalendar.icsStream).then((status){
-      if(!status){
-        return;
-      }
-      _hasInit = status;
-    });
+    IcsImportHelper.streamIcsFileContent(ICSCalendar.icsStream);
   }
 
-  static bool isReady(){
-    return _hasInit && !_streamingIcs;
-  }
-
-  static bool _streamingIcs = false;
   static void icsStream(Stream<List<int>> stream, {bool? firstLine}){
-    _streamingIcs = true;
     final converter = ICSStreamConverter();
-    stream.transform(utf8.decoder).transform(LineSplitter()).listen(cancelOnError: false, onError: (_){}, onDone: (){
-      _streamingIcs = false;
-    }, firstLine != null && firstLine ? converter.takeLineFirstEvent : converter.takeLine);
+    stream.transform(utf8.decoder).transform(LineSplitter()).listen(
+      cancelOnError: false,
+      onError: (_){},
+      onDone: (){},
+      firstLine != null && firstLine ? converter.takeLineFirstEvent : converter.takeLine,
+    );
   }
 
   static int _cachedFirstMs = 0;

@@ -8,7 +8,6 @@ import 'Pages/startup_page.dart';
 import 'language.dart';
 
 void main() {
-  //DataCache.dataWipeNoKeep();
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   BackgroundService.initialize();
@@ -33,14 +32,11 @@ class NeptunApp extends StatelessWidget with WidgetsBindingObserver {
 
   @override
   void didChangePlatformBrightness(){
-    //final systemTheme = MediaQuery.of(navigatorKey.currentContext!).platformBrightness == Brightness.dark;
     final isDark = MediaQuery.of(navigatorKey.currentContext!).platformBrightness == Brightness.dark;
-    //log('$systemTheme $isDark');
     AppColors.setCurrentSystemTheme(!isDark);
     final preferedTheme = !isDark ? 'Dark' : 'Light';
     AppColors.setUserThemeByName(preferedTheme, navigatorKey.currentContext!);
     DataCache.setPreferredAppTheme(preferedTheme);
-    //navigatorKey.currentContext!.read<ThemeNotifier>().createNewThemeData();
     super.didChangePlatformBrightness();
   }
 
@@ -57,11 +53,11 @@ class NeptunApp extends StatelessWidget with WidgetsBindingObserver {
         await AppColors.loadDownloadedPaletteData(context);
         final isDark = AppColors.getTheme().basedOnDark;
         AppColors.setCurrentSystemTheme(isDark);
-        final userTheme = DataCache.getPreferredAppTheme();
+        var userTheme = DataCache.getPreferredAppTheme();
         if(userTheme == null || userTheme == 'Dark' || userTheme == 'Light'){
-          AppColors.setUserThemeByName(isDark ? 'Dark' : 'Light', navigatorKey.currentContext!);
+          userTheme = isDark ? 'Dark' : 'Light';
         }
-        AppColors.setUserThemeByName(userTheme!, navigatorKey.currentContext!);
+        AppColors.setUserThemeByName(userTheme, navigatorKey.currentContext!);
         AppColors.refreshThemeIndexing();
       });
     }

@@ -16,7 +16,6 @@ class AppSnackbar extends StatelessWidget{
   final String text;
   final Duration displayDuration;
 
-  //final double dragAmmount;
   final VoidCallback changer;
   final bool state;
 

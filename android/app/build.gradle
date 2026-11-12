@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.security.MessageDigest
 
 plugins {
     id "com.android.application"
@@ -89,26 +90,64 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            // Csak a release buildeket nevezzük át
+            // Csak a release buildeket nevezzük át Jupiterre
             if (variant.buildType.name == "release") {
                 // Megnézzük, melyik ABI (architektúra) épp a soros
                 def abiFilter = output.getFilter(com.android.build.OutputFile.ABI)
                 def customName = ""
 
                 if (abiFilter == "armeabi-v7a") {
-                    customName = "Neptun_Mobile_ARM7.apk"
+                    customName = "Jupiter_ARM7.apk"
                 } else if (abiFilter == "arm64-v8a") {
-                    customName = "Neptun_Mobile_ARM8.apk"
+                    customName = "Jupiter_ARM8.apk"
                 } else if (abiFilter == "x86_64") {
-                    customName = "Neptun_Mobile_x86_64.apk" // Ha esetleg ezt is buildelnéd
+                    customName = "Jupiter_x86_64.apk"
                 } else {
-                    // Fallback, ha valami más jönne ki (pl. universal apk)
-                    customName = "Neptun_Mobile_Universal.apk"
+                    // Universal APK (ha nem split per abi)
+                    customName = "Jupiter_Universal.apk"
                 }
 
-                // Csak akkor nevezzük át, ha meg tudtuk határozni az ABI-t
-                if (abiFilter != null) {
-                    outputFileName = customName
+                outputFileName = customName
+            }
+        }
+
+        // Automatikus SHA-256 fájl generálás minden elkészült APK-hoz
+        variant.assembleProvider.configure { assembleTask ->
+            assembleTask.doLast {
+                variant.outputs.each { output ->
+                    File apkFile = output.outputFile
+                    if (apkFile != null && apkFile.exists()) {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256")
+                        apkFile.eachByte(4096) { buffer, length ->
+                            digest.update(buffer, 0, length)
+                        }
+                        String sha256Hex = digest.digest().collect { String.format("%02x", it) }.join()
+                        
+                        // 1. Mentés a Gradle kimeneti mappába
+                        File shaFile1 = new File(apkFile.parentFile, "${apkFile.name}.sha256")
+                        shaFile1.text = "${sha256Hex}  ${apkFile.name}\n"
+
+                        // 2. Mentés a Flutter flutter-apk mappájába is (pl. Jupiter_Universal.apk.sha256)
+                        File flutterApkDir = new File(project.rootDir.parentFile, "build/app/outputs/flutter-apk")
+                        if (!flutterApkDir.exists()) {
+                            flutterApkDir.mkdirs()
+                        }
+                        File shaFile2 = new File(flutterApkDir, "${apkFile.name}.sha256")
+                        shaFile2.text = "${sha256Hex}  ${apkFile.name}\n"
+
+                        // Ha .apk végződésű, legeneráljuk a .apk nélküli változatot is (pl. Jupiter_Universal.sha256)
+                        if (apkFile.name.endsWith(".apk")) {
+                            String baseWithoutExt = apkFile.name.substring(0, apkFile.name.length() - 4)
+                            File shaFileNoExt = new File(flutterApkDir, "${baseWithoutExt}.sha256")
+                            shaFileNoExt.text = "${sha256Hex}  ${apkFile.name}\n"
+                        }
+
+                        // Ha app-release.apk vagy app-debug.apk néven is kéri valamilyen pipeline
+                        File defaultApkSha = new File(flutterApkDir, "app-${variant.buildType.name}.apk.sha256")
+                        defaultApkSha.text = "${sha256Hex}  app-${variant.buildType.name}.apk\n"
+
+                        project.logger.lifecycle("SHA-256 generálva: ${shaFile1.name} -> ${sha256Hex}")
+                    }
                 }
             }
         }

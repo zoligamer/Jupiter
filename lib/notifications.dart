@@ -40,7 +40,6 @@ class AppNotifications{
   static final List<NotificationLink> _scheduledNotifLinks = <NotificationLink>[].toList();
 
   static Future<void> cancelScheduledNotifs()async{
-    //log('cancle');
     await _localnotifs.cancelAll();
     _scheduledNotifLinks.clear();
     Counter.reset();
@@ -127,7 +126,7 @@ class AppNotifications{
   }
 }
 
-class Counter{ // using "static int counter" did not want to increment :(
+class Counter{
   static Counter? _instance;
   Counter(){
     _instance = this;
@@ -135,12 +134,12 @@ class Counter{ // using "static int counter" did not want to increment :(
 
   int _counter = 0;
   static int getCount(){
-    //log('${_instance!._counter + 1}');
+    _instance ??= Counter();
     return ++_instance!._counter;
   }
 
   static void reset(){
-    _instance!._counter = 0;
+    _instance?._counter = 0;
   }
 }
 

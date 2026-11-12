@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_next_class_label">Következő óra (Órarend)</string>
+    <string name="widget_next_class_description">Megjeleníti a következő vagy épp zajló tanórát, termet és időpontot.</string>
+
+    <string name="widget_finances_label">Gyűjtőszámla egyenleg</string>
+    <string name="widget_finances_description">Mutatja az egyetemi gyűjtőszámla egyenlegét és a feltöltési adatokat.</string>
+
+    <string name="widget_messages_label">Neptun üzenetek</string>
+    <string name="widget_messages_description">Gyors betekintés az új olvasatlan Neptun üzenetekbe.</string>
+
+    <string name="widget_credits_label">Kreditek és tanulmányok</string>
+    <string name="widget_credits_description">Megszerzett kreditek, féléves tanulmányi átlag és ösztöndíjindex.</string>
+
+    <string name="widget_periods_label">Időszakok és határidők</string>
+    <string name="widget_periods_description">Aktuális és közelgő egyetemi időszakok hátralévő ideje.</string>
+
+    <string name="widget_tasks_label">Kérdőívek és teendők</string>
+    <string name="widget_tasks_description">Határidős kérdőívek és kitöltendő egyetemi feladatok.</string>
+
+    <string name="widget_master_hub_label">Jupiter Vezérlősáv (4×2)</string>
+    <string name="widget_master_hub_description">Kompakt egyképes állapot widget: terem, időpont, üzenetek, kreditek és teendők.</string>
+</resources>

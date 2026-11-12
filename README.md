@@ -35,17 +35,21 @@ A Jupiterrel másodpercek alatt áttekintheted az órarendedet, megnézheted a j
 
 <br/>
 
-## 🌟 Legfrissebb Stabil Verzió (Kiemelt)
+## 🌟 Legfrissebb Stabil Verzió
 
 > [!TIP]
-> ### 🚀 Jupiter v2.2.0 — Új Egyetemválasztó, Bevezető Bemutató és Teljes Üzenetszinkron
-> - 🏛️ **Teljes Képernyős Egyetemválasztó:** Keresés intézménynév és mozaikszó szerint nagy felbontású logókkal és címerekkel.
-> - 💡 **1 Perces Interaktív Bemutató:** Képernyőbarát (SafeArea) gyorstúra az órarendről, tárgyakról, pénzügyekről és időszakokról.
-> - 💬 **Végtelen Üzenetgörgetés:** Megszűnt a 20 üzenetes korlát; szinkronizált számlálók a tálcán és a fejlécben.
-> - 💳 **Új Gyűjtőszámla Kártya & Hibrid Pénzügyek:** Nagy borostyánsárga egyenlegkártya, egykoppintásos „Feltöltés” és számlaszám-másolás, valamint intelligens hibrid szétválasztás (ösztöndíjak +, kiadások -, gyűjtőszámlás belső utalások ⚪).
-> - 📚 **Valós Kredit-Előrehaladás:** Merev számok helyett az egyetemed által visszaadott valós képzési adatok és féléves tantárgy-összesítő.
+> ### 🚀 Jupiter v2.3.0 — Kezdőképernyő widgetek, mester vezérlősáv és új témák
+> - 📱 **Kezdőképernyő widgetek:** Az órarend, az egyetemi egyenleg, a kreditek, az üzenetek és a fontos határidők már közvetlenül a telefon kezdőképernyőjén is láthatók.
+> - 🎴 **Mester vezérlősáv:** Egyetlen összefoglaló kártyán követheted a következő órád termét és kezdési idejét, valamint az új üzenetek és teendők jelzőfényeit.
+> - 📋 **Kérdőívek és véleményezések:** A tantárgyi és tanári kérdőíveket mostantól közvetlenül az alkalmazásból töltheted ki külön jelszómegadás nélkül.
+> - 🎨 **Több mint harminc új színtéma:** Rengeteg új színvilág közül válogathatsz a hangulatos éjszakai stílusoktól a letisztult világos megjelenésekig.
+> - 🍁 **Automatikus szezonális megjelenés:** Bekapcsolhatod, hogy az alkalmazás színei maguktól igazodjanak az aktuális évszakhoz vagy a közelgő ünnepekhez.
+> - 🪟 **Lebegő témaválasztó:** A beállításokban egy kényelmesen görgethető, színes kis dobozokból álló ablakban próbálhatod ki a különböző stílusokat.
+> - 🛠️ **Megbízhatóbb widget működés:** Kijavítottuk a kreditek modul hibáját, így minden kezdőképernyős elem gyorsan és stabilan indul el.
+> - 📰 **Szebb frissítési ablak:** Az új verziók bemutatója mostantól formázott szövegekkel és képekkel jelenik meg.
+> - 🔒 **Biztonságosabb letöltések:** A letölthető telepítőcsomagok mellé automatikusan elkészül a modern ellenőrzőkód is a fájlok eredetiségének megerősítésére.
 > 
-> 👉 **[Kattints ide a legfrissebb v2.2.0 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
+> 👉 **[Kattints ide a legfrissebb v2.3.0 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
 
 ---
 
@@ -87,6 +91,17 @@ Egyetlen perc alatt elküldheted nekünk az észrevételedet:
 <details open>
 <summary><b>✨ v2.x Kiadások (Legfrissebb változatok)</b></summary>
 <br/>
+
+### 🪐 v2.3.0 — Kezdőképernyő widgetek, mester vezérlősáv és új témák
+* 📱 **Kezdőképernyő widgetek:** Az órarend, az egyetemi egyenleg, a kreditek, az üzenetek és a fontos határidők már közvetlenül a telefon kezdőképernyőjén is láthatók.
+* 🎴 **Mester vezérlősáv:** Egyetlen összefoglaló kártyán követheted a következő órád termét és kezdési idejét, valamint az új üzenetek és teendők jelzőfényeit.
+* 📋 **Kérdőívek és véleményezések:** A tantárgyi és tanári kérdőíveket mostantól közvetlenül az alkalmazásból töltheted ki külön jelszómegadás nélkül.
+* 🎨 **Több mint harminc új színtéma:** Rengeteg új színvilág közül válogathatsz a hangulatos éjszakai stílusoktól a letisztult világos megjelenésekig.
+* 🍁 **Automatikus szezonális megjelenés:** Bekapcsolhatod, hogy az alkalmazás színei maguktól igazodjanak az aktuális évszakhoz vagy a közelgő ünnepekhez.
+* 🪟 **Lebegő témaválasztó:** A beállításokban egy kényelmesen görgethető, színes kis dobozokból álló ablakban próbálhatod ki a különböző stílusokat.
+* 🛠️ **Megbízhatóbb widget működés:** Kijavítottuk a kreditek modul hibáját, így minden kezdőképernyős elem gyorsan és stabilan indul el.
+* 📰 **Szebb frissítési ablak:** Az új verziók bemutatója mostantól formázott szövegekkel és képekkel jelenik meg.
+* 🔒 **Biztonságosabb letöltések:** A letölthető telepítőcsomagok mellé automatikusan elkészül a modern ellenőrzőkód is a fájlok eredetiségének megerősítésére.
 
 ### 🪐 v2.2.0 (2026. november) — Új Egyetemválasztó, Bemutató Túra & Stabilitás
 * 🏛️ **Új Egyetemválasztó & Bejelentkezés:** Kereshető, logókkal és címerekkel ellátott teljes képernyős lista. Kétlépcsős azonosítás (2FA) egyszerű ablakban, és azonnali fióktiltás elleni védelem hibás jelszó esetén.

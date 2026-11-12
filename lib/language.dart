@@ -587,10 +587,6 @@ class AppStrings{
     return result;
   }
 
-  static String getStringPrural(String one, String multiple, int determiner){
-    return determiner <= 0 ? one : multiple;
-  }
-
   static List<String> getAllLangFlags(){
     return _supportedLanguagesFlags + _downloadedSupportedLanguagesFlags;
   }
@@ -1766,7 +1762,6 @@ class LanguageManager{
     if(langPack == null){
       return;
     }
-    //AppHaptics.attentionImpact();
     AppStrings.saveDownloadedLanguageData();
     AppStrings.setupPopupPreviews(langPack);
     await saveInt('SuggestLangUpdateCacheTime', DateTime.now().millisecondsSinceEpoch);
