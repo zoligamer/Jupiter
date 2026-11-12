@@ -73,7 +73,19 @@ A Jupiterrel másodpercek alatt áttekintheted az órarendedet, megnézheted a j
 2. Nyisd meg a letöltött `.apk` fájlt a telefonodon *(ha a készülék kéri, engedélyezd a külső forrásból történő telepítést)*.
 3. Válaszd ki az egyetemedet a listából, lépj be a megszokott Neptun kódoddal és jelszavaddal, és élvezd a zavartalan élményt! 🎉
 
-*(Az alkalmazás beépített automata frissítésfigyelővel rendelkezik, így mindig szólni fog, ha új verzió jelenik meg).*
+> [!NOTE]
+> ### 🛡️ Google Play Protect figyelmeztetés jelenik meg? Teljesen biztonságos!
+> 
+> Ha a telefonod telepítéskor a *"Letiltotta a Play Protect"* vagy az *"Ismeretlen fejlesztő"* ablakot mutatja, **nem kell aggódnod, ez nem vírus!**
+> 
+> **Miért jelez a telefonod?**
+> * 🔄 **Kényelmi automata frissítő:** Az alkalmazásba beépítettünk egy intelligens frissítésfigyelőt, ami automatikusan jelzi az új verziókat és képes letölteni a javításokat közvetlenül a hivatalos GitHub oldalról. A Google védelmi rendszere a külső, nem a Play Áruházból frissülő alkalmazásoknál ezt automatikusan gyanúsnak ítéli.
+> * 🌐 **Közvetlen diákmunka:** A Jupiter egy ingyenes, független hallgatói projekt, nem a Play Áruház zárt rendszeréből érkezik, így a Google algoritmusa alapesetben még nem ismeri a digitális aláírást.
+> * 📖 **100% nyílt forráskód és adatvédelem:** A teljes forráskód bárki számára nyilvános és ellenőrizhető itt a GitHubon. Nincsenek rejtett kódok vagy adatgyűjtők; a Neptun belépési adataidat és jelszavadat pedig kizárólag a telefonod saját, hardveresen titkosított belső chipje tárolja.
+> 
+> **Hogyan tudod feltenni a telefonodra?**
+> 1. A felugró ablakban koppints a **„Részletek”** *(vagy a lefelé mutató kis nyíl)* opcióra.
+> 2. Válaszd a **„Telepítés mindenképpen”** lehetőséget, és az app máris indul!
 
 ---
 
