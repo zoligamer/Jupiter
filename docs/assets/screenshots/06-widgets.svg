@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <linearGradient id="wpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1d" />
+      <stop offset="50%" stop-color="#141e33" />
+      <stop offset="100%" stop-color="#1f162e" />
+    </linearGradient>
+    <linearGradient id="widgetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Wallpaper -->
+  <rect width="390" height="844" fill="url(#wpGrad)" />
+
+  <!-- Ambient Glow -->
+  <circle cx="200" cy="240" r="160" fill="#f97316" fill-opacity="0.12" filter="blur(40px)" />
+  <circle cx="300" cy="560" r="140" fill="#0284c7" fill-opacity="0.08" filter="blur(40px)" />
+
+  <!-- Status Bar -->
+  <text x="28" y="38" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600">09:41</text>
+  <circle cx="340" cy="34" r="4" fill="#10b981" />
+  <rect x="352" y="28" width="18" height="10" rx="3" fill="none" stroke="#e2e8f0" stroke-width="1.5" />
+  <rect x="354" y="30" width="10" height="6" rx="1.5" fill="#e2e8f0" />
+
+  <!-- Home Screen Header -->
+  <text x="24" y="82" fill="#94a3b8" font-family="sans-serif" font-size="12" font-weight="600" letter-spacing="1">KEDD, NOVEMBER 26.</text>
+  <text x="24" y="112" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="800">Jupiter Widgetek</text>
+
+  <!-- WIDGET 1: Next Class (Órarend Widget 4x2) -->
+  <g transform="translate(20, 134)" filter="url(#shadow)">
+    <rect width="350" height="128" rx="22" fill="url(#widgetGrad)" stroke="rgba(249, 115, 22, 0.3)" stroke-width="1.5" />
+    
+    <!-- Widget Header -->
+    <rect x="18" y="16" width="28" height="28" rx="8" fill="url(#accentGrad)" />
+    <text x="32" y="35" fill="#ffffff" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">⚡</text>
+    <text x="56" y="28" fill="#f97316" font-family="sans-serif" font-size="11" font-weight="700">KÖVETKEZŐ ÓRA</text>
+    <text x="56" y="42" fill="#94a3b8" font-family="sans-serif" font-size="10">24 perc múlva kezdődik</text>
+    
+    <rect x="268" y="16" width="64" height="22" rx="11" fill="#f97316" fill-opacity="0.15" />
+    <text x="300" y="31" fill="#fb923c" font-family="sans-serif" font-size="11" font-weight="700" text-anchor="middle">10:15</text>
+
+    <!-- Class Details -->
+    <text x="18" y="78" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="700">Valószínűségszámítás II.</text>
+    <text x="18" y="98" fill="#94a3b8" font-family="sans-serif" font-size="12">Terem: IB028 • Előadás • Dr. Kovács Péter</text>
+    
+    <!-- Progress Bar -->
+    <rect x="18" y="112" width="314" height="4" rx="2" fill="#334155" />
+    <rect x="18" y="112" width="180" height="4" rx="2" fill="url(#accentGrad)" />
+  </g>
+
+  <!-- WIDGET 2 & 3 (2x2 Grid Widgets) -->
+  <!-- Finances Widget -->
+  <g transform="translate(20, 276)" filter="url(#shadow)">
+    <rect width="168" height="136" rx="22" fill="url(#widgetGrad)" stroke="rgba(16, 185, 129, 0.25)" stroke-width="1.5" />
+    <rect x="16" y="16" width="26" height="26" rx="7" fill="#10b981" fill-opacity="0.2" />
+    <text x="29" y="34" fill="#34d399" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">💳</text>
+    <text x="48" y="33" fill="#34d399" font-family="sans-serif" font-size="11" font-weight="700">PÉNZÜGYEK</text>
+    
+    <text x="16" y="70" fill="#94a3b8" font-family="sans-serif" font-size="11">Gyűjtőszámla:</text>
+    <text x="16" y="92" fill="#f8fafc" font-family="sans-serif" font-size="17" font-weight="800">42 500 Ft</text>
+    <text x="16" y="116" fill="#10b981" font-family="sans-serif" font-size="11" font-weight="600">✓ Nincs tartozás</text>
+  </g>
+
+  <!-- Credits & Grades Widget -->
+  <g transform="translate(202, 276)" filter="url(#shadow)">
+    <rect width="168" height="136" rx="22" fill="url(#widgetGrad)" stroke="rgba(56, 189, 248, 0.25)" stroke-width="1.5" />
+    <rect x="16" y="16" width="26" height="26" rx="7" fill="#0284c7" fill-opacity="0.2" />
+    <text x="29" y="34" fill="#38bdf8" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">🎓</text>
+    <text x="48" y="33" fill="#38bdf8" font-family="sans-serif" font-size="11" font-weight="700">KREDITEK</text>
+    
+    <text x="16" y="70" fill="#94a3b8" font-family="sans-serif" font-size="11">Súlyozott átlag:</text>
+    <text x="16" y="92" fill="#f8fafc" font-family="sans-serif" font-size="17" font-weight="800">4.62 / 5.00</text>
+    <text x="16" y="116" fill="#38bdf8" font-family="sans-serif" font-size="11" font-weight="600">28 / 30 Kredit pipa</text>
+  </g>
+
+  <!-- WIDGET 4: Master Hub Widget (4x2 All-in-One) -->
+  <g transform="translate(20, 426)" filter="url(#shadow)">
+    <rect width="350" height="154" rx="22" fill="url(#widgetGrad)" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1.5" />
+    
+    <!-- Title -->
+    <text x="18" y="28" fill="#fbbf24" font-family="sans-serif" font-size="12" font-weight="700">JUPITER MASTER HUB WIDGET</text>
+    <rect x="272" y="14" width="60" height="20" rx="10" fill="#38bdf8" fill-opacity="0.15" />
+    <text x="302" y="28" fill="#38bdf8" font-family="sans-serif" font-size="10" font-weight="700" text-anchor="middle">ÉLŐ SZINK</text>
+
+    <!-- 3 Mini Columns -->
+    <!-- Col 1: Messages -->
+    <rect x="18" y="44" width="98" height="92" rx="14" fill="#1e293b" />
+    <text x="30" y="66" fill="#94a3b8" font-family="sans-serif" font-size="10" font-weight="600">ÜZENETEK</text>
+    <text x="30" y="96" fill="#f97316" font-family="sans-serif" font-size="22" font-weight="900">2 új</text>
+    <text x="30" y="118" fill="#64748b" font-family="sans-serif" font-size="9">TO értesítés</text>
+
+    <!-- Col 2: Exams -->
+    <rect x="126" y="44" width="98" height="92" rx="14" fill="#1e293b" />
+    <text x="138" y="66" fill="#94a3b8" font-family="sans-serif" font-size="10" font-weight="600">VIZSGÁK</text>
+    <text x="138" y="96" fill="#38bdf8" font-family="sans-serif" font-size="22" font-weight="900">3 db</text>
+    <text x="138" y="118" fill="#64748b" font-family="sans-serif" font-size="9">dec. 14-től</text>
+
+    <!-- Col 3: Periods -->
+    <rect x="234" y="44" width="98" height="92" rx="14" fill="#1e293b" />
+    <text x="246" y="66" fill="#94a3b8" font-family="sans-serif" font-size="10" font-weight="600">IDŐSZAK</text>
+    <text x="246" y="96" fill="#34d399" font-family="sans-serif" font-size="16" font-weight="800">Szorgalmi</text>
+    <text x="246" y="118" fill="#64748b" font-family="sans-serif" font-size="9">12. hét aktív</text>
+  </g>
+
+  <!-- Android Bottom Dock -->
+  <g transform="translate(35, 730)">
+    <rect x="0" y="0" width="320" height="74" rx="24" fill="#0f172a" fill-opacity="0.8" stroke="rgba(255, 255, 255, 0.1)" />
+    
+    <!-- App Icons -->
+    <circle cx="48" cy="37" r="22" fill="#1e293b" />
+    <text x="48" y="43" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">📞</text>
+
+    <circle cx="122" cy="37" r="22" fill="#1e293b" />
+    <text x="122" y="43" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">🌐</text>
+
+    <!-- Jupiter App Icon Highlighted -->
+    <circle cx="198" cy="37" r="24" fill="url(#accentGrad)" />
+    <text x="198" y="44" fill="#ffffff" font-family="sans-serif" font-size="18" text-anchor="middle">🪐</text>
+
+    <circle cx="272" cy="37" r="22" fill="#1e293b" />
+    <text x="272" y="43" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">⚙️</text>
+  </g>
+
+  <!-- Android Gestural Navigation Bar -->
+  <rect x="140" y="826" width="110" height="4" rx="2" fill="#ffffff" fill-opacity="0.4" />
+</svg>
