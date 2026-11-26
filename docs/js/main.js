@@ -142,11 +142,10 @@ const EXACT_DOWNLOADS_CACHE_KEY = "jupiter_exact_downloads_count";
 const VERIFIED_EXACT_BASELINE = 129; // Live verified sum across GitHub releases (matches Shields.io total)
 
 async function fetchDownloadStats() {
-  const giantCountElem = document.getElementById("giant-download-count");
   const planetCountElem = document.getElementById("planet-download-count");
   const brandCountElem = document.getElementById("brand-download-count");
   const hubCountElem = document.getElementById("hub-total-downloads");
-  if (!giantCountElem && !planetCountElem && !brandCountElem && !hubCountElem) return;
+  if (!planetCountElem && !brandCountElem && !hubCountElem) return;
 
   let totalCount = VERIFIED_EXACT_BASELINE;
 
@@ -191,7 +190,6 @@ async function fetchDownloadStats() {
   }
 
   // Exact integer display: NO suffix (+), NO floats!
-  animateCount(giantCountElem, totalCount, "");
   animateCount(planetCountElem, totalCount, "");
   animateCount(brandCountElem, totalCount, "");
   animateCount(hubCountElem, totalCount, "");
@@ -528,7 +526,6 @@ function initFeedbackButton() {
 const I18N = {
   hu: {
     nav_download: "Letöltés",
-    nav_stats: "Mérföldkő",
     nav_showcase: "Funkciók & Képek",
     nav_features: "Előnyök",
     nav_faq: "GYIK & Biztonság",
@@ -547,9 +544,7 @@ const I18N = {
     hero_helper: "💡 Nincs szükség találgatásra: bármely Android készüléken azonnal fut.",
     hero_split: "Kisebb méretű architektúra APK-k ↓",
     hero_dl_label: "Letöltés a GitHubon",
-    giant_badge: "Hivatalos Élő GitHub Mérföldkő",
     giant_title: "Egyetemi Hallgató Töltötte Már Le",
-    giant_sub: "A magyar egyetemisták egyre növekvő közössége választja a Jupiter klienst a gyorsaság, a megbízhatóság és a modern kezdőképernyő widgetek miatt.",
     hub_tag: "Letöltési Központ",
     hub_title: "Válaszd ki a telefonodhoz illő csomagot",
     hub_sub: "A Universal csomag azonnal működik minden eszközön. Haladó felhasználóknak kisebb letöltési méretű, processzorra optimalizált APK-kat is biztosítunk.",
@@ -562,7 +557,6 @@ const I18N = {
   },
   en: {
     nav_download: "Download",
-    nav_stats: "Milestone",
     nav_showcase: "Showcase & Screens",
     nav_features: "Features",
     nav_faq: "FAQ & Safety",
@@ -581,9 +575,7 @@ const I18N = {
     hero_helper: "💡 No guesswork: works seamlessly on all Android devices.",
     hero_split: "Smaller architecture-specific APKs ↓",
     hero_dl_label: "Downloads on GitHub",
-    giant_badge: "Official Live GitHub Milestone",
     giant_title: "University Students Downloaded",
-    giant_sub: "A rapidly growing community of students across Hungary is choosing Jupiter for its 0.05s instant speed, reliability, and native home screen widgets.",
     hub_tag: "Download Hub",
     hub_title: "Select the perfect package for your device",
     hub_sub: "The Universal package runs immediately on all devices. For power users, processor-optimized APKs with smaller sizes are also available.",
