@@ -135,16 +135,23 @@ android {
                         File shaFile2 = new File(flutterApkDir, "${apkFile.name}.sha256")
                         shaFile2.text = "${sha256Hex}  ${apkFile.name}\n"
 
-                        // Ha .apk végződésű, legeneráljuk a .apk nélküli változatot is (pl. Jupiter_Universal.sha256)
-                        if (apkFile.name.endsWith(".apk")) {
-                            String baseWithoutExt = apkFile.name.substring(0, apkFile.name.length() - 4)
-                            File shaFileNoExt = new File(flutterApkDir, "${baseWithoutExt}.sha256")
-                            shaFileNoExt.text = "${sha256Hex}  ${apkFile.name}\n"
+                        // 3. Mentés az alapértelmezett Flutter APK névhez is a flutter-apk mappában
+                        // (pl. app-release.apk.sha256, app-arm64-v8a-release.apk.sha256, app-armeabi-v7a-release.apk.sha256, app-x86_64-release.apk.sha256)
+                        def abiFilter = output.getFilter(com.android.build.OutputFile.ABI)
+                        String standardFlutterName = ""
+                        if (abiFilter == "armeabi-v7a") {
+                            standardFlutterName = "app-armeabi-v7a-${variant.buildType.name}.apk"
+                        } else if (abiFilter == "arm64-v8a") {
+                            standardFlutterName = "app-arm64-v8a-${variant.buildType.name}.apk"
+                        } else if (abiFilter == "x86_64") {
+                            standardFlutterName = "app-x86_64-${variant.buildType.name}.apk"
+                        } else {
+                            standardFlutterName = "app-${variant.buildType.name}.apk"
                         }
-
-                        // Ha app-release.apk vagy app-debug.apk néven is kéri valamilyen pipeline
-                        File defaultApkSha = new File(flutterApkDir, "app-${variant.buildType.name}.apk.sha256")
-                        defaultApkSha.text = "${sha256Hex}  app-${variant.buildType.name}.apk\n"
+                        if (standardFlutterName != apkFile.name) {
+                            File standardFlutterSha = new File(flutterApkDir, "${standardFlutterName}.sha256")
+                            standardFlutterSha.text = "${sha256Hex}  ${standardFlutterName}\n"
+                        }
 
                         project.logger.lifecycle("SHA-256 generálva: ${shaFile1.name} -> ${sha256Hex}")
                     }

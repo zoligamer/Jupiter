@@ -12,8 +12,6 @@
     <uses-permission
         android:name="android.permission.VIBRATE"/>
     <uses-permission
-        android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
-    <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission

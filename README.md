@@ -38,18 +38,13 @@ A Jupiterrel másodpercek alatt áttekintheted az órarendedet, megnézheted a j
 ## 🌟 Legfrissebb Stabil Verzió
 
 > [!TIP]
-> ### 🚀 Jupiter v2.3.0 — Kezdőképernyő widgetek, mester vezérlősáv és új témák
-> - 📱 **Kezdőképernyő widgetek:** Az órarend, az egyetemi egyenleg, a kreditek, az üzenetek és a fontos határidők már közvetlenül a telefon kezdőképernyőjén is láthatók.
-> - 🎴 **Mester vezérlősáv:** Egyetlen összefoglaló kártyán követheted a következő órád termét és kezdési idejét, valamint az új üzenetek és teendők jelzőfényeit.
-> - 📋 **Kérdőívek és véleményezések:** A tantárgyi és tanári kérdőíveket mostantól közvetlenül az alkalmazásból töltheted ki külön jelszómegadás nélkül.
-> - 🎨 **Több mint harminc új színtéma:** Rengeteg új színvilág közül válogathatsz a hangulatos éjszakai stílusoktól a letisztult világos megjelenésekig.
-> - 🍁 **Automatikus szezonális megjelenés:** Bekapcsolhatod, hogy az alkalmazás színei maguktól igazodjanak az aktuális évszakhoz vagy a közelgő ünnepekhez.
-> - 🪟 **Lebegő témaválasztó:** A beállításokban egy kényelmesen görgethető, színes kis dobozokból álló ablakban próbálhatod ki a különböző stílusokat.
-> - 🛠️ **Megbízhatóbb widget működés:** Kijavítottuk a kreditek modul hibáját, így minden kezdőképernyős elem gyorsan és stabilan indul el.
-> - 📰 **Szebb frissítési ablak:** Az új verziók bemutatója mostantól formázott szövegekkel és képekkel jelenik meg.
-> - 🔒 **Biztonságosabb letöltések:** A letölthető telepítőcsomagok mellé automatikusan elkészül a modern ellenőrzőkód is a fájlok eredetiségének megerősítésére.
+> ### 🚀 Jupiter v2.3.1 — Biztonságos frissítési folyamat és Play Protect zöld út
+> - 🛡️ **Tiszta Play Protect ellenőrzés:** Az alkalmazást mostantól nem jelzi tévesen kártékonynak a Google Play Protect védelmi rendszere.
+> - 🌐 **Közvetlen böngészős frissítés:** A frissítés gomb mostantól közvetlenül a Jupiter hivatalos letöltési weboldalát nyitja meg a telefon alapértelmezett böngészőjében, így a legújabb verzió két kattintással, biztonságosan letölthető.
+> - 🔍 **Miért jelzett korábban a telefon?** A korábbi kiadásokban egy kényelmi belső frissítő a háttérben töltötte le az új telepítőt, amihez külön csomagtelepítési engedélyre volt szükség. A Google védelmi szűrője ezt az automatikus letöltési viselkedést elővigyázatosságból gyanúsnak látta. A v2.3.1-ben ezt az engedélyt és a belső telepítőt teljesen eltávolítottuk, így a rendszer többé nem riaszt.
+> - 📱 **Minden v2.3.0 funkció elérhető:** Natív kezdőképernyő widgetek, áttekinthető fix mester vezérlősáv, tantárgyi és tanári kérdőívek kitöltése, valamint több mint harminc új hangulati és évszakos téma.
 > 
-> 👉 **[Kattints ide a legfrissebb v2.3.0 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
+> 👉 **[Kattints ide a legfrissebb v2.3.1 letöltéséhez a hivatalos oldalon!](https://zoligamer.github.io/Jupiter/)**
 
 ---
 
@@ -79,7 +74,7 @@ A Jupiterrel másodpercek alatt áttekintheted az órarendedet, megnézheted a j
 > Ha a telefonod telepítéskor a *"Letiltotta a Play Protect"* vagy az *"Ismeretlen fejlesztő"* ablakot mutatja, **nem kell aggódnod, ez nem vírus!**
 > 
 > **Miért jelez a telefonod?**
-> * 🔄 **Kényelmi automata frissítő:** Az alkalmazásba beépítettünk egy intelligens frissítésfigyelőt, ami automatikusan jelzi az új verziókat és képes letölteni a javításokat közvetlenül a hivatalos GitHub oldalról. A Google védelmi rendszere a külső, nem a Play Áruházból frissülő alkalmazásoknál ezt automatikusan gyanúsnak ítéli.
+> * 🔄 **Kényelmi frissítésértesítő:** Az alkalmazásba beépítettünk egy intelligens frissítésfigyelőt, ami azonnal jelzi az új verziókat és egyetlen érintéssel átirányít a hivatalos weboldal letöltési pontjára. Mivel nem közvetlenül a Play Áruház zárt rendszeréből érkezik a telepítő, a Google védelmi rendszere elővigyázatosságból rákérdezhet a külső forrásra.
 > * 🌐 **Közvetlen diákmunka:** A Jupiter egy ingyenes, független hallgatói projekt, nem a Play Áruház zárt rendszeréből érkezik, így a Google algoritmusa alapesetben még nem ismeri a digitális aláírást.
 > * 📖 **100% nyílt forráskód és adatvédelem:** A teljes forráskód bárki számára nyilvános és ellenőrizhető itt a GitHubon. Nincsenek rejtett kódok vagy adatgyűjtők; a Neptun belépési adataidat és jelszavadat pedig kizárólag a telefonod saját, hardveresen titkosított belső chipje tárolja.
 > 
@@ -103,6 +98,13 @@ Egyetlen perc alatt elküldheted nekünk az észrevételedet:
 <details open>
 <summary><b>✨ v2.x Kiadások (Legfrissebb változatok)</b></summary>
 <br/>
+
+### 🪐 v2.3.1 — Biztonságos frissítési folyamat & Play Protect zöld út
+* 🛡️ **Play Protect riasztás megszüntetése:** A Google Play Protect mostantól nem blokkolja az alkalmazást és nem minősíti kártékonynak.
+* 🌐 **Böngészős átirányítás a weboldalra:** A belső APK-letöltő motort és a csomagtelepítési engedélyt (`REQUEST_INSTALL_PACKAGES`) teljesen eltávolítottuk. Az alkalmazás frissítéskor közvetlenül a hivatalos Jupiter weboldalra irányít, ahol két kattintással letölthető az új kiadás.
+* 💡 **Mi okozta korábban a téves riasztást?** A háttérbeli APK letöltés és közvetlen telepítés kérése pontosan megegyezett az Androidos letöltő trójaiak viselkedésével, ezért a Google automatikus szűrője elővigyázatosságból veszélyesnek jelölte az appot. Ennek megszüntetésével a program teljesen tiszta minősítést kap.
+* 🏬 **Google Play előkészítés:** A kockázatos jogosultság kivezetésével az alkalmazás maximálisan felkészült a hivatalos Play Áruházi megjelenésre.
+* 🧮 **Letisztult ellenőrzőkódok:** Eltávolítottuk a duplikált fájlokat, mostantól kizárólag a szabványos `.apk.sha256` ellenőrző kódok generálódnak a telepítők mellé.
 
 ### 🪐 v2.3.0 — Kezdőképernyő widgetek, mester vezérlősáv és új témák
 * 📱 **Kezdőképernyő widgetek:** Az órarend, az egyetemi egyenleg, a kreditek, az üzenetek és a fontos határidők már közvetlenül a telefon kezdőképernyőjén is láthatók.

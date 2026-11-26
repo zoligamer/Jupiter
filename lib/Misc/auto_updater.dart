@@ -1,15 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:ffi';
-import 'package:dio/dio.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,13 +14,28 @@ import '../colors.dart';
 class AppUpdater {
   static const String repoOwner = "zoligamer";
   static const String repoName = "Jupiter";
+  static const String websiteUrl = "https://zoligamer.github.io/Jupiter/";
 
   /// Reaktív értesítők a felület számára
   static final ValueNotifier<bool> hasUpdateNotifier = ValueNotifier<bool>(false);
   static final ValueNotifier<String?> latestVersionNotifier = ValueNotifier<String?>(null);
-  static String installedVersion = "1.0.5";
+  static String installedVersion = "2.3.1";
   static String latestAvailableVersion = "";
   static Map<String, dynamic>? latestReleaseData;
+
+  /// Átirányítás a hivatalos letöltési weboldalra a telefon alapértelmezett böngészőjében
+  static Future<void> redirectToDownloadPage() async {
+    try {
+      final uri = Uri.parse(websiteUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint("Hiba a letöltési oldal megnyitásakor: $e");
+    }
+  }
 
   /// Inicializálás (verzió betöltése és gyorsított gyorsítótár-ellenőrzés)
   static Future<void> initialize() async {
@@ -97,7 +106,7 @@ class AppUpdater {
     }
   }
 
-  /// Fő belépési pont.
+  /// Fő belépési pont frissítés ellenőrzéséhez és a hivatalos weboldalra irányításhoz
   static Future<void> checkAndInstallUpdate(BuildContext? context, {bool force = false}) async {
     // 1. Internet ellenőrzés
     final conn = await Connectivity().checkConnectivity();
@@ -133,7 +142,7 @@ class AppUpdater {
     }
 
     try {
-      // 3. GitHub API hívás a 'latest' kiadásért megfelelő fejlécekkel
+      // 3. GitHub API hívás a 'latest' kiadásért
       final response = await http.get(
         Uri.parse("https://api.github.com/repos/$repoOwner/$repoName/releases/latest"),
         headers: {
@@ -159,11 +168,10 @@ class AppUpdater {
       final latestTag = data['tag_name']?.toString() ?? '';
 
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version; // pl. 1.0.4 vagy 1.0.4+16
+      final currentVersion = packageInfo.version;
       installedVersion = currentVersion;
       latestAvailableVersion = latestTag;
 
-      // Elmentjük a sikeres ellenőrzés idejét és tagjét
       await saveString('CachedLatestReleaseTag', latestTag);
       await saveInt('ObsoleteAppVerUpdateCacheTime', DateTime.now().millisecondsSinceEpoch);
 
@@ -176,12 +184,9 @@ class AppUpdater {
           return;
         }
 
-        bool shouldUpdate = await _showUpdateDialog(activeContext, latestTag);
-        if (shouldUpdate) {
-          BuildContext? downloadContext = activeContext.mounted ? activeContext : HomePageState.getContext();
-          if (downloadContext != null && downloadContext.mounted) {
-            await _downloadAndInstall(downloadContext, data['assets'] ?? []);
-          }
+        bool shouldRedirect = await _showUpdateDialog(activeContext, latestTag);
+        if (shouldRedirect) {
+          await redirectToDownloadPage();
         }
       } else {
         hasUpdateNotifier.value = false;
@@ -197,7 +202,7 @@ class AppUpdater {
         }
       }
     } catch (e) {
-      debugPrint("Hiba az auto-update során: $e");
+      debugPrint("Hiba az update ellenőrzése során: $e");
       if (force && Platform.isAndroid) {
         Fluttertoast.showToast(
           msg: "Hiba történt a frissítés ellenőrzésekor.",
@@ -210,33 +215,50 @@ class AppUpdater {
     }
   }
 
-  /// Egyszerű Igen / Később ablak
+  /// Frissítési ablak: tájékoztatja a felhasználót az új verzióról és átirányít a weboldalra
   static Future<bool> _showUpdateDialog(BuildContext context, String version) async {
+    final theme = AppColors.getTheme();
     return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.getTheme().rootBackground,
-        title: Text(
-          "Frissítés elérhető!",
-          style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold),
+        backgroundColor: theme.rootBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.system_update_rounded, color: theme.primary, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Frissítés elérhető!",
+                style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
         ),
         content: Text(
-          "Az alkalmazás új verziója ($version) elérhető. Szeretnéd most letölteni és telepíteni?",
-          style: TextStyle(color: AppColors.getTheme().textColor),
+          "Az alkalmazás új verziója ($version) elérhető a hivatalos weboldalon. Szeretnéd megnyitni a letöltési oldalt a böngésződben?",
+          style: TextStyle(color: theme.textColor, fontSize: 14, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text("Később", style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6))),
+            child: Text("Később", style: TextStyle(color: theme.textColor.withValues(alpha: 0.6))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.getTheme().currentClassGreen,
+              backgroundColor: theme.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Igen", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text("Megnyitás", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -421,228 +443,6 @@ class AppUpdater {
     );
   }
 
-  /// Detektálja, hogy 64-bites (ARM8) vagy 32-bites (ARM7) környezetben futunk
-  static Future<bool> _detectIs64Bit() async {
-    // 1. Android eszköz ABI lekérdezése
-    try {
-      if (Platform.isAndroid) {
-        final deviceInfo = DeviceInfoPlugin();
-        final androidInfo = await deviceInfo.androidInfo;
-        if (androidInfo.supported64BitAbis.isNotEmpty) {
-          return true;
-        }
-        final abis = androidInfo.supportedAbis.map((e) => e.toLowerCase()).toList();
-        if (abis.any((a) => a.contains('arm64') || a.contains('v8a') || a.contains('x86_64') || a.contains('aarch64'))) {
-          return true;
-        }
-        if (abis.any((a) => a.contains('arm') || a.contains('v7a') || a.contains('armeabi') || a.contains('x86'))) {
-          return false;
-        }
-      }
-    } catch (e) {
-      debugPrint("DeviceInfo architektúra hiba: $e");
-    }
-
-    // 2. Tartalék: a futó app saját futtatókörnyezetének (Abi.current) vizsgálata
-    try {
-      final currentAbi = Abi.current();
-      if (currentAbi == Abi.androidArm64 || currentAbi == Abi.androidX64 || currentAbi == Abi.linuxArm64 || currentAbi == Abi.linuxX64 || currentAbi == Abi.windowsX64 || currentAbi == Abi.windowsArm64) {
-        return true;
-      }
-      if (currentAbi == Abi.androidArm || currentAbi == Abi.androidIA32 || currentAbi == Abi.linuxArm || currentAbi == Abi.linuxIA32 || currentAbi == Abi.windowsIA32) {
-        return false;
-      }
-    } catch (e) {
-      debugPrint("Abi.current() hiba: $e");
-    }
-
-    // Alapértelmezett: 64-bit (ARM8) a modern telefonokhoz
-    return true;
-  }
-
-  static bool _isArm64Asset(String name) {
-    final n = name.toLowerCase();
-    return n.contains('arm8') || n.contains('arm-8') || n.contains('arm_8') ||
-           n.contains('arm64') || n.contains('arm-64') || n.contains('v8a') ||
-           n.contains('aarch64');
-  }
-
-  static bool _isArm32Asset(String name) {
-    final n = name.toLowerCase();
-    return n.contains('arm7') || n.contains('arm-7') || n.contains('arm_7') ||
-           n.contains('armv7') || n.contains('v7a') || n.contains('armeabi');
-  }
-
-  /// Kiválasztja a CPU architektúrához leginkább illeszkedő APK-t a GitHub assets listából
-  static Future<Map<String, dynamic>?> _selectBestAsset(List assets) async {
-    final apkAssets = assets.where((a) {
-      if (a is! Map) return false;
-      final name = a['name']?.toString().toLowerCase() ?? '';
-      return name.endsWith('.apk') && !name.endsWith('.sha1') && !name.endsWith('.sha256') && !name.endsWith('.md5') && !name.endsWith('.sig');
-    }).cast<Map<String, dynamic>>().toList();
-
-    if (apkAssets.isEmpty) return null;
-
-    // 0. Elsődleges: Univerzális APK csomag (így az Android csomagkezelő maga választhat a megfelelő binárisokból)
-    for (final a in apkAssets) {
-      final name = a['name']?.toString().toLowerCase() ?? '';
-      if (name.contains('universal')) {
-        return a;
-      }
-    }
-
-    final is64Bit = await _detectIs64Bit();
-
-    if (is64Bit) {
-      // 1. Elsődleges: ARM8 / arm64 / v8a (pl. NeptunMobile_ARM8-v1.0.5.apk, app-arm64-v8a-release.apk)
-      for (final a in apkAssets) {
-        final name = a['name']?.toString() ?? '';
-        if (_isArm64Asset(name)) {
-          return a;
-        }
-      }
-      // 2. Univerzális (nem ARM7-specifikus)
-      for (final a in apkAssets) {
-        final name = a['name']?.toString() ?? '';
-        if (!_isArm32Asset(name)) {
-          return a;
-        }
-      }
-      // 3. Fallback
-      return apkAssets.first;
-    } else {
-      // 32-bites eszköz (ARM7)
-      // 1. Elsődleges: ARM7 / v7a / armeabi (pl. NeptunMobile_ARM7-v1.0.5.apk, app-armeabi-v7a-release.apk)
-      for (final a in apkAssets) {
-        final name = a['name']?.toString() ?? '';
-        if (_isArm32Asset(name)) {
-          return a;
-        }
-      }
-      // 2. Univerzális (nem 64-bites specifikus)
-      for (final a in apkAssets) {
-        final name = a['name']?.toString() ?? '';
-        if (!_isArm64Asset(name)) {
-          return a;
-        }
-      }
-      // 3. Fallback
-      return apkAssets.first;
-    }
-  }
-
-  /// Letöltés sávval és automatikus megnyitás
-  static Future<void> _downloadAndInstall(BuildContext context, List assets) async {
-    final asset = await _selectBestAsset(assets);
-    if (asset == null) {
-      debugPrint("Nem található megfelelő APK fájl a kiadásban.");
-      if (Platform.isAndroid) {
-        Fluttertoast.showToast(
-          msg: "Nem található kompatibilis telepítőcsomag (.apk) a kiadásban.",
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.SNACKBAR,
-          backgroundColor: AppColors.getTheme().rootBackground,
-          textColor: AppColors.getTheme().textColor,
-        );
-      }
-      return;
-    }
-
-    final downloadUrl = asset['browser_download_url']?.toString() ?? '';
-    // Only this repo's release assets, safe file name, digest check when GitHub provides one.
-    final releasePrefix = 'https://github.com/$repoOwner/$repoName/releases/download/';
-    if (!downloadUrl.startsWith(releasePrefix)) return;
-    final rawName = asset['name']?.toString() ?? 'Neptun_Update.apk';
-    final assetFileName = rawName.split('/').last.split('\\').last.replaceAll('..', '_');
-    final expectedDigest = asset['digest']?.toString() ?? '';
-
-    String targetSha256 = '';
-    if (expectedDigest.toLowerCase().startsWith('sha256:')) {
-      targetSha256 = expectedDigest.substring(7).trim().toLowerCase();
-    } else {
-      // Keresünk azonos nevű .sha256 kiadási assetet (mind az .apk.sha256, mind a .sha256 formátum támogatva)
-      final shaNameWithApk = '${rawName.toLowerCase()}.sha256';
-      final shaNameWithoutApk = '${rawName.toLowerCase().replaceAll(RegExp(r'\.apk$'), '')}.sha256';
-      final shaAsset = assets.firstWhere(
-        (a) {
-          if (a is! Map) return false;
-          final aname = a['name']?.toString().toLowerCase();
-          return aname == shaNameWithApk || aname == shaNameWithoutApk;
-        },
-        orElse: () => null,
-      );
-      if (shaAsset != null && shaAsset['browser_download_url'] != null) {
-        try {
-          final shaUrl = shaAsset['browser_download_url'].toString();
-          if (shaUrl.startsWith(releasePrefix)) {
-            final res = await http.get(Uri.parse(shaUrl)).timeout(const Duration(seconds: 5));
-            if (res.statusCode == 200) {
-              final hashMatch = RegExp(r'[a-fA-F0-9]{64}').firstMatch(res.body);
-              if (hashMatch != null) {
-                targetSha256 = hashMatch.group(0)!.toLowerCase();
-              }
-            }
-          }
-        } catch (_) {}
-      }
-    }
-
-    final tempDir = await getTemporaryDirectory();
-    final savePath = "${tempDir.path}/$assetFileName";
-
-    // Takarítás: töröljük az esetleges korábbi ideiglenes telepítőt
-    if (File(savePath).existsSync()) {
-      try {
-        File(savePath).deleteSync();
-      } catch (_) {}
-    }
-
-    if (!context.mounted) return;
-
-    // Letöltés folyamatjelző
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const _DownloadProgressDialog(),
-    );
-
-    try {
-      final dio = Dio();
-      await dio.download(downloadUrl, savePath);
-      if (targetSha256.isNotEmpty) {
-        final actual = (await sha256.bind(File(savePath).openRead()).first).toString().toLowerCase();
-        if (actual != targetSha256) {
-          try { File(savePath).deleteSync(); } catch (_) {}
-          throw Exception('APK digest mismatch');
-        }
-      }
-
-      if (context.mounted) {
-        Navigator.pop(context); // Töltés ablak bezárása
-      }
-
-      // Telepítés indítása
-      final result = await OpenFilex.open(savePath);
-      if (result.type != ResultType.done) {
-        debugPrint("APK megnyitási státusz: ${result.message}");
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-      debugPrint("Hálózati hiba a letöltés során: $e");
-      if (Platform.isAndroid) {
-        Fluttertoast.showToast(
-          msg: "Hiba történt a letöltés során!",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.SNACKBAR,
-          backgroundColor: AppColors.getTheme().rootBackground,
-          textColor: AppColors.getTheme().textColor,
-        );
-      }
-    }
-  }
-
   /// Kinyeri a numerikus és szemantikus verzió szegmenseket (pl. 1.0.5, 1.0.5R, 1.0.5-Hotfix, 1.0.5F, 1.0.5+20)
   static List<int> _parseVersionNumbers(String raw) {
     if (raw.trim().isEmpty) return [0];
@@ -689,30 +489,5 @@ class AppUpdater {
       if (l < c) return false; // A telepített verzió újabb vagy megegyezik
     }
     return false; // Pontosan megegyeznek
-  }
-}
-
-/// Belső Widget a letöltési folyamatjelzőhöz
-class _DownloadProgressDialog extends StatelessWidget {
-  const _DownloadProgressDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.getTheme().rootBackground,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(color: AppColors.getTheme().currentClassGreen),
-          const SizedBox(height: 20),
-          Text("Frissítés letöltése folyamatban...", style: TextStyle(color: AppColors.getTheme().textColor)),
-          const SizedBox(height: 10),
-          Text(
-            "Kérlek, ne zárd be az alkalmazást.",
-            style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6), fontSize: 12),
-          ),
-        ],
-      ),
-    );
   }
 }
