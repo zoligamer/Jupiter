@@ -363,7 +363,7 @@ class AppUpdater {
               onTapLink: (text, href, title) async {
                 if (href != null && href.isNotEmpty) {
                   final uri = Uri.tryParse(href);
-                  if (uri != null && await canLaunchUrl(uri)) {
+                  if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
                 }
@@ -398,6 +398,10 @@ class AppUpdater {
                 ),
               ),
               sizedImageBuilder: (config) {
+                final uri = config.uri;
+                if (uri.scheme != 'https' && uri.scheme != 'http') {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: ClipRRect(

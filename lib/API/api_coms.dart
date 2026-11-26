@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert' as conv;
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
@@ -10,9 +9,20 @@ import 'package:jupiter/API/ics_calendar.dart';
 import 'package:jupiter/Misc/clickable_text_span.dart';
 import 'package:jupiter/colors.dart';
 import 'package:jupiter/language.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import '../storage.dart' as storage;
-import 'dart:developer' as debug;
 import '../storage.dart';
+
+class _DebugLogger {
+  const _DebugLogger();
+  void log(String message, {DateTime? time, int? sequenceNumber, int level = 0, String name = '', Object? error, StackTrace? stackTrace, Zone? zone}) {
+    if (kDebugMode) {
+      developer.log(message, time: time, sequenceNumber: sequenceNumber, level: level, name: name, error: error, stackTrace: stackTrace, zone: zone);
+    }
+  }
+}
+const debug = _DebugLogger();
   
   class URLs{
     static const String INSTITUTIONS_URL = "https://mobilecloudservice.cloudapp.net/MobileServiceLib/MobileCloudService.svc/GetAllNeptunMobileUrls";
@@ -93,7 +103,7 @@ import '../storage.dart';
             }
       catch(error){
         client.close();
-        return '{"ErrorMessage": "Hálózati hiba: $error"}';
+        return conv.jsonEncode({"ErrorMessage": "Hálózati hiba történt a kérés során."});
       }
 
       // Close the client when done
@@ -621,9 +631,17 @@ import '../storage.dart';
           final Map<String, dynamic> jsonMap = conv.json.decode(response.body);
           final institutes = jsonMap["Institutes"];
           if (institutes is List && institutes.isNotEmpty) {
-            _inMemoryInstitutes = institutes;
-            await storage.saveString('CACHED_INSTITUTES_JSON', response.body);
-            return institutes;
+            bool allValid = institutes.every((item) {
+              if (item is! Map) return false;
+              final name = item['Name']?.toString().trim() ?? '';
+              final url = item['Url']?.toString().trim() ?? '';
+              return name.isNotEmpty && url.isNotEmpty;
+            });
+            if (allValid) {
+              _inMemoryInstitutes = institutes;
+              await storage.saveString('CACHED_INSTITUTES_JSON', response.body);
+              return institutes;
+            }
           }
         }
       } catch (_) {}
@@ -637,11 +655,15 @@ import '../storage.dart';
     static List<Institute> getDataFromInstitudesJSON(List<dynamic> jsonMap){
       var newList = <Institute>[].toList();
       for (var item in jsonMap){
-        var item2 = item as Map<String, dynamic>;
-        String name = item2['Name'];
-        String url = item2['Url'] ?? "NULL";
-        if(url != "NULL" && name != "DEMO") { //remove obsolete or non existent entries
-          newList.add(Institute(name, url));
+        if (item is! Map<String, dynamic>) continue;
+        String name = (item['Name'] ?? '').toString().trim();
+        String rawUrl = (item['Url'] ?? "NULL").toString().trim();
+        if (rawUrl != "NULL" && name != "DEMO" && name.isNotEmpty) {
+          String normalizedUrl = normalizeLoginUrl(rawUrl);
+          final uri = Uri.tryParse(normalizedUrl);
+          if (uri != null && uri.scheme == 'https' && uri.hasAuthority && uri.host.isNotEmpty) {
+            newList.add(Institute(name, normalizedUrl));
+          }
         }
       }
       return newList;
@@ -1489,17 +1511,16 @@ class CalendarRequest {
       final activeTermId = termId ?? storage.DataCache.getSelectedTermId();
       final termInt = int.tryParse(activeTermId ?? '0') ?? 0;
 
-      return
-        '{'
-          '"UserLogin":"$username",'
-          '"Password":"$password",'
-          '"Time":true,'
-          '"Exam":true,'
-          '"startDate":"/Date($epochStart)/",'
-          '"endDate":"/Date($epochEnd)/",'
-          '"TotalRowCount":-1,'
-          '"filter":{"TermID":$termInt}'
-        '}';
+      return conv.jsonEncode({
+        "UserLogin": username,
+        "Password": password,
+        "Time": true,
+        "Exam": true,
+        "startDate": "/Date($epochStart)/",
+        "endDate": "/Date($epochEnd)/",
+        "TotalRowCount": -1,
+        "filter": {"TermID": termInt}
+      });
     }
   }
 
@@ -1701,7 +1722,13 @@ class MarkbookRequest{
     final username = storage.DataCache.getUsername();
     final password = storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.MARKBOOK_URL);
-    final json = '{"UserLogin":"$username","Password":"$password","CurrentPage":1,"filter":{"TermID": $termId},"TotalRowCount":-1}';
+    final json = conv.jsonEncode({
+      "UserLogin": username,
+      "Password": password,
+      "CurrentPage": 1,
+      "filter": {"TermID": termId},
+      "TotalRowCount": -1
+    });
     return await _APIRequest.postRequest(url, json);
   }
 
@@ -2048,7 +2075,11 @@ class CashinRequest{
 
     final username = storage.DataCache.getUsername();
     final password = storage.DataCache.getPassword();
-    final json = '{"UserLogin":"$username","Password":"$password","TotalRowCount":-1}';
+    final json = conv.jsonEncode({
+      "UserLogin": username,
+      "Password": password,
+      "TotalRowCount": -1
+    });
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.GETCASHIN_URL);
 
     List<CashinEntry> entries = _jsonToCashinEntry(await _APIRequest.postRequest(url, json));
@@ -2232,7 +2263,12 @@ class PeriodsRequest{
     final username = storage.DataCache.getUsername();
     final password = storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.PERIODS_URL);
-    final json = '{"UserLogin":"$username","Password":"$password","PeriodTermID":$termID,"TotalRowCount":-1}';
+    final json = conv.jsonEncode({
+      "UserLogin": username,
+      "Password": password,
+      "PeriodTermID": termID,
+      "TotalRowCount": -1
+    });
     return await _APIRequest.postRequest(url, json);
   }
 }
@@ -2335,7 +2371,14 @@ class MailRequest{
     final username = storage.DataCache.getUsername();
     final password = storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.MESSAGES_URL);
-    final json = '{"UserLogin":"$username","Password":"$password","CurrentPage":$page,"TotalRowCount":-1,"MessageID":0,"MessageSortEnum":0}';
+    final json = conv.jsonEncode({
+      "UserLogin": username,
+      "Password": password,
+      "CurrentPage": page,
+      "TotalRowCount": -1,
+      "MessageID": 0,
+      "MessageSortEnum": 0
+    });
     return await _APIRequest.postRequest(url, json);
   }
 
@@ -2466,10 +2509,10 @@ class MailRequest{
               .trim();
           return cleanText;
         } else {
-          return "Üres válasz érkezett a Neptuntól.\n\nSzerver válasza: $responseRaw";
+          return "Az üzenet tartalma üres vagy nem tölthető be.";
         }
       } catch (e) {
-        return "Hálózati hiba a letöltés során:\n$e";
+        return "Hálózati hiba történt az üzenet letöltésekor.";
       }
     }
     return oldDetails;
@@ -3035,26 +3078,30 @@ class CashinEntry{
             }
             String newText = match.group(1)!;
 
-            if(!newText.contains('@') || !newText.contains('https://') || !newText.contains('http://')){
-              final htmlLink3 = RegExp(r'href="(.*?)"');
-              final match = htmlLink3.firstMatch(matches[i]);
-              if (match == null) {
-                break;
-              }
-              final url = match.group(1)!;
-              spans.add(ClickableTextSpan.getNewClickableSpan(
-                  ClickableTextSpan.getNewOpenLinkCallback(url), newText,
-                  ClickableTextSpan.getStockStyle()));
+            final htmlLink3 = RegExp(r'''href=["'](.*?)["']''', caseSensitive: false);
+            final hrefMatch = htmlLink3.firstMatch(matches[i]);
+            if (hrefMatch == null) {
+              spans.add(TextSpan(text: newText));
+              continue;
             }
-            else{
-              final isMailTo = newText.contains('@') &&
-                  !(newText.contains('https://') || newText.contains('http://'));
+            final url = hrefMatch.group(1)!.trim();
 
-              spans.add(ClickableTextSpan.getNewClickableSpan(
-                  ClickableTextSpan.getNewOpenLinkCallback(
-                      isMailTo ? 'mailto:$newText' : newText.contains('www.') && !newText.contains('http:') ? 'https://$newText' : newText), newText,
-                  ClickableTextSpan.getStockStyle()));
+            // Phishing / Link-target mismatch detection:
+            // Ha a látható szöveg egy URL-nek látszik, de a tényleges célcím más domainre mutat,
+            // jelezzük a valódi célállomást a megtévesztés ellen.
+            String displayText = newText;
+            final textUri = Uri.tryParse(newText.trim());
+            final targetUri = Uri.tryParse(url);
+            if (textUri != null && (textUri.scheme == 'http' || textUri.scheme == 'https') && textUri.hasAuthority &&
+                targetUri != null && (targetUri.scheme == 'http' || targetUri.scheme == 'https') && targetUri.hasAuthority) {
+              if (textUri.host.toLowerCase() != targetUri.host.toLowerCase()) {
+                displayText = "$newText [➔ ${targetUri.host}]";
+              }
             }
+
+            spans.add(ClickableTextSpan.getNewClickableSpan(
+                ClickableTextSpan.getNewOpenLinkCallback(url), displayText,
+                ClickableTextSpan.getStockStyle()));
           }
           else {
             // Handle URLs
@@ -3163,7 +3210,7 @@ class CashinEntry{
       }
       try {
         final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/Languages/supportedLanguages.json');
-        final response = await http.get(url);
+        final response = await http.get(url).timeout(const Duration(seconds: 5));
 
         if (response.statusCode != 200) {
           return null;
@@ -3173,7 +3220,12 @@ class CashinEntry{
         final allLangItems = jsonMap['languagesMap'] as List<dynamic>;
         final List<LangPackMap> langPacksRoot = [];
         for (var item in allLangItems){
-          langPacksRoot.add(LangPackMap.fromMap(item));
+          if (item is Map<String, dynamic>) {
+            final packUrl = item['langURL']?.toString() ?? '';
+            if (packUrl.isEmpty || URLs.isTrustedPackUrl(packUrl)) {
+              langPacksRoot.add(LangPackMap.fromMap(item));
+            }
+          }
         }
         _langMapCache = langPacksRoot;
         return langPacksRoot;
@@ -3209,7 +3261,7 @@ class CashinEntry{
       }
       try {
         final url = Uri.parse('https://raw.githubusercontent.com/zoligamer/Jupiter/refs/heads/main/Themes/supportedThemes.json');
-        final response = await http.get(url);
+        final response = await http.get(url).timeout(const Duration(seconds: 5));
 
         if (response.statusCode != 200) {
           return null;
@@ -3219,7 +3271,12 @@ class CashinEntry{
         final allThemeItems = jsonMap['themesMap'] as List<dynamic>;
         final List<ThemePackMap> themePacksRoot = [];
         for (var item in allThemeItems){
-          themePacksRoot.add(ThemePackMap.fromMap(item));
+          if (item is Map<String, dynamic>) {
+            final packUrl = item['themeUrl']?.toString() ?? '';
+            if (packUrl.isEmpty || URLs.isTrustedPackUrl(packUrl)) {
+              themePacksRoot.add(ThemePackMap.fromMap(item));
+            }
+          }
         }
         _themeMapCache = themePacksRoot;
         return themePacksRoot;

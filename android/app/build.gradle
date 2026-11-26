@@ -4,7 +4,6 @@ import java.security.MessageDigest
 
 plugins {
     id "com.android.application"
-    id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -57,7 +56,6 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        setProperty("archivesBaseName", "Jupiter")
     }
 
     signingConfigs {
@@ -75,8 +73,6 @@ android {
         release {
             if (keystoreProperties['storeFile'] && file(keystoreProperties['storeFile']).exists()) {
                 signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
             }
             minifyEnabled false
             shrinkResources false
@@ -113,6 +109,13 @@ android {
 
         // Automatikus SHA-256 fájl generálás minden elkészült APK-hoz
         variant.assembleProvider.configure { assembleTask ->
+            if (variant.buildType.name == "release") {
+                assembleTask.doFirst {
+                    if (!keystoreProperties['storeFile'] || !file(keystoreProperties['storeFile']).exists()) {
+                        throw new GradleException("Release build cannot proceed: 'android/key.properties' is missing or keystore file '${keystoreProperties['storeFile']}' does not exist. Refusing to sign release builds with debug keys.")
+                    }
+                }
+            }
             assembleTask.doLast {
                 variant.outputs.each { output ->
                     File apkFile = output.outputFile

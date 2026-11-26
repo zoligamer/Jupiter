@@ -238,22 +238,20 @@ class DataCache{
     _username = await getString('Username');
     _instituteUrl = await getString('URL');
 
-    _password = await _secureStorage.read(key: 'neptun_password');
-
+    _password = await _readSecure('neptun_password');
 
     if (_password == null) {
       String? oldPassword = await getString('Password');
       if (oldPassword != null && oldPassword.isNotEmpty) {
         _password = oldPassword;
         await _secureStorage.write(key: 'neptun_password', value: oldPassword);
-
       }
     }
     if ((_password ?? '').isNotEmpty) {
       await (await SharedPreferences.getInstance()).remove('Password');
     }
 
-    _accessToken = await _secureStorage.read(key: 'neptun_jwt_token');
+    _accessToken = await _readSecure('neptun_jwt_token');
 
     if (_accessToken == null) {
       String? oldToken = await getString('AccessToken');
@@ -266,11 +264,11 @@ class DataCache{
       await (await SharedPreferences.getInstance()).remove('AccessToken');
     }
 
-    _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
-    _sessionCookieName = await _secureStorage.read(key: 'neptun_session_cookie_name');
+    _refreshToken = await _readSecure('neptun_refresh_token');
+    _sessionCookieName = await _readSecure('neptun_session_cookie_name');
     _stickyServerId = await getString('StickyServerId');
     if (_username != null && _username!.isNotEmpty) {
-      _cachedDeviceCookie = await _secureStorage.read(key: 'devicecookie_${_username!.toUpperCase()}');
+      _cachedDeviceCookie = await _readSecure('devicecookie_${_username!.toUpperCase()}');
     }
 
     tmp = await getInt('IsModernApi');
@@ -397,12 +395,13 @@ class DataCache{
       _cachedAvatarBytes = null;
     }
     _cachedFallbackColor = await getString('USER_FallbackAvatarColor');
-    // SEC-03: Érzékeny személyes és banki adatok titkosított betöltése Keystore-ból
-    _cachedPersonalDataRaw = await _secureStorage.read(key: 'sec_USER_PersonalDataRaw') ?? await getString('USER_PersonalDataRaw');
-    _cachedPersonalContactsRaw = await _secureStorage.read(key: 'sec_USER_PersonalContactsRaw') ?? await getString('USER_PersonalContactsRaw');
-    _cachedPersonalDocumentsRaw = await _secureStorage.read(key: 'sec_USER_PersonalDocumentsRaw') ?? await getString('USER_PersonalDocumentsRaw');
-    _cachedStudentCardRaw = await _secureStorage.read(key: 'sec_USER_StudentCardRaw') ?? await getString('USER_StudentCardRaw');
-    _cachedBankAccountRaw = await _secureStorage.read(key: 'sec_USER_BankAccountRaw') ?? await getString('USER_BankAccountRaw');
+    // SEC-03: Érzékeny személyes és banki adatok titkosított betöltése és azonnali migrációja
+    _cachedPersonalDataRaw = await _migrateLegacyPlainKey('USER_PersonalDataRaw', 'sec_USER_PersonalDataRaw');
+    _cachedPersonalContactsRaw = await _migrateLegacyPlainKey('USER_PersonalContactsRaw', 'sec_USER_PersonalContactsRaw');
+    _cachedPersonalDocumentsRaw = await _migrateLegacyPlainKey('USER_PersonalDocumentsRaw', 'sec_USER_PersonalDocumentsRaw');
+    _cachedStudentCardRaw = await _migrateLegacyPlainKey('USER_StudentCardRaw', 'sec_USER_StudentCardRaw');
+    _cachedBankAccountRaw = await _migrateLegacyPlainKey('USER_BankAccountRaw', 'sec_USER_BankAccountRaw');
+    _accountCollectiveBankAccount = await _migrateLegacyPlainKey('ACCOUNT_CollectiveBankAccount', 'sec_ACCOUNT_CollectiveBankAccount');
     _cachedProfileSettingsRaw = await getString('USER_ProfileSettingsRaw');
     _cachedStorageDashboardRaw = await getString('STORAGE_DashboardRaw');
     _cachedStorageForStudentDocsRaw = await getStringList('STORAGE_ForStudentDocs') ?? [];
@@ -461,8 +460,43 @@ class DataCache{
     await saveString('Username', value.toString());
   }
 
-  // A kritikus dolgoknak (jelszó, token) létrehozzuk a Secure Storage-ot
-  static const _secureStorage = FlutterSecureStorage();
+  // A kritikus adatoknak (jelszó, token, banki/személyes adatok) hardveresen titkosított Secure Storage
+  static const _legacySecureStorage = FlutterSecureStorage();
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  static Future<String?> _readSecure(String key) async {
+    String? val;
+    try {
+      val = await _secureStorage.read(key: key);
+    } catch (_) {}
+    if (val == null || val.isEmpty) {
+      try {
+        val = await _legacySecureStorage.read(key: key);
+        if (val != null && val.isNotEmpty) {
+          await _secureStorage.write(key: key, value: val);
+          await _legacySecureStorage.delete(key: key);
+        }
+      } catch (_) {}
+    }
+    return val;
+  }
+
+  static Future<String?> _migrateLegacyPlainKey(String plainKey, String secKey) async {
+    String? val = await _readSecure(secKey);
+    if (val == null || val.isEmpty) {
+      val = await getString(plainKey);
+      if (val != null && val.isNotEmpty) {
+        await _secureStorage.write(key: secKey, value: val);
+      }
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(plainKey)) {
+      await prefs.remove(plainKey);
+    }
+    return val;
+  }
   // PASSWORD HANDLING:
 
 
@@ -524,7 +558,7 @@ class DataCache{
   }
 
   static Future<String?> getDeviceCookie(String username) async {
-    return await _secureStorage.read(key: 'devicecookie_${username.toUpperCase()}');
+    return await _readSecure('devicecookie_${username.toUpperCase()}');
   }
 
   static String? getDeviceCookieSync() => _instance._cachedDeviceCookie;
@@ -641,7 +675,13 @@ class DataCache{
   static Future<void> setAccountCollectiveBankAccount(String? value) async {
     _instance._accountCollectiveBankAccount = value;
     if (value != null) {
-      await saveString('ACCOUNT_CollectiveBankAccount', value);
+      await _secureStorage.write(key: 'sec_ACCOUNT_CollectiveBankAccount', value: value);
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey('ACCOUNT_CollectiveBankAccount')) {
+        await prefs.remove('ACCOUNT_CollectiveBankAccount');
+      }
+    } else {
+      await _secureStorage.delete(key: 'sec_ACCOUNT_CollectiveBankAccount');
     }
   }
 
@@ -737,13 +777,37 @@ class DataCache{
 
   static Future<void> clearLocalCachePreservingLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    final keysToClear = [
-      'CachedMarkbook', 'CachedCalendar', 'CachedPayments', 'CachedPeriods', 'CachedMails',
-      'HasCachedMarkbook', 'HasCachedCalendar', 'HasCachedPayments', 'HasCachedPeriods', 'HasCachedMail',
-      'CachedTermsList', 'CachedMailsUnread',
-    ];
-    for (final k in keysToClear) {
-      await prefs.remove(k);
+    final allKeys = prefs.getKeys().toList();
+    for (final k in allKeys) {
+      if (k.startsWith('CachedCalendar_') ||
+          k.startsWith('PermanentCalendar_') ||
+          k.startsWith('CachedMarkbook_') ||
+          k.startsWith('CachedPayments_') ||
+          k.startsWith('CachedPeriods_') ||
+          k.startsWith('CachedMails_') ||
+          k == 'CachedMarkbook' ||
+          k == 'CachedCalendar' ||
+          k == 'CachedPayments' ||
+          k == 'CachedPeriods' ||
+          k == 'CachedMails' ||
+          k == 'CalendarCacheTermId' ||
+          k == 'CalendarCacheTime' ||
+          k == 'MarkbookCacheTime' ||
+          k == 'MarkbookCacheTermId' ||
+          k == 'PaymentsCacheTime' ||
+          k == 'PeriodsCacheTime' ||
+          k == 'PeriodsCacheTermId' ||
+          k == 'MailCacheTime' ||
+          k == 'LastKnownTopMailId' ||
+          k == 'HasCachedMarkbook' ||
+          k == 'HasCachedCalendar' ||
+          k == 'HasCachedPayments' ||
+          k == 'HasCachedPeriods' ||
+          k == 'HasCachedMail' ||
+          k == 'CachedTermsList' ||
+          k == 'CachedMailsUnread') {
+        await prefs.remove(k);
+      }
     }
     _instance._hasCachedCalendar = false;
     _instance._hasCachedMarkbook = false;

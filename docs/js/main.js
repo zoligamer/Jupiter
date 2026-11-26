@@ -5,18 +5,17 @@
 const REPO_OWNER = "zoligamer";
 const REPO_NAME = "Jupiter";
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
-const CACHE_KEY = "jupiter_latest_release_v220";
+const CACHE_KEY = "jupiter_latest_release_v231_clean";
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 mins
 
 const FALLBACK_RELEASE = {
-  tagName: "2.2.0",
-  universalUrl: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_Universal_v2.2.0.apk",
-  universalSize: "71.4 MB",
-  arm8Url: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM8.apk",
-  arm8Size: "33.5 MB",
-  arm7Url: "https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM7.apk",
-  arm7Size: "31.3 MB",
-  universalSha1: "804d9a334f3e65b34e822facaed1d2d66ab7298f"
+  tagName: "2.3.1",
+  universalUrl: "https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_Universal_v2.3.1.apk",
+  universalSize: "75.0 MB",
+  arm8Url: "https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_ARM8_v2.3.1.apk",
+  arm8Size: "36.1 MB",
+  arm7Url: "https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_ARM7_v2.3.1.apk",
+  arm7Size: "34.2 MB"
 };
 
 /* Showcase Data */
@@ -78,17 +77,31 @@ const SHOWCASE_ITEMS = [
     ]
   },
   {
+    id: "widgets",
+    badge: "Kezdőképernyő Integráció",
+    title: "7 db Natív Widget & Master Hub",
+    desc: "Tedd ki az órarendedet, egyenlegedet, kreditjeidet vagy a Master Hub widgetet közvetlenül az Android kezdőképernyődre. Valós idejű szinkronizáció háttérbeli akkumulátorkímélő motorral.",
+    imgPng: "assets/screenshots/06-widgets.svg",
+    imgSvg: "assets/screenshots/06-widgets.svg",
+    alt: "Jupiter Android Kezdőképernyő Widgetek és Master Hub",
+    benefits: [
+      "Következő óra widget visszaszámlálóval és kiemelt teremkóddal",
+      "Gyűjtőszámla és fizetési státusz widget egyetlen érintéssel",
+      "Mindent összefogó Master Hub widget (üzenetek, kreditek, határidők)"
+    ]
+  },
+  {
     id: "themes",
-    badge: "Testreszabhatóság",
-    title: "Bolygóközi Témák & Fizika-alapú Navigáció",
-    desc: "Válassz a Jovian Amber, Midnight Ocean, Cyberpunk Violet, E-Ink vagy Forest témák közül. A dinamikus színharmónia automatikusan igazítja az akcentusszíneket.",
+    badge: "30+ Téma & Testreszabás",
+    title: "Bolygóközi Témák & Szezonális Események",
+    desc: "Válassz a több mint 30 egyedi színtéma közül (Jovian Amber, Midnight Ocean, Cyberpunk, Forest Emerald, AMOLED E-Ink stb.). Szezonális ünnepi témák és finom fizika-alapú rugózó menü.",
     imgPng: "assets/screenshots/05-themes.png",
     imgSvg: "assets/screenshots/05-themes.svg",
     alt: "Jupiter Témák és Jiggly Navigáció",
     benefits: [
+      "Több mint 30 választható prémium téma és szezonális eseményszínek",
       "Finoman rugózó 'jiggly' alsó menü fizikai spring animációval",
-      "Dinamikusan számolt komplementer teremkiemelő színek (Hue + 180°)",
-      "Valós idejű olvasatlan üzenet-számláló jelvény a navigációs sávon"
+      "Dinamikusan számolt komplementer teremkiemelő színek (Hue + 180°)"
     ]
   }
 ];
@@ -121,6 +134,89 @@ function formatBytes(bytes) {
   if (!bytes || isNaN(bytes)) return "";
   const mb = bytes / (1024 * 1024);
   return `${mb.toFixed(1)} MB`;
+}
+
+/* Exact Real-Time Download Counter (All GitHub Releases Sum) */
+const ALL_RELEASES_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases?per_page=100`;
+const EXACT_DOWNLOADS_CACHE_KEY = "jupiter_exact_downloads_count";
+const VERIFIED_EXACT_BASELINE = 129; // Live verified sum across GitHub releases (matches Shields.io total)
+
+async function fetchDownloadStats() {
+  const giantCountElem = document.getElementById("giant-download-count");
+  const planetCountElem = document.getElementById("planet-download-count");
+  const brandCountElem = document.getElementById("brand-download-count");
+  const hubCountElem = document.getElementById("hub-total-downloads");
+  if (!giantCountElem && !planetCountElem && !brandCountElem && !hubCountElem) return;
+
+  let totalCount = VERIFIED_EXACT_BASELINE;
+
+  // Check cached count if available
+  try {
+    const cached = localStorage.getItem(EXACT_DOWNLOADS_CACHE_KEY);
+    if (cached) {
+      const parsed = parseInt(cached, 10);
+      if (!isNaN(parsed) && parsed >= VERIFIED_EXACT_BASELINE) {
+        totalCount = parsed;
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const res = await fetch(ALL_RELEASES_API_URL, {
+      headers: { "Accept": "application/vnd.github.v3+json" }
+    });
+    if (res.ok) {
+      const releases = await res.json();
+      if (Array.isArray(releases)) {
+        let liveSum = 0;
+        for (const rel of releases) {
+          if (Array.isArray(rel.assets)) {
+            for (const asset of rel.assets) {
+              if (typeof asset.download_count === "number") {
+                liveSum += asset.download_count;
+              }
+            }
+          }
+        }
+        if (liveSum >= VERIFIED_EXACT_BASELINE) {
+          totalCount = liveSum;
+          try {
+            localStorage.setItem(EXACT_DOWNLOADS_CACHE_KEY, totalCount.toString());
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {
+    // Graceful fallback to verified exact baseline
+  }
+
+  // Exact integer display: NO suffix (+), NO floats!
+  animateCount(giantCountElem, totalCount, "");
+  animateCount(planetCountElem, totalCount, "");
+  animateCount(brandCountElem, totalCount, "");
+  animateCount(hubCountElem, totalCount, "");
+}
+
+function animateCount(elem, target, suffix = "") {
+  if (!elem) return;
+  const start = 0;
+  const duration = 1200;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // easeOutQuad
+    const ease = 1 - (1 - progress) * (1 - progress);
+    const current = Math.floor(start + (target - start) * ease);
+    elem.textContent = `${current}${suffix}`;
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      elem.textContent = `${target}${suffix}`;
+    }
+  }
+  requestAnimationFrame(update);
 }
 
 /* GitHub Releases API */
@@ -171,29 +267,15 @@ function parseReleasePayload(data) {
   let universal = null;
   let arm8 = null;
   let arm7 = null;
-  let shaAsset = null;
-  let isSha256 = false;
 
   for (const asset of assets) {
     const name = asset.name.toLowerCase();
-    if (name.endsWith(".sha256")) {
-      if (name.includes("universal") || !shaAsset) {
-        shaAsset = asset;
-        isSha256 = true;
-      }
-      continue;
-    }
-    if (name.endsWith(".sha1")) {
-      if (!isSha256 && (name.includes("universal") || !shaAsset)) {
-        shaAsset = asset;
-      }
-      continue;
-    }
-    if (name.includes("universal") && name.endsWith(".apk")) {
+    if (!name.endsWith(".apk")) continue;
+    if (name.includes("universal")) {
       universal = asset;
-    } else if ((name.includes("arm8") || name.includes("arm64") || name.includes("v8a")) && name.endsWith(".apk")) {
+    } else if (name.includes("arm8") || name.includes("arm64") || name.includes("v8a")) {
       arm8 = asset;
-    } else if ((name.includes("arm7") || name.includes("armv7") || name.includes("v7a")) && name.endsWith(".apk")) {
+    } else if (name.includes("arm7") || name.includes("armv7") || name.includes("v7a")) {
       arm7 = asset;
     }
   }
@@ -206,9 +288,8 @@ function parseReleasePayload(data) {
     arm8Size: arm8 ? formatBytes(arm8.size) : FALLBACK_RELEASE.arm8Size,
     arm7Url: arm7 ? arm7.browser_download_url : (universal ? universal.browser_download_url : FALLBACK_RELEASE.arm7Url),
     arm7Size: arm7 ? formatBytes(arm7.size) : FALLBACK_RELEASE.arm7Size,
-    universalSha1: FALLBACK_RELEASE.universalSha1,
-    sha1Url: shaAsset ? shaAsset.browser_download_url : null,
-    isSha256: isSha256
+    publishedAt: data.published_at || null,
+    body: data.body || null
   };
 }
 
@@ -247,26 +328,9 @@ function applyReleaseData(rel) {
   if (cardArm7Ver && rel.tagName) cardArm7Ver.textContent = `v${rel.tagName}`;
   if (cardArm7Size && rel.arm7Size) cardArm7Size.textContent = rel.arm7Size;
 
-  // Universal Checksum (SHA256 vagy SHA1)
-  const sha1Elem = document.getElementById("universal-sha1-val");
-  const shaLabel = document.querySelector(".checksum-label");
-  if (sha1Elem) {
-    if (rel.universalSha1) sha1Elem.textContent = rel.universalSha1;
-    if (rel.sha1Url) {
-      fetch(rel.sha1Url)
-        .then(r => r.text())
-        .then(hash => {
-          const cleaned = hash.trim().split(/\s+/)[0];
-          if (cleaned && cleaned.length >= 20) {
-            sha1Elem.textContent = cleaned;
-            if (shaLabel && (cleaned.length === 64 || rel.isSha256)) {
-              shaLabel.textContent = "SHA-256:";
-            }
-          }
-        })
-        .catch(() => {});
-    }
-  }
+  // Update changelog version tag if present
+  const changeVer = document.getElementById("changelog-version-tag");
+  if (changeVer && rel.tagName) changeVer.textContent = `v${rel.tagName}`;
 }
 
 /* Showcase Controller */
@@ -287,9 +351,13 @@ function initShowcase() {
     const index = parseInt(btn.getAttribute("data-index"), 10);
     if (isNaN(index) || !SHOWCASE_ITEMS[index]) return;
 
-    // Toggle active tab style
-    tabsContainer.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    // Toggle active tab style and accessibility attributes
+    tabsContainer.querySelectorAll(".tab-btn").forEach(b => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
     btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
 
     const item = SHOWCASE_ITEMS[index];
 
@@ -323,6 +391,75 @@ function initShowcase() {
   });
 }
 
+/* Interactive Theme Swatches */
+function initThemeSwatches() {
+  const frame = document.querySelector(".phone-mockup-frame");
+  const swatches = document.querySelectorAll(".theme-swatch-btn");
+  if (!frame || !swatches.length) return;
+
+  swatches.forEach(btn => {
+    btn.addEventListener("click", () => {
+      swatches.forEach(s => s.classList.remove("active"));
+      btn.classList.add("active");
+      const glow = btn.getAttribute("data-glow") || "rgba(249, 115, 22, 0.25)";
+      frame.style.setProperty("--mockup-glow", glow);
+    });
+  });
+}
+
+/* Screenshot Lightbox */
+function initScreenshotLightbox() {
+  const screen = document.querySelector(".phone-screen");
+  const screenImg = document.getElementById("showcase-screen-img");
+  const lightbox = document.getElementById("screenshot-lightbox");
+  const lightboxImg = document.getElementById("lightbox-img");
+  const closeBtn = document.getElementById("lightbox-close-btn");
+  if (!screen || !screenImg || !lightbox || !lightboxImg) return;
+
+  screen.addEventListener("click", () => {
+    lightboxImg.src = screenImg.src;
+    lightboxImg.alt = screenImg.alt;
+    if (typeof lightbox.showModal === "function") {
+      lightbox.showModal();
+    }
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => lightbox.close());
+  }
+
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) {
+      lightbox.close();
+    }
+  });
+}
+
+/* University Search Filter */
+function initUniversitySearch() {
+  const searchInput = document.getElementById("uni-search-input");
+  const tags = document.querySelectorAll(".uni-tag");
+  const countPill = document.getElementById("uni-count-pill");
+  if (!searchInput || !tags.length) return;
+
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.toLowerCase().trim();
+    let visibleCount = 0;
+    tags.forEach(tag => {
+      const text = tag.textContent.toLowerCase();
+      if (!query || text.includes(query)) {
+        tag.style.display = "";
+        visibleCount++;
+      } else {
+        tag.style.display = "none";
+      }
+    });
+    if (countPill) {
+      countPill.textContent = query ? `${visibleCount} találat` : "50+ intézmény";
+    }
+  });
+}
+
 /* Clipboard */
 function initClipboard() {
   // Git Clone Copy
@@ -341,23 +478,6 @@ function initClipboard() {
       } catch (err) {}
     });
   }
-
-  // SHA1 Copy
-  const copySha1Btn = document.getElementById("copy-sha1-btn");
-  if (copySha1Btn) {
-    copySha1Btn.addEventListener("click", async () => {
-      const sha1Val = document.getElementById("universal-sha1-val")?.textContent || "";
-      if (!sha1Val) return;
-      try {
-        await navigator.clipboard.writeText(sha1Val.trim());
-        const orig = copySha1Btn.textContent;
-        copySha1Btn.textContent = "Másolva!";
-        setTimeout(() => {
-          copySha1Btn.textContent = orig;
-        }, 2000);
-      } catch (err) {}
-    });
-  }
 }
 
 /* Mobile Menu */
@@ -366,14 +486,154 @@ function initMobileMenu() {
   const navLinks = document.getElementById("nav-links");
   
   if (toggleBtn && navLinks) {
-    toggleBtn.addEventListener("click", () => {
+    const closeMenu = () => navLinks.classList.remove("open");
+
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
       navLinks.classList.toggle("open");
     });
     
     navLinks.querySelectorAll("a").forEach(link => {
-      link.addEventListener("click", () => {
-        navLinks.classList.remove("open");
-      });
+      link.addEventListener("click", closeMenu);
+    });
+
+    // Close on Escape
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && navLinks.classList.contains("open")) {
+        closeMenu();
+      }
+    });
+
+    // Close on outside clicks
+    document.addEventListener("click", (e) => {
+      if (navLinks.classList.contains("open") && !navLinks.contains(e.target) && e.target !== toggleBtn) {
+        closeMenu();
+      }
+    });
+  }
+}
+
+/* Tally Feedback Button */
+function initFeedbackButton() {
+  const btn = document.getElementById("tally-feedback-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    if (!window.Tally) {
+      window.open("https://tally.so/r/2jX62M", "_blank");
+    }
+  });
+}
+
+/* Language Engine (HU / EN) */
+const I18N = {
+  hu: {
+    nav_download: "Letöltés",
+    nav_stats: "Mérföldkő",
+    nav_showcase: "Funkciók & Képek",
+    nav_features: "Előnyök",
+    nav_faq: "GYIK & Biztonság",
+    nav_ios: "iOS Verzió",
+    nav_developer: "Fejlesztők & Források",
+    nav_cta: "Letöltés",
+    brand_dl_label: "letöltés",
+    planet_dl_label: "letöltés",
+    planet_badge_live: "ÉLŐ MÉRŐ",
+    hero_pill_status: "Android: Elérhető (v2.3.1)",
+    hero_pill_ios: "iOS: Fejlesztés alatt (PWA elérhető)",
+    hero_title: 'Töltsd le a <span class="hero-title-highlight">Jupiter klienst</span> a telefonodra!',
+    hero_desc: "Egy modern, villámgyors és átlátható egyetemi kliens a lassú hivatalos Neptun mobilapp helyett. Nincsenek elrejtett menük vagy bosszantó hibák: csak néhány érintés, és a kezedben a zökkenőmentes egyetemi félév.",
+    hero_btn_title: "Universal APK Letöltése",
+    hero_btn_sub: "Minden Android telefonra • Frissítési értesítővel • Play Protect-tiszta",
+    hero_helper: "💡 Nincs szükség találgatásra: bármely Android készüléken azonnal fut.",
+    hero_split: "Kisebb méretű architektúra APK-k ↓",
+    hero_dl_label: "Letöltés a GitHubon",
+    giant_badge: "Hivatalos Élő GitHub Mérföldkő",
+    giant_title: "Egyetemi Hallgató Töltötte Már Le",
+    giant_sub: "A magyar egyetemisták egyre növekvő közössége választja a Jupiter klienst a gyorsaság, a megbízhatóság és a modern kezdőképernyő widgetek miatt.",
+    hub_tag: "Letöltési Központ",
+    hub_title: "Válaszd ki a telefonodhoz illő csomagot",
+    hub_sub: "A Universal csomag azonnal működik minden eszközön. Haladó felhasználóknak kisebb letöltési méretű, processzorra optimalizált APK-kat is biztosítunk.",
+    hub_stat1: "Összesített Letöltés a GitHubon",
+    hub_stat2: "Támogatott Magyar Intézmény",
+    hub_stat3: "Gyorsítótárazott Órarend",
+    faq_tag: "GYIK & Biztonság",
+    faq_title: "Gyakran Ismételt Kérdések",
+    faq_sub: "Minden fontos tudnivaló a telepítésről, az adatbiztonságról és a Google Play Protect működéséről."
+  },
+  en: {
+    nav_download: "Download",
+    nav_stats: "Milestone",
+    nav_showcase: "Showcase & Screens",
+    nav_features: "Features",
+    nav_faq: "FAQ & Safety",
+    nav_ios: "iOS Version",
+    nav_developer: "Developers",
+    nav_cta: "Download",
+    brand_dl_label: "downloads",
+    planet_dl_label: "downloads",
+    planet_badge_live: "LIVE METRIC",
+    hero_pill_status: "Android: Available (v2.3.1)",
+    hero_pill_ios: "iOS: Under Development (PWA Ready)",
+    hero_title: 'Download the <span class="hero-title-highlight">Jupiter Client</span> for your phone!',
+    hero_desc: "A modern, blazingly fast and transparent university student client instead of the sluggish official Neptun mobile app. No hidden menus or frustrating bugs: complete peace of mind for your semester.",
+    hero_btn_title: "Download Universal APK",
+    hero_btn_sub: "For all Android phones • Update notifier • Play Protect clean",
+    hero_helper: "💡 No guesswork: works seamlessly on all Android devices.",
+    hero_split: "Smaller architecture-specific APKs ↓",
+    hero_dl_label: "Downloads on GitHub",
+    giant_badge: "Official Live GitHub Milestone",
+    giant_title: "University Students Downloaded",
+    giant_sub: "A rapidly growing community of students across Hungary is choosing Jupiter for its 0.05s instant speed, reliability, and native home screen widgets.",
+    hub_tag: "Download Hub",
+    hub_title: "Select the perfect package for your device",
+    hub_sub: "The Universal package runs immediately on all devices. For power users, processor-optimized APKs with smaller sizes are also available.",
+    hub_stat1: "Total Downloads on GitHub",
+    hub_stat2: "Supported Universities",
+    hub_stat3: "Cached Instant Timetable",
+    faq_tag: "FAQ & Safety",
+    faq_title: "Frequently Asked Questions",
+    faq_sub: "Everything you need to know about installation, privacy, 2FA, and Google Play Protect safety."
+  }
+};
+
+function setLanguage(lang) {
+  if (lang !== "hu" && lang !== "en") lang = "hu";
+  localStorage.setItem("jupiter-lang", lang);
+  document.documentElement.setAttribute("lang", lang);
+
+  const dict = I18N[lang];
+  if (!dict) return;
+
+  document.querySelectorAll("[data-i18n]").forEach(elem => {
+    const key = elem.getAttribute("data-i18n");
+    if (dict[key]) {
+      elem.innerHTML = dict[key];
+    }
+  });
+
+  const huLabel = document.getElementById("lang-hu-label");
+  const enLabel = document.getElementById("lang-en-label");
+  if (huLabel && enLabel) {
+    if (lang === "en") {
+      huLabel.classList.remove("active");
+      enLabel.classList.add("active");
+    } else {
+      enLabel.classList.remove("active");
+      huLabel.classList.add("active");
+    }
+  }
+}
+
+function initLanguageEngine() {
+  const toggleBtn = document.getElementById("lang-toggle-btn");
+  const currentLang = localStorage.getItem("jupiter-lang") || "hu";
+  setLanguage(currentLang);
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const active = document.documentElement.getAttribute("lang") || "hu";
+      const next = active === "hu" ? "en" : "hu";
+      setLanguage(next);
     });
   }
 }
@@ -381,8 +641,14 @@ function initMobileMenu() {
 /* DOM Ready */
 document.addEventListener("DOMContentLoaded", () => {
   initThemeEngine();
+  initLanguageEngine();
+  fetchDownloadStats();
   fetchLatestRelease();
   initShowcase();
+  initThemeSwatches();
+  initScreenshotLightbox();
+  initUniversitySearch();
   initClipboard();
   initMobileMenu();
+  initFeedbackButton();
 });

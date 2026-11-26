@@ -3,16 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Download the Student Jupiter Client for phone! Letisztult, villámgyors és megbízható Neptun kliens egyetemistáknak. Android kliens és opcionális iOS webapp.">
+  <meta name="description" content="Töltsd le a Jupiter egyetemi Neptun klienst a telefonodra! 0.05s villámgyors órarend, kezdőképernyő widgetek, szellemjegy kalkulátor, kérvénykezelő és Play Protect-tiszta működés.">
   <meta name="theme-color" content="#f97316">
   
-  <!-- OpenGraph -->
-  <meta property="og:title" content="Jupiter — Student Client for Phone">
-  <meta property="og:description" content="Download the Student Jupiter Client for phone! (Currently Android only, iOS work in progress).">
+  <!-- Immediate Theme Engine to eliminate FOUC -->
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('jupiter-theme');
+        if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- OpenGraph Metadata -->
+  <meta property="og:title" content="Jupiter — Modern Neptun Kliens Okostelefonra">
+  <meta property="og:description" content="Villámgyors, letisztult és biztonságos Neptun kliens magyar egyetemistáknak. 0.05s órarend, widgetek, szellemjegyek és Play Protect-tiszta működés.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/images/jupiter-logo.svg">
+  <meta property="og:url" content="https://zoligamer.github.io/Jupiter/">
+  <meta property="og:image" content="https://zoligamer.github.io/Jupiter/assets/images/jupiter-logo.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
   
-  <title>Jupiter — Student Client for Phone</title>
+  <title>Jupiter — Modern Neptun Kliens Okostelefonra</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
@@ -26,23 +40,39 @@
   <!-- Navigation -->
   <nav class="navbar" id="navbar">
     <div class="container nav-wrapper">
-      <a href="#top" class="brand" aria-label="Jupiter Home">
+      <a href="#top" class="brand" aria-label="Jupiter Kezdőlap">
         <img src="assets/images/jupiter-logo.svg" alt="Jupiter Logo" class="brand-icon">
         <div class="brand-text">
-          <span class="brand-title">Jupiter</span>
+          <div class="brand-title-wrap">
+            <span class="brand-title">Jupiter</span>
+            <span class="brand-download-pill" title="Hivatalos élő letöltések a GitHubon">
+              <span class="stat-live-dot"></span>
+              <span id="brand-download-count">129</span>
+              <span class="brand-download-unit" data-i18n="brand_dl_label">letöltés</span>
+            </span>
+          </div>
           <span class="brand-badge">Student Client</span>
         </div>
       </a>
 
       <ul class="nav-links" id="nav-links">
-        <li><a href="#download" class="nav-link">Letöltés</a></li>
-        <li><a href="#showcase" class="nav-link">Funkciók &amp; Képek</a></li>
-        <li><a href="#features" class="nav-link">Előnyök</a></li>
-        <li><a href="#ios" class="nav-link">iOS Verzió</a></li>
-        <li><a href="#developer" class="nav-link">Fejlesztők &amp; Források</a></li>
+        <li><a href="#download" class="nav-link" data-i18n="nav_download">Letöltés</a></li>
+        <li><a href="#stats" class="nav-link" data-i18n="nav_stats">Mérföldkő</a></li>
+        <li><a href="#showcase" class="nav-link" data-i18n="nav_showcase">Funkciók &amp; Képek</a></li>
+        <li><a href="#features" class="nav-link" data-i18n="nav_features">Előnyök</a></li>
+        <li><a href="#faq" class="nav-link" data-i18n="nav_faq">GYIK &amp; Biztonság</a></li>
+        <li><a href="#ios" class="nav-link" data-i18n="nav_ios">iOS Verzió</a></li>
+        <li><a href="#developer" class="nav-link" data-i18n="nav_developer">Fejlesztők &amp; Források</a></li>
       </ul>
 
       <div class="nav-actions">
+        <!-- Language Switcher HU / EN -->
+        <button id="lang-toggle-btn" class="lang-toggle-btn" aria-label="Nyelv váltása (HU / EN)" title="Nyelv váltása / Switch Language">
+          <span class="lang-code active" id="lang-hu-label">HU</span>
+          <span class="lang-sep">/</span>
+          <span class="lang-code" id="lang-en-label">EN</span>
+        </button>
+
         <!-- Theme Toggle -->
         <button id="theme-toggle-btn" class="theme-toggle" aria-label="Színséma váltása (Nappali / Éjszakai)" title="Színséma váltása">
           <!-- Sun Icon -->
@@ -56,7 +86,7 @@
         </button>
 
         <a href="#download" class="nav-cta-btn">
-          <span>Letöltés</span>
+          <span data-i18n="nav_cta">Letöltés</span>
           <span>↓</span>
         </a>
 
@@ -76,69 +106,120 @@
       <div class="hero-content">
         <div class="platform-pill">
           <span class="status-dot-active"></span>
-          <span>Android: Elérhető</span>
+          <span data-i18n="hero_pill_status">Android: Elérhető (v2.3.1)</span>
           <span class="pill-sep">•</span>
-          <span>iOS: Fejlesztés alatt</span>
+          <span data-i18n="hero_pill_ios">iOS: Fejlesztés alatt (PWA elérhető)</span>
         </div>
 
-        <h1 class="hero-title">
-          Download the Student <span class="hero-title-highlight">Jupiter Client</span> for phone!
+        <h1 class="hero-title" data-i18n="hero_title">
+          Töltsd le a <span class="hero-title-highlight">Jupiter klienst</span> a telefonodra!
         </h1>
 
-        <p class="hero-desc">
-          Egy modern, villámgyors és átlátható egyetemi kliens a lassú hivatalos Neptun mobilapp helyett. Nincsenek elrejtett menük vagy bosszantó hibák: csak néhány kattintás, és a kezedben a zökkenőmentes egyetemi félév.
+        <p class="hero-desc" data-i18n="hero_desc">
+          Egy modern, villámgyors és átlátható egyetemi kliens a lassú hivatalos Neptun mobilapp helyett. Nincsenek elrejtett menük vagy bosszantó hibák: csak néhány érintés, és a kezedben a zökkenőmentes egyetemi félév.
         </p>
 
         <!-- Universal Download Button -->
         <div class="universal-download-wrap">
-          <a id="hero-universal-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_Universal_v2.2.0.apk" class="universal-btn" title="Legfrissebb Universal APK közvetlen letöltése">
+          <a id="hero-universal-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_Universal_v2.3.1.apk" class="universal-btn" title="Legfrissebb Universal APK közvetlen letöltése">
             <div class="btn-left">
               <!-- Android Icon -->
               <svg class="btn-icon-android" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0001s.4482-1.0001.9993-1.0001c.5516 0 .9997.4486.9997 1.0001s-.4481 1.0001-.9997 1.0001m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0001s.4482-1.0001.9993-1.0001c.5516 0 .9997.4486.9997 1.0001s-.4481 1.0001-.9997 1.0001m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.084 12 8.084s-3.5902.3276-5.1368.8657L4.8409 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.741h24c-.3432-4.0821-2.6889-7.5543-6.1185-9.4196" />
               </svg>
               <div class="btn-text-group">
-                <span class="btn-title">Universal APK Letöltése</span>
-                <span class="btn-subtitle">Minden Android telefonra • Automatikusan frissül</span>
+                <span class="btn-title" data-i18n="hero_btn_title">Universal APK Letöltése</span>
+                <span class="btn-subtitle" data-i18n="hero_btn_sub">Minden Android telefonra • Frissítési értesítővel • Play Protect-tiszta</span>
               </div>
             </div>
             <div class="btn-meta-badge">
-              <span id="hero-universal-version" class="btn-version">v2.2.0</span>
-              <span id="hero-universal-size" class="btn-size">~71.4 MB</span>
+              <span id="hero-universal-version" class="btn-version">v2.3.1</span>
+              <span id="hero-universal-size" class="btn-size">~75.0 MB</span>
             </div>
           </a>
 
           <div class="universal-helper-text">
-            <span>💡 Nincs szükség találgatásra: bármely Android készüléken tökéletesen fut.</span>
-            <a href="#download" class="split-link">Kisebb méretű architektúra APK-k ↓</a>
+            <span data-i18n="hero_helper">💡 Nincs szükség találgatásra: bármely Android készüléken azonnal fut.</span>
+            <a href="#download" class="split-link" data-i18n="hero_split">Kisebb méretű architektúra APK-k ↓</a>
           </div>
         </div>
 
         <!-- Trust Badges -->
         <div class="trust-badges">
           <span class="badge-item">⚡ 0.05s Instant Órarend</span>
+          <span class="badge-item">📱 7 db Kezdőképernyő Widget</span>
           <span class="badge-item">🛡️ AES-256 Hardveres Titkosítás</span>
-          <span class="badge-item">🏛️ Minden Magyar Egyetemhez</span>
+          <span class="badge-item">🏛️ 50+ Magyar Intézményhez</span>
           <span class="badge-item">✨ 100% Nyílt Forráskód</span>
         </div>
       </div>
 
-      <!-- Hero Visual -->
+      <!-- Hero Visual: Floating Planet Graphic + Separated Borderless High-Contrast Metric -->
       <div class="hero-visual">
-        <img src="assets/images/jupiter-planet.svg" alt="Jupiter Planet Graphic" class="hero-planet-img">
+        <div class="hero-frameless-wrap">
+          <!-- Floating Jupiter Planet Graphic (Separated above counter) -->
+          <img src="assets/images/jupiter-planet.svg" alt="Jupiter Planet Graphic" class="hero-frameless-planet">
+
+          <!-- Completely Borderless, Cubeless, High-Contrast Stat -->
+          <div class="hero-frameless-stat">
+            <div class="frameless-badge">
+              <span class="stat-live-dot"></span>
+              <span data-i18n="planet_badge_live">ÉLŐ MÉRŐ</span>
+            </div>
+            <div class="frameless-number" id="planet-download-count">129</div>
+            <div class="frameless-unit" data-i18n="planet_dl_label">letöltés</div>
+            <div class="frameless-caption" data-i18n="giant_title">Egyetemi Hallgató Töltötte Már Le</div>
+          </div>
+        </div>
       </div>
     </div>
   </header>
+
+  <!-- HATALMAS KÖZÖSSÉGI LETÖLTÉSSZÁMLÁLÓ SZEKCIÓ (Keretek nélkül, háttér nélkül) -->
+  <section class="container" id="stats" style="padding-top: 2rem; padding-bottom: 3.5rem;">
+    <div class="milestone-frameless-wrap">
+      <div class="milestone-badge">
+        <span class="stat-live-dot"></span>
+        <span data-i18n="giant_badge">Hivatalos Élő GitHub Mérföldkő</span>
+      </div>
+      
+      <!-- Hatalmas Számláló Kijelző (keretek és háttér nélkül) -->
+      <div class="giant-frameless-number" id="giant-download-count">129</div>
+      
+      <div class="giant-frameless-label" data-i18n="giant_title">Egyetemi Hallgató Töltötte Már Le</div>
+      <p class="giant-frameless-sub" data-i18n="giant_sub">
+        A magyar egyetemisták egyre növekvő közössége választja a Jupiter klienst a gyorsaság, a megbízhatóság és a modern kezdőképernyő widgetek miatt.
+      </p>
+    </div>
+  </section>
 
   <!-- Download Hub -->
   <section class="download-section" id="download">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Letöltési Központ</span>
-        <h2 class="section-title">Válaszd ki a telefonodhoz illő csomagot</h2>
-        <p class="section-subtitle">
+        <span class="section-tag" data-i18n="hub_tag">Letöltési Központ</span>
+        <h2 class="section-title" data-i18n="hub_title">Válaszd ki a telefonodhoz illő csomagot</h2>
+        <p class="section-subtitle" data-i18n="hub_sub">
           A Universal csomag azonnal működik minden eszközön. Haladó felhasználóknak kisebb letöltési méretű, processzorra optimalizált APK-kat is biztosítunk.
         </p>
+      </div>
+
+      <!-- Hub Stat Banner (Big Metrics) -->
+      <div class="hub-stat-banner">
+        <div class="hub-stat-card">
+          <span class="hub-stat-big" id="hub-total-downloads">129</span>
+          <span class="hub-stat-caption" data-i18n="hub_stat1">Összesített Letöltés a GitHubon</span>
+        </div>
+        <div class="hub-stat-divider"></div>
+        <div class="hub-stat-card">
+          <span class="hub-stat-big">50+</span>
+          <span class="hub-stat-caption" data-i18n="hub_stat2">Támogatott Magyar Intézmény</span>
+        </div>
+        <div class="hub-stat-divider"></div>
+        <div class="hub-stat-card">
+          <span class="hub-stat-big">0.05s</span>
+          <span class="hub-stat-caption" data-i18n="hub_stat3">Gyorsítótárazott Órarend</span>
+        </div>
       </div>
 
       <div class="download-cards-grid">
@@ -152,17 +233,10 @@
               Egyetlen csomagban tartalmazza az ARM64 és ARMv7 natív kódokat. A telefonod operációs rendszere telepítéskor kizárólag a megfelelő verziót bontja ki.
             </p>
           </div>
-          <a id="card-universal-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_Universal_v2.2.0.apk" class="card-btn btn-primary">
-            <span>Universal Letöltése (<span id="card-universal-version">v2.2.0</span>)</span>
+          <a id="card-universal-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_Universal_v2.3.1.apk" class="card-btn btn-primary">
+            <span>Universal Letöltése (<span id="card-universal-version">v2.3.1</span> • <span id="card-universal-size">75.0 MB</span>)</span>
             <span>↓</span>
           </a>
-          <div class="card-checksum-wrap">
-            <div class="checksum-content">
-              <span class="checksum-label">SHA-1:</span>
-              <span id="universal-sha1-val" class="checksum-hash">804d9a334f3e65b34e822facaed1d2d66ab7298f</span>
-            </div>
-            <button id="copy-sha1-btn" class="copy-hash-btn" title="SHA-1 másolása">Másolás</button>
-          </div>
         </div>
 
         <!-- ARM64 Card -->
@@ -171,11 +245,11 @@
             <span class="card-badge">Modern Telefonok (ARM64 / v8a)</span>
             <h3 class="card-title">Jupiter ARM8</h3>
             <p class="card-desc">
-              Kisebb letöltési méret (~33.5 MB), a mai okostelefonok több mint 95%-ához optimalizálva (Snapdragon, MediaTek, Exynos, Tensor).
+              Kisebb letöltési méret (~36.1 MB), a mai okostelefonok több mint 95%-ához optimalizálva (Snapdragon, MediaTek, Exynos, Tensor).
             </p>
           </div>
-          <a id="card-arm8-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM8.apk" class="card-btn btn-secondary">
-            <span>ARM8 APK (<span id="card-arm8-version">v2.2.0</span> • <span id="card-arm8-size">33.5 MB</span>)</span>
+          <a id="card-arm8-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_ARM8_v2.3.1.apk" class="card-btn btn-secondary">
+            <span>ARM8 APK (<span id="card-arm8-version">v2.3.1</span> • <span id="card-arm8-size">36.1 MB</span>)</span>
             <span>↓</span>
           </a>
         </div>
@@ -186,14 +260,35 @@
             <span class="card-badge">Idősebb Telefonok (ARM 32-bit)</span>
             <h3 class="card-title">Jupiter ARM7</h3>
             <p class="card-desc">
-              Régebbi vagy belépőszintű 32 bites Android készülékekhez készített különálló telepítőcsomag.
+              Régebbi vagy belépőszintű 32 bites Android készülékekhez készített különálló telepítőcsomag (~34.2 MB).
             </p>
           </div>
-          <a id="card-arm7-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.2.0/Jupiter_v2.2.0_ARM7.apk" class="card-btn btn-secondary">
-            <span>ARM7 APK (<span id="card-arm7-version">v2.2.0</span> • <span id="card-arm7-size">31.3 MB</span>)</span>
+          <a id="card-arm7-btn" href="https://github.com/zoligamer/Jupiter/releases/download/2.3.1/Jupiter_ARM7_v2.3.1.apk" class="card-btn btn-secondary">
+            <span>ARM7 APK (<span id="card-arm7-version">v2.3.1</span> • <span id="card-arm7-size">34.2 MB</span>)</span>
             <span>↓</span>
           </a>
         </div>
+      </div>
+
+      <!-- Live Release Notes / Changelog Panel -->
+      <div class="changelog-container">
+        <details class="changelog-details" open>
+          <summary class="changelog-summary">
+            <span class="changelog-summary-left">
+              <span class="changelog-sparkle">✨</span>
+              <span class="changelog-title">Legutóbbi Változások &amp; Frissítési Hírek (<span id="changelog-version-tag">v2.3.1</span>)</span>
+            </span>
+            <span class="changelog-toggle-icon">▼</span>
+          </summary>
+          <div class="changelog-body" id="changelog-body">
+            <ul class="changelog-list">
+              <li><strong>Google Play Protect tisztaság:</strong> A korábbi verziókban lévő háttérbeli APK letöltő és telepítő engedély teljes mértékben el lett távolítva. A frissítési értesítő mostantól közvetlenül erre a hivatalos weboldalra irányít, megelőzve az ismeretlen forrású telepítő téves vírusriasztásait.</li>
+              <li><strong>7 db Natív Kezdőképernyő Widget &amp; Master Hub:</strong> Következő óra visszaszámlálóval, Pénzügyek és gyűjtőszámla, Kreditek, Üzenetek, Határidők és mindent egybefogó Master Hub widget.</li>
+              <li><strong>Biztonsági Keményítések (Security Audit):</strong> Hardveres Keystore-alapú AES-256 titkosított adattárolás, JSON paraméterezés és MitM elleni szervertanúsítvány-ellenőrzés az egyetemi kéréseknél.</li>
+              <li><strong>Dokumentumtár &amp; Kérdőívek:</strong> Diákigazolvány matricák és profilazonosítók (TAJ, adóazonosító), beépített Unipoll kérdőívkitöltés és gyors PDF nézegető.</li>
+            </ul>
+          </div>
+        </details>
       </div>
 
       <!-- Quick Install Guide -->
@@ -238,12 +333,13 @@
       </div>
 
       <!-- Interactive Tab Pills -->
-      <div class="showcase-tabs" id="showcase-tabs">
-        <button class="tab-btn active" data-index="0">📅 01 Órarend &amp; TO Nyitva</button>
-        <button class="tab-btn" data-index="1">👻 02 Szellemjegyek &amp; Átlag</button>
-        <button class="tab-btn" data-index="2">📑 03 Kérvények &amp; A4 PDF</button>
-        <button class="tab-btn" data-index="3">💳 04 Pénzügyek &amp; Ösztöndíjak</button>
-        <button class="tab-btn" data-index="4">🎨 05 Témák &amp; Jiggly Animáció</button>
+      <div class="showcase-tabs" id="showcase-tabs" role="tablist">
+        <button class="tab-btn active" role="tab" aria-selected="true" data-index="0">📅 Órarend &amp; TO Nyitva</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-index="1">👻 Szellemjegyek &amp; Átlag</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-index="2">📑 Kérvények &amp; PDF</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-index="3">💳 Pénzügyek &amp; Támogatás</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-index="4">📱 Kezdőképernyő Widgetek</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-index="5">🎨 30+ Téma &amp; Testreszabás</button>
       </div>
 
       <!-- Display Container -->
@@ -251,7 +347,7 @@
         <!-- Phone Mockup Frame -->
         <div class="phone-mockup-frame">
           <div class="phone-notch"></div>
-          <div class="phone-screen">
+          <div class="phone-screen" title="Kattints a teljes méretű nagyításhoz">
             <img id="showcase-screen-img" src="assets/screenshots/01-timetable.png" onerror="this.onerror=null; this.src='assets/screenshots/01-timetable.svg';" alt="Jupiter Instant Órarend és TO Nyitvatartás" class="phone-screen-img">
           </div>
         </div>
@@ -279,6 +375,16 @@
             </li>
           </ul>
 
+          <!-- Interactive Theme Swatches -->
+          <div class="theme-swatches-wrap">
+            <span class="theme-swatch-label">Próbáld ki a színeket:</span>
+            <button class="theme-swatch-btn active" data-glow="rgba(249, 115, 22, 0.4)" style="background: #f97316;" title="Jovian Amber" aria-label="Jovian Amber téma"></button>
+            <button class="theme-swatch-btn" data-glow="rgba(2, 132, 199, 0.4)" style="background: #0284c7;" title="Midnight Ocean" aria-label="Midnight Ocean téma"></button>
+            <button class="theme-swatch-btn" data-glow="rgba(168, 85, 247, 0.4)" style="background: #a855f7;" title="Cyberpunk Violet" aria-label="Cyberpunk Violet téma"></button>
+            <button class="theme-swatch-btn" data-glow="rgba(16, 185, 129, 0.4)" style="background: #10b981;" title="Forest Emerald" aria-label="Forest Emerald téma"></button>
+            <button class="theme-swatch-btn" data-glow="rgba(148, 163, 184, 0.4)" style="background: #334155;" title="AMOLED E-Ink" aria-label="AMOLED E-Ink téma"></button>
+          </div>
+
           <a href="#download" class="feature-micro-cta">
             <span>Próbáld ki a Jupiter klienst</span>
             <span>→</span>
@@ -304,7 +410,15 @@
           <div class="feature-card-icon">⚡</div>
           <h3 class="feature-card-title">0.05s Instant Betöltés</h3>
           <p class="feature-card-text">
-            A Smart Dual-Cache technológia révén az órarended azonnal megjelenik megnyitáskor. Az átmeneti hálózati hibák nem törlik le a telefonodon tárolt óráidat.
+            A Smart Dual-Cache technológia révén az órarended azonnal megjelenik megnyitáskor. Az átmeneti egyetemi szerverhibák nem törlik le a telefonodon tárolt óráidat.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-card-icon">📱</div>
+          <h3 class="feature-card-title">7 db Kezdőképernyő Widget</h3>
+          <p class="feature-card-text">
+            Következő óra visszaszámlálóval és teremkóddal, gyűjtőszámla egyenleg, kreditek, határidők és Master Hub widget közvetlenül az Android kezdőképernyődön.
           </p>
         </div>
 
@@ -341,12 +455,158 @@
         </div>
 
         <div class="feature-card">
+          <div class="feature-card-icon">📂</div>
+          <h3 class="feature-card-title">Dokumentumtár &amp; Profil Hub</h3>
+          <p class="feature-card-text">
+            Diákigazolvány matricák lejárata, TAJ szám, adóazonosító és letöltött hivatalos igazolások egyetlen biztonságos, offline elérhető széfben.
+          </p>
+        </div>
+
+        <div class="feature-card">
           <div class="feature-card-icon">🛡️</div>
           <h3 class="feature-card-title">Hardveres AES-256 Titkosítás</h3>
           <p class="feature-card-text">
-            A belépési adataidat és diákazonosítódat az Android Keystore hardveresen védett széfje tárolja. Hitelesített egyetemi szervertanúsítvány-ellenőrzés (MitM védelem).
+            A belépési adataidat az Android Keystore hardveresen védett széfje tárolja. Hitelesített egyetemi szervertanúsítvány-ellenőrzés (MitM védelem).
           </p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Supported Universities -->
+  <section class="universities-section">
+    <div class="container">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <span class="section-tag" id="uni-count-pill">50+ támogatott intézmény</span>
+          <h3 style="font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem;">Támogatott Felsőoktatási Intézmények</h3>
+        </div>
+      </div>
+      <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">
+        A Jupiter a hivatalos Neptun API-n keresztül biztonságosan és közvetlenül kommunikál az alábbi magyar egyetemekkel és főiskolákkal:
+      </p>
+
+      <!-- Search Box -->
+      <div class="uni-search-wrap">
+        <span class="uni-search-icon">🔍</span>
+        <input type="text" id="uni-search-input" class="uni-search-input" placeholder="Keress egyetemet vagy várost (pl. BME, ELTE, Szeged, Corvinus)..." aria-label="Egyetem keresése">
+      </div>
+
+      <div class="uni-tags-wrap" id="uni-tags-wrap">
+        <span class="uni-tag">Budapesti Műszaki és Gazdaságtudományi Egyetem (BME)</span>
+        <span class="uni-tag">Eötvös Loránd Tudományegyetem (ELTE)</span>
+        <span class="uni-tag">Budapesti Corvinus Egyetem (BCE)</span>
+        <span class="uni-tag">Budapesti Gazdasági Egyetem (BGE)</span>
+        <span class="uni-tag">Óbudai Egyetem (ÓE)</span>
+        <span class="uni-tag">Szegedi Tudományegyetem (SZTE)</span>
+        <span class="uni-tag">Pécsi Tudományegyetem (PTE)</span>
+        <span class="uni-tag">Debreceni Egyetem (DE)</span>
+        <span class="uni-tag">Széchenyi István Egyetem (SZE)</span>
+        <span class="uni-tag">Semmelweis Egyetem (SE)</span>
+        <span class="uni-tag">Pázmány Péter Katolikus Egyetem (PPKE)</span>
+        <span class="uni-tag">Károli Gáspár Református Egyetem (KRE)</span>
+        <span class="uni-tag">Magyar Agrár- és Élettudományi Egyetem (MATE)</span>
+        <span class="uni-tag">Pannon Egyetem (PE)</span>
+        <span class="uni-tag">Miskolci Egyetem (ME)</span>
+        <span class="uni-tag">Soproni Egyetem (SOE)</span>
+        <span class="uni-tag">Állatorvostudományi Egyetem (ÁTE)</span>
+        <span class="uni-tag">Budapesti Metropolitan Egyetem (METU)</span>
+        <span class="uni-tag">Eszterházy Károly Katolikus Egyetem (EKKE)</span>
+        <span class="uni-tag">Nemzeti Közszolgálati Egyetem (NKE)</span>
+        <span class="uni-tag">Neumann János Egyetem (NJE)</span>
+        <span class="uni-tag">Nyíregyházi Egyetem (NYE)</span>
+        <span class="uni-tag">Dunaújvárosi Egyetem (DUE)</span>
+        <span class="uni-tag">Moholy-Nagy Művészeti Egyetem (MOME)</span>
+        <span class="uni-tag">Liszt Ferenc Zeneművészeti Egyetem (LFZE)</span>
+        <span class="uni-tag">Magyar Képzőművészeti Egyetem (MKE)</span>
+        <span class="uni-tag">Színház- és Filmművészeti Egyetem (SZFE)</span>
+        <span class="uni-tag">Magyar Táncművészeti Egyetem (MTE)</span>
+        <span class="uni-tag">Testnevelési Egyetem (TE)</span>
+        <span class="uni-tag">Edutus Főiskola</span>
+        <span class="uni-tag">Milton Friedman Egyetem</span>
+        <span class="uni-tag">Kodolányi János Egyetem</span>
+        <span class="uni-tag">Gábor Dénes Egyetem</span>
+        <span class="uni-tag">Tomori Pál Főiskola</span>
+        <span class="uni-tag">A Tan Kapuja Buddhista Főiskola</span>
+        <span class="uni-tag">Apor Vilmos Katolikus Főiskola</span>
+        <span class="uni-tag">Debreceni Református Hittudományi Egyetem</span>
+        <span class="uni-tag">Eötvös József Főiskola</span>
+        <span class="uni-tag">Gál Ferenc Egyetem</span>
+        <span class="uni-tag">IBS Nemzetközi Üzleti Főiskola</span>
+        <span class="uni-tag">Országos Rabbiképző - Zsidó Egyetem</span>
+        <span class="uni-tag">Sapientia Erdélyi Magyar Tudományegyetem</span>
+        <span class="uni-tag">Sapientia Szerzetesi Hittudományi Főiskola</span>
+        <span class="uni-tag">Szent Atanáz Görög Katolikus Hittudományi Főiskola</span>
+        <span class="uni-tag">Szent Pál Akadémia</span>
+        <span class="uni-tag">Tokaj-Hegyalja Egyetem</span>
+        <span class="uni-tag">Veszprémi Érseki Főiskola</span>
+        <span class="uni-tag">Wekerle Sándor Üzleti Főiskola</span>
+        <span class="uni-tag">Wesley János Lelkészképző Főiskola</span>
+        <span class="uni-tag">Bhaktivedanta Hittudományi Főiskola</span>
+        <span class="uni-tag">Brenner János Hittudományi Főiskola</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ & Security Section -->
+  <section class="faq-section" id="faq">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag" data-i18n="faq_tag">GYIK &amp; Biztonság</span>
+        <h2 class="section-title" data-i18n="faq_title">Gyakran Ismételt Kérdések</h2>
+        <p class="section-subtitle" data-i18n="faq_sub">
+          Minden fontos tudnivaló a telepítésről, az adatbiztonságról és a Google Play Protect működéséről.
+        </p>
+      </div>
+
+      <div class="faq-grid">
+        <!-- Question 1 -->
+        <details class="faq-item" open>
+          <summary class="faq-question">
+            <span>🛡️ Biztonságos a Jupiter APK telepítése? Miért jelzett korábban a Play Protect?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-answer">
+            <p><strong>Igen, a Jupiter 100%-ban tiszta és nyílt forráskódú.</strong></p>
+            <p>A korábbi verziókban egy kényelmi funkcióként működő belső frissítő modul közvetlenül az appon belül töltötte le az új APK csomagokat. Mivel a Google Play Protect szigorúan tiltja, hogy a Play Áruházon kívüli alkalmazások saját maguk telepítsenek APK-kat, ezt a jogosultságot tévesen potenciálisan kártékonynak minősíthette.</p>
+            <p>A <strong>v2.3.1-es verziótól</strong> kezdve ezt az engedélyt (<code>REQUEST_INSTALL_PACKAGES</code>) teljes egészében eltávolítottuk: az app mostantól a telefonod alapértelmezett böngészőjében nyitja meg ezt a hivatalos weboldalt a frissítéshez, így az alkalmazás teljesen tiszta.</p>
+          </div>
+        </details>
+
+        <!-- Question 2 -->
+        <details class="faq-item">
+          <summary class="faq-question">
+            <span>🔐 Működik a kétlépcsős azonosítás (2FA)?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-answer">
+            <p><strong>Igen, teljes körűen támogatott.</strong> Amennyiben az egyetemed megköveteli a kétlépcsős azonosítást (akár SMS-ben küldött biztonsági kóddal, akár hitelesítő alkalmazással), a Jupiter bejelentkezési képernyője automatikusan felajánlja a 2FA kód megadását, és biztonságosan továbbítja a hivatalos egyetemi szervereknek.</p>
+          </div>
+        </details>
+
+        <!-- Question 3 -->
+        <details class="faq-item">
+          <summary class="faq-question">
+            <span>🔍 Hogyan ellenőrizhetem a letöltött fájl SHA-256 ujjlenyomatát?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-answer">
+            <p>Minden kiadás (release) hivatalos <code>.sha256</code> ellenőrzőösszeg-fájlját megtalálod közvetlenül a <a href="https://github.com/zoligamer/Jupiter/releases/latest" target="_blank" rel="noopener noreferrer" class="split-link">GitHub Releases oldalon</a> az adott APK mellett. Ezzel garantálhatod, hogy a letöltött fájl megegyezik az eredeti fordítással.</p>
+            <p>Parancssorban így ellenőrizheted:</p>
+            <code class="faq-code-snip"># Linux / macOS:&#10;sha256sum Jupiter_Universal_v2.3.1.apk&#10;&#10;# Windows (PowerShell):&#10;Get-FileHash Jupiter_Universal_v2.3.1.apk -Algorithm SHA256</code>
+          </div>
+        </details>
+
+        <!-- Question 4 -->
+        <details class="faq-item">
+          <summary class="faq-question">
+            <span>📱 Milyen engedélyeket igényel az alkalmazás a telefonon?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-answer">
+            <p>A Jupiter a minimális jogosultságok elvét követi: kizárólag internet-hozzáférést használ az egyetemi szerverek eléréséhez, valamint opcionális értesítési és ébresztési jogosultságot az órarendi emlékeztetőkhöz és a kezdőképernyő widgetek szinkronizációjához. Nincs hozzáférése a névjegyzékedhez, kamerádhoz, helyadataidhoz vagy SMS üzeneteidhez.</p>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -370,33 +630,6 @@
     </div>
   </section>
 
-  <!-- Supported Universities -->
-  <section class="universities-section">
-    <div class="container">
-      <span class="section-tag">Kompatibilitás</span>
-      <h3 style="font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem;">Támogatott Felsőoktatási Intézmények</h3>
-      <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem;">
-        A Jupiter a hivatalos Neptun API-n keresztül kommunikál a magyar egyetemekkel és főiskolákkal.
-      </p>
-
-      <div class="uni-tags-wrap">
-        <span class="uni-tag">Budapesti Műszaki és Gazdaságtudományi Egyetem (BME)</span>
-        <span class="uni-tag">Eötvös Loránd Tudományegyetem (ELTE)</span>
-        <span class="uni-tag">Budapesti Corvinus Egyetem (BCE)</span>
-        <span class="uni-tag">Budapesti Gazdasági Egyetem (BGE)</span>
-        <span class="uni-tag">Óbudai Egyetem (ÓE)</span>
-        <span class="uni-tag">Szegedi Tudományegyetem (SZTE)</span>
-        <span class="uni-tag">Pécsi Tudományegyetem (PTE)</span>
-        <span class="uni-tag">Debreceni Egyetem (DE)</span>
-        <span class="uni-tag">Széchenyi István Egyetem (SZE)</span>
-        <span class="uni-tag">Magyar Agrár- és Élettudományi Egyetem (MATE)</span>
-        <span class="uni-tag">Pannon Egyetem (PE)</span>
-        <span class="uni-tag">Semmelweis Egyetem (SE)</span>
-        <span class="uni-tag">...és 20+ további intézmény</span>
-      </div>
-    </div>
-  </section>
-
   <!-- Developer & Source References -->
   <section class="dev-section" id="developer">
     <div class="container">
@@ -404,12 +637,12 @@
         <span class="section-tag">Fejlesztői Részleg</span>
         <h2 class="section-title">Nyílt Forráskód és Forrásreferenciák</h2>
         <p class="section-subtitle">
-          Átlátható fejlesztés, dokumentált eredet és közvetlen hozzáférés a kódtárakhoz gombok nélkül.
+          Átlátható fejlesztés, nyílt forráskód és közvetlen hozzáférés a hivatalos tárolókhoz és kiadásokhoz.
         </p>
       </div>
 
       <div class="dev-grid">
-        <!-- Source Links Box (Without buttons as specified) -->
+        <!-- Source Links Box -->
         <div class="dev-box">
           <h3 class="dev-box-title">
             <span>🔗 Források és Hivatkozások</span>
@@ -425,13 +658,13 @@
             <li class="source-item">
               <span class="source-role">Legfrissebb APK Kiadások (Latest Releases)</span>
               <a href="https://github.com/zoligamer/Jupiter/releases/latest" class="source-anchor" target="_blank" rel="noopener noreferrer">https://github.com/zoligamer/Jupiter/releases/latest</a>
-              <span class="source-note">A hivatalosan közzétett legfrissebb APK fájlok és SHA-1 lenyomatok.</span>
+              <span class="source-note">A hivatalosan közzétett legfrissebb APK fájlok és SHA-256 lenyomatok.</span>
             </li>
 
             <li class="source-item">
-              <span class="source-role">Forrásreferencia (Workspace / Fork Eredet)</span>
+              <span class="source-role">Forrásreferencia (Upstream Architektúra)</span>
               <a href="https://github.com/zoligamer/Neptun-Mobile-fork" class="source-anchor" target="_blank" rel="noopener noreferrer">https://github.com/zoligamer/Neptun-Mobile-fork</a>
-              <span class="source-note">A neptun2fix munkakörnyezetben elemzett fork, amelyből a Jupiter önálló projektté formálódott.</span>
+              <span class="source-note">A Neptun-Mobile ág, amelyből a Jupiter új generációs architektúrája kifejlődött.</span>
             </li>
 
             <li class="source-item">
@@ -501,7 +734,8 @@
           <ul class="footer-links">
             <li><a href="#download">Letöltési Központ</a></li>
             <li><a href="#showcase">Képernyőképek</a></li>
-            <li><a href="#features">Funkciók</a></li>
+            <li><a href="#features">Funkciók &amp; Előnyök</a></li>
+            <li><a href="#faq">GYIK &amp; Biztonság</a></li>
             <li><a href="#ios">iOS Weboldal</a></li>
             <li><a href="#developer">Fejlesztői Források</a></li>
           </ul>
@@ -535,13 +769,20 @@
     data-tally-width="600"
     data-tally-emoji-text="💬"
     data-tally-emoji-animation="wave"
-    onclick="if(!window.Tally){window.open('https://tally.so/r/2jX62M','_blank');}"
     aria-label="Visszajelzés küldése vagy hibabejelentés"
     title="Visszajelzés / Hibabejelentés">
     <span class="tally-btn-icon">💬</span>
     <span class="tally-btn-label">Visszajelzés / Hiba</span>
   </button>
   <script async src="https://tally.so/widgets/embed.js"></script>
+
+  <!-- Screenshot Lightbox Dialog -->
+  <dialog id="screenshot-lightbox" class="screenshot-lightbox">
+    <div class="lightbox-content">
+      <button id="lightbox-close-btn" class="lightbox-close-btn" aria-label="Bezárás">✕</button>
+      <img id="lightbox-img" src="" alt="Jupiter Képernyőkép Nagyítás" class="lightbox-img">
+    </div>
+  </dialog>
 
   <!-- Main JavaScript -->
   <script src="js/main.js"></script>
