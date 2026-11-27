@@ -136,10 +136,11 @@ function formatBytes(bytes) {
   return `${mb.toFixed(1)} MB`;
 }
 
-/* Exact Real-Time Download Counter (All GitHub Releases Sum) */
+/* Live GitHub Download Counter (Powered by Shields.io endpoint from README.md + GitHub Releases API fallback) */
+const SHIELDS_DOWNLOADS_JSON_URL = `https://img.shields.io/github/downloads/${REPO_OWNER}/${REPO_NAME}/total.json`;
 const ALL_RELEASES_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases?per_page=100`;
-const EXACT_DOWNLOADS_CACHE_KEY = "jupiter_exact_downloads_count";
-const VERIFIED_EXACT_BASELINE = 129; // Live verified sum across GitHub releases (matches Shields.io total)
+const DOWNLOADS_CACHE_KEY = "jupiter_live_downloads_cache_v2";
+const DOWNLOADS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 mins
 
 async function fetchDownloadStats() {
   const planetCountElem = document.getElementById("planet-download-count");
@@ -147,52 +148,86 @@ async function fetchDownloadStats() {
   const hubCountElem = document.getElementById("hub-total-downloads");
   if (!planetCountElem && !brandCountElem && !hubCountElem) return;
 
-  let totalCount = VERIFIED_EXACT_BASELINE;
-
-  // Check cached count if available
+  // Clear legacy baseline cache so stale values never linger
   try {
-    const cached = localStorage.getItem(EXACT_DOWNLOADS_CACHE_KEY);
-    if (cached) {
-      const parsed = parseInt(cached, 10);
-      if (!isNaN(parsed) && parsed >= VERIFIED_EXACT_BASELINE) {
-        totalCount = parsed;
+    localStorage.removeItem("jupiter_exact_downloads_count");
+  } catch (e) {}
+
+  let displayValue = null;
+
+  // Check short-TTL cache first
+  try {
+    const rawCache = localStorage.getItem(DOWNLOADS_CACHE_KEY);
+    if (rawCache) {
+      const parsedCache = JSON.parse(rawCache);
+      if (parsedCache && typeof parsedCache.value !== "undefined" && Date.now() - parsedCache.timestamp < DOWNLOADS_CACHE_TTL_MS) {
+        displayValue = parsedCache.value;
       }
     }
   } catch (e) {}
 
-  try {
-    const res = await fetch(ALL_RELEASES_API_URL, {
-      headers: { "Accept": "application/vnd.github.v3+json" }
-    });
-    if (res.ok) {
-      const releases = await res.json();
-      if (Array.isArray(releases)) {
-        let liveSum = 0;
-        for (const rel of releases) {
-          if (Array.isArray(rel.assets)) {
-            for (const asset of rel.assets) {
-              if (typeof asset.download_count === "number") {
-                liveSum += asset.download_count;
+  // 1. Primary: Live Shields.io JSON endpoint (matches README.md badge)
+  if (displayValue === null) {
+    try {
+      const res = await fetch(SHIELDS_DOWNLOADS_JSON_URL);
+      if (res.ok) {
+        const data = await res.json();
+        const raw = (data.value ?? data.message ?? "").toString().trim();
+        if (/^\d+$/.test(raw)) {
+          displayValue = parseInt(raw, 10);
+        } else if (raw) {
+          displayValue = raw;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Fallback: GitHub Releases API sum if Shields.io fails or formats shorthand
+  if (displayValue === null || typeof displayValue === "string") {
+    try {
+      const res = await fetch(ALL_RELEASES_API_URL, {
+        headers: { "Accept": "application/vnd.github.v3+json" }
+      });
+      if (res.ok) {
+        const releases = await res.json();
+        if (Array.isArray(releases)) {
+          let liveSum = 0;
+          for (const rel of releases) {
+            if (Array.isArray(rel.assets)) {
+              for (const asset of rel.assets) {
+                if (typeof asset.download_count === "number") {
+                  liveSum += asset.download_count;
+                }
               }
             }
           }
-        }
-        if (liveSum >= VERIFIED_EXACT_BASELINE) {
-          totalCount = liveSum;
-          try {
-            localStorage.setItem(EXACT_DOWNLOADS_CACHE_KEY, totalCount.toString());
-          } catch (e) {}
+          displayValue = liveSum;
         }
       }
-    }
-  } catch (e) {
-    // Graceful fallback to verified exact baseline
+    } catch (e) {}
   }
 
-  // Exact integer display: NO suffix (+), NO floats!
-  animateCount(planetCountElem, totalCount, "");
-  animateCount(brandCountElem, totalCount, "");
-  animateCount(hubCountElem, totalCount, "");
+  if (displayValue === null) return;
+
+  try {
+    localStorage.setItem(DOWNLOADS_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      value: displayValue
+    }));
+  } catch (e) {}
+
+  const applyValue = (elem) => {
+    if (!elem) return;
+    if (typeof displayValue === "number") {
+      animateCount(elem, displayValue, "");
+    } else {
+      elem.textContent = displayValue;
+    }
+  };
+
+  applyValue(planetCountElem);
+  applyValue(brandCountElem);
+  applyValue(hubCountElem);
 }
 
 function animateCount(elem, target, suffix = "") {
